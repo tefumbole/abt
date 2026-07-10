@@ -25,10 +25,12 @@ export const CONTACT_EMAIL =
   import.meta.env.VITE_CONTACT_EMAIL || 'info@alpha-bridge.net';
 
 export const DEFAULT_LOGO_URL =
-  import.meta.env.VITE_LOGO_URL || '/branding/beyond-logo.png';
+  import.meta.env.VITE_LOGO_URL ||
+  'https://horizons-cdn.hostinger.com/81ef3422-3855-479e-bfe8-28a4ceb0df39/a742e501955dd22251276e445b31816d.png';
 
 export const HERO_IMAGE_URL =
-  import.meta.env.VITE_HERO_IMAGE_URL || '/branding/beyond-hero.png';
+  import.meta.env.VITE_HERO_IMAGE_URL ||
+  'https://horizons-cdn.hostinger.com/81ef3422-3855-479e-bfe8-28a4ceb0df39/dd5d2c583a8b091d7529cd8c4e5ff3ea.png';
 
 export function whatsAppUrl(message) {
   const text = typeof message === 'string' ? message : '';

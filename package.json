@@ -21,7 +21,6 @@
     "migrate:hostinger": "bash tools/migrate-hostinger.sh",
     "vps:check": "bash tools/vps-check-ports.sh",
     "vps:deploy": "bash tools/deploy-alphabridge-vps.sh",
-    "vps:deploy:beyondtechworld": "bash tools/deploy-beyondtechworld-vps.sh",
     "local:deploy": "bash tools/deploy-local.sh",
     "local:backup": "bash tools/backup-local.sh",
     "api:start": "npm run start --prefix apps/api",
