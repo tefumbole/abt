@@ -1,5 +1,5 @@
 /** Alpha Bridge ERP release identifier — update when creating a new restore point. */
-export const APP_VERSION = 'ABT_ERP_V.1.1.25';
+export const APP_VERSION = 'ABT_ERP_V.1.1.26';
 
 export const APP_VERSION_LABEL = 'Version';
 
