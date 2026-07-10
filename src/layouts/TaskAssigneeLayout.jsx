@@ -26,7 +26,7 @@ function TaskAssigneeLayout({ children }) {
       <header className="bg-[#003D82] text-white shadow-md">
         <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <BrandLogo alt="Beyond Enterprise" className="h-10 w-auto" variant="onDark" />
+            <BrandLogo alt="Alpha Bridge" className="h-10 w-auto" variant="onDark" />
             <div>
               <p className="text-sm font-semibold">Task Portal</p>
               <p className="text-xs text-blue-100">{profile?.full_name || user?.email}</p>

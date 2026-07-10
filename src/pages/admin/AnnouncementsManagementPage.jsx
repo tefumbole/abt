@@ -102,7 +102,7 @@ const AnnouncementsManagementPage = ({ mode: modeProp }) => {
 
 	const [category, setCategory] = useState('general');
 	const [title, setTitle] = useState('');
-	const [headerHtml, setHeaderHtml] = useState('Beyond Enterprise');
+	const [headerHtml, setHeaderHtml] = useState('Alpha Bridge');
 	const [bodyHtml, setBodyHtml] = useState('Dear {name},');
 	const [attachments, setAttachments] = useState([]);
 	const [recipientTab, setRecipientTab] = useState('customers');
@@ -146,7 +146,7 @@ const AnnouncementsManagementPage = ({ mode: modeProp }) => {
 		const incoming = location.state?.template;
 		if (mode !== 'compose' || !incoming) return;
 		setTitle(incoming.subject || '');
-		setHeaderHtml(incoming.header_html || 'Beyond Enterprise');
+		setHeaderHtml(incoming.header_html || 'Alpha Bridge');
 		setBodyHtml(incoming.body_html || 'Dear {name},');
 		setCategory(incoming.category || 'general');
 		setTemplateKey('blank');
@@ -197,7 +197,7 @@ const AnnouncementsManagementPage = ({ mode: modeProp }) => {
 		setTemplateKey('blank');
 		setCategory('general');
 		setTitle('');
-		setHeaderHtml('Beyond Enterprise');
+		setHeaderHtml('Alpha Bridge');
 		setBodyHtml('Dear {name}');
 		setAttachments([]);
 		setRecipients([]);
@@ -331,13 +331,13 @@ const AnnouncementsManagementPage = ({ mode: modeProp }) => {
 			setTitle('');
 			setBodyHtml('Dear {name}');
 			setCategory('general');
-			setHeaderHtml('Beyond Enterprise');
+			setHeaderHtml('Alpha Bridge');
 			return;
 		}
 		const tmpl = templates.find((item) => String(item.id) === key);
 		if (tmpl) {
 			setTitle(tmpl.subject || '');
-			setHeaderHtml(tmpl.header_html || 'Beyond Enterprise');
+			setHeaderHtml(tmpl.header_html || 'Alpha Bridge');
 			setBodyHtml(tmpl.body_html || 'Dear {name}');
 			setCategory(tmpl.category || 'general');
 			toast.success(`Template "${tmpl.name}" loaded.`);

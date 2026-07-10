@@ -153,7 +153,7 @@ export const sendRegistrationConfirmation = async (registrationData, recipientEm
     'send-email',
     {
       to: recipientEmail,
-      subject: 'Course Registration Confirmation - Beyond Enterprise',
+      subject: 'Course Registration Confirmation - Alpha Bridge',
       templateType: 'registration_confirmation',
       data: {
         clientName: registrationData.client_name,
@@ -173,7 +173,7 @@ export const sendAdminNotification = async (registrationData) => {
   return invokeEmailFunction(
     'send-email',
     {
-      to: 'admin@beyondtechworld.com',
+      to: 'admin@alpha-bridge.net',
       subject: 'New Course Registration Received',
       templateType: 'admin_registration_notification',
       data: {
@@ -186,7 +186,7 @@ export const sendAdminNotification = async (registrationData) => {
     },
     null,
     'admin_notification',
-    'admin@beyondtechworld.com'
+    'admin@alpha-bridge.net'
   );
 };
 
@@ -195,7 +195,7 @@ export const sendOTPEmail = async (email, otpCode) => {
     'send-email',
     {
       to: email,
-      subject: 'Your OTP Code - Beyond Enterprise',
+      subject: 'Your OTP Code - Alpha Bridge',
       htmlBody: `<h1>OTP Code</h1><p>${otpCode}</p>`,
       templateType: 'otp',
       data: { otpCode }

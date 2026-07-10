@@ -26,7 +26,7 @@ const RegisterNowPage = () => {
                         transition={{ delay: 0.1 }}
                         className="text-lg md:text-xl text-blue-100 max-w-2xl"
                     >
-                        Join Beyond Enterprise and elevate your skills with our premium courses. Select your courses below to get started.
+                        Join Alpha Bridge and elevate your skills with our premium courses. Select your courses below to get started.
                     </motion.p>
                 </div>
             </div>

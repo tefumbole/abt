@@ -11,7 +11,7 @@ function CompanyInfoSection() {
             Official Registration
           </h2>
           <p className="text-gray-600 max-w-2xl mx-auto">
-            Beyond Enterprise is fully registered and compliant with the laws of the Republic of Rwanda.
+            Alpha Bridge is fully registered and compliant with the laws of the Republic of Rwanda.
           </p>
         </div>
 
@@ -27,7 +27,7 @@ function CompanyInfoSection() {
             <div className="absolute inset-0 bg-gold/10 rounded-xl transform translate-x-4 translate-y-4"></div>
             <img 
               src="https://horizons-cdn.hostinger.com/81ef3422-3855-479e-bfe8-28a4ceb0df39/ea644c584a1b4177047d03ed1000c0ad.png" 
-              alt="Beyond Enterprise Certificate of Incorporation" 
+              alt="Alpha Bridge Certificate of Incorporation" 
               className="relative rounded-xl shadow-2xl border border-gray-200 w-full"
             />
           </motion.div>
@@ -57,7 +57,7 @@ function CompanyInfoSection() {
                     <Building className="w-4 h-4 text-tech-blue" />
                     Company Name
                   </div>
-                  <p className="text-gray-700 pl-6">Beyond Enterprise</p>
+                  <p className="text-gray-700 pl-6">Alpha Bridge</p>
                 </div>
 
                 <div>

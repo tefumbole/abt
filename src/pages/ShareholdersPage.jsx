@@ -84,8 +84,8 @@ const ShareholdersPage = () => {
   return (
     <div className="min-h-screen bg-[--primary-blue] text-white flex flex-col">
       <Helmet>
-        <title>Shareholders Agreement | Beyond Enterprise</title>
-        <meta name="description" content="Read and accept the Shareholder Agreement to invest in Beyond Enterprise." />
+        <title>Shareholders Agreement | Alpha Bridge</title>
+        <meta name="description" content="Read and accept the Shareholder Agreement to invest in Alpha Bridge." />
       </Helmet>
 
       {/* Header */}
@@ -107,14 +107,14 @@ const ShareholdersPage = () => {
             <div className="mb-8 p-6 bg-blue-900/30 rounded-lg border-l-4 border-[#D4AF37]">
                 <h2 className="text-xl font-bold text-white mb-2">Terms & Conditions of Investment</h2>
                 <p className="text-gray-300">
-                    This document serves as a binding understanding between Beyond Enterprise (the "Company") and you (the "Investor"). 
+                    This document serves as a binding understanding between Alpha Bridge (the "Company") and you (the "Investor"). 
                     By clicking "I Agree" below, you acknowledge that you have read, understood, and accepted these terms.
                 </p>
             </div>
 
             <SectionCard number="1" icon={Info} title="About the Company">
                 <p>
-                    <strong>Beyond Enterprise</strong> is a private limited company registered in Rwanda. 
+                    <strong>Alpha Bridge</strong> is a private limited company registered in Rwanda. 
                     We specialize in IT consultancy, networking, security systems, and AV engineering.
                 </p>
             </SectionCard>

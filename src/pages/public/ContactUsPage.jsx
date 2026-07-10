@@ -10,7 +10,7 @@ import { sendContactMessageViaWhatsApp } from '@/services/contactService';
 const ContactUsPage = () => {
   const [formData, setFormData] = useState({
     name: 'Sr. Engr. Mbole',
-    email: 'info@beyondtechworld.com',
+    email: 'info@alpha-bridge.net',
     subject: '',
     message: ''
   });
@@ -29,7 +29,7 @@ const ContactUsPage = () => {
                 title: "Message Sent Successfully!",
                 description: "Thank you for reaching out. We have received your message and will get back to you shortly.",
             });
-            setFormData({ name: 'Sr. Engr. Mbole', email: 'info@beyondtechworld.com', subject: '', message: '' });
+            setFormData({ name: 'Sr. Engr. Mbole', email: 'info@alpha-bridge.net', subject: '', message: '' });
         } else {
             throw new Error(res.error || "Failed to send message");
         }
@@ -45,7 +45,7 @@ const ContactUsPage = () => {
   };
 
   const handleWhatsAppClick = () => {
-    window.open(`https://wa.me/237675321739?text=${encodeURIComponent("Hello Beyond Enterprise, I would like to inquire about...")}`, '_blank');
+    window.open(`https://wa.me/250794006160?text=${encodeURIComponent("Hello Alpha Bridge, I would like to inquire about...")}`, '_blank');
   };
 
   return (
@@ -56,7 +56,7 @@ const ContactUsPage = () => {
         <div className="text-center mb-16">
           <h1 className="text-4xl md:text-5xl font-extrabold text-[#003D82] mb-4">Get in Touch</h1>
           <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-            Have a question, need assistance, or want to explore partnership opportunities? We're here to help. Reach out to the Beyond Enterprise team today.
+            Have a question, need assistance, or want to explore partnership opportunities? We're here to help. Reach out to the Alpha Bridge team today.
           </p>
         </div>
 
@@ -70,7 +70,7 @@ const ContactUsPage = () => {
                     <MapPin className="w-5 h-5" /> Office Location
                 </h3>
                 <div className="space-y-3 text-gray-600">
-                    <p className="font-semibold text-gray-800">Beyond Enterprise.</p>
+                    <p className="font-semibold text-gray-800">Alpha Bridge.</p>
                     <p>Norrsken House Kigali</p>
                     <p>Kigali, Rwanda</p>
                 </div>
@@ -93,7 +93,7 @@ const ContactUsPage = () => {
                             <Phone className="w-4 h-4" />
                         </div>
                         <div>
-                            <p className="font-medium">+237 675 321 739</p>
+                            <p className="font-medium">+250 794 006 160</p>
                             <Button variant="link" className="p-0 h-auto text-[#D4AF37] hover:text-[#003D82] text-xs font-semibold" onClick={handleWhatsAppClick}>
                                 <MessageSquare className="w-3 h-3 mr-1" /> Chat on WhatsApp
                             </Button>
@@ -104,8 +104,8 @@ const ContactUsPage = () => {
                         <div className="bg-yellow-100 p-2 rounded-full text-[#D4AF37]">
                             <Mail className="w-4 h-4" />
                         </div>
-                        <a href="mailto:info@beyondtechworld.com" className="font-medium hover:text-[#003D82] transition-colors">
-                            info@beyondtechworld.com
+                        <a href="mailto:info@alpha-bridge.net" className="font-medium hover:text-[#003D82] transition-colors">
+                            info@alpha-bridge.net
                         </a>
                     </div>
                     
@@ -113,8 +113,8 @@ const ContactUsPage = () => {
                         <div className="bg-gray-200 p-2 rounded-full text-gray-700">
                             <Globe className="w-4 h-4" />
                         </div>
-                        <a href="https://beyondtechworld.com" className="font-medium hover:text-[#003D82] transition-colors">
-                            www.beyondtechworld.com
+                        <a href="https://alpha-bridge.net" className="font-medium hover:text-[#003D82] transition-colors">
+                            www.alpha-bridge.net
                         </a>
                     </div>
                 </div>

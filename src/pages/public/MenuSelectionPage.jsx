@@ -55,7 +55,7 @@ const MenuSelectionPage = () => {
   }, [eventId]);
 
   const handleWhatsAppConfirmation = async (data) => {
-    const template = `Hello {name},\n\nYour meal selection for ${event?.event_name} has been successfully registered!\n\n🍽️ *Your Menu:*\n- Starter: ${data.starter}\n- Main: ${data.mainCourse}\n- Side: ${data.sideDish}\n- Dessert: ${data.dessert}\n\nWe look forward to seeing you!\n\n*Beyond Enterprise*`;
+    const template = `Hello {name},\n\nYour meal selection for ${event?.event_name} has been successfully registered!\n\n🍽️ *Your Menu:*\n- Starter: ${data.starter}\n- Main: ${data.mainCourse}\n- Side: ${data.sideDish}\n- Dessert: ${data.dessert}\n\nWe look forward to seeing you!\n\n*Alpha Bridge*`;
     
     try {
       await sendWhatsAppMessage(data.phone, template, { name: data.name });
@@ -246,7 +246,7 @@ const MenuSelectionPage = () => {
         </Card>
         
         <div className="text-center text-xs text-gray-500">
-          Powered by Beyond Enterprise
+          Powered by Alpha Bridge
         </div>
       </div>
     </div>

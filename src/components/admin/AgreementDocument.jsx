@@ -156,7 +156,7 @@ const AgreementDocument = ({
           <h3>Terms &amp; Conditions</h3>
           <div className="terms-list">
             {[
-              ['About Beyond Enterprise:', 'The Company is a technology solutions provider incorporated under the laws of Cameroon, specializing in software development, IT consulting, and digital transformation services.'],
+              ['About Alpha Bridge:', 'The Company is a technology solutions provider incorporated under the laws of Cameroon, specializing in software development, IT consulting, and digital transformation services.'],
               ['Share Price & Value:', 'The share price stated in this agreement represents the current valuation at the time of approval. The shareholder acknowledges that share values may fluctuate based on company performance and market conditions.'],
               ['Shareholder Rights:', 'The shareholder is entitled to voting rights proportional to their shareholding, access to annual financial statements, participation in shareholder meetings, and distribution of dividends as declared by the Board of Directors.'],
               ['Dividends:', 'Dividends will be distributed at the discretion of the Board of Directors based on company profitability and cash flow requirements. No guaranteed dividend schedule is implied.'],

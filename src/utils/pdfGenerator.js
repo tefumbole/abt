@@ -43,7 +43,7 @@ export const generateShareholderAgreementPDF = async (shareholderData, signature
   doc.setFontSize(18);
   doc.text('Shareholder Agreement', 105, 20, { align: 'center' });
   doc.setFontSize(12);
-  doc.text('Beyond Enterprise', 105, 30, { align: 'center' });
+  doc.text('Alpha Bridge', 105, 30, { align: 'center' });
 
   // Body Text
   doc.setFontSize(10);
@@ -56,7 +56,7 @@ export const generateShareholderAgreementPDF = async (shareholderData, signature
     if(isBold) doc.setFont('helvetica', 'normal');
   };
 
-  addText(`This agreement is made on ${new Date().toLocaleDateString()} between Beyond Enterprise ("the Company") and ${shareholderData.name} ("the Shareholder").`, true);
+  addText(`This agreement is made on ${new Date().toLocaleDateString()} between Alpha Bridge ("the Company") and ${shareholderData.name} ("the Shareholder").`, true);
   addText('1. Share Price: The value of one (1) share is set at USD $500.');
   addText('2. Vesting Period: Shares will be officially issued after a vesting period of 24 months.');
   addText('3. Dividends: Dividends are not guaranteed and are declared by the Board of Directors from company profits.');

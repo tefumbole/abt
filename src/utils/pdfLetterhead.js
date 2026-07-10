@@ -5,7 +5,7 @@ export function getAppOrigin() {
   if (typeof window !== 'undefined' && window.location?.origin) {
     return window.location.origin;
   }
-  return import.meta.env.VITE_APP_URL || 'https://www.beyondtechworld.com';
+  return import.meta.env.VITE_APP_URL || 'https://www.alpha-bridge.net';
 }
 
 export function getAgreementVerifyUrl(shareholderId) {
@@ -14,7 +14,7 @@ export function getAgreementVerifyUrl(shareholderId) {
 }
 
 export function normalizeBrandingSettings(settings = {}) {
-  const appName = settings.application_name || 'Beyond Enterprise';
+  const appName = settings.application_name || 'Alpha Bridge';
 
   return {
     application_name: appName,

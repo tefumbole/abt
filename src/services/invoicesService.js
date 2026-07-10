@@ -75,13 +75,13 @@ export const createInvoicePDF = (invoice) => {
     
     // Header
     doc.setFontSize(22);
-    doc.setTextColor(0, 61, 130); // Beyond Enterprise Blue
+    doc.setTextColor(0, 61, 130); // Alpha Bridge Blue
     doc.text("INVOICE", 105, 20, null, null, "center");
     
     // Company Info
     doc.setFontSize(10);
     doc.setTextColor(100);
-    doc.text("Beyond Enterprise", 105, 30, null, null, "center");
+    doc.text("Alpha Bridge", 105, 30, null, null, "center");
     doc.text("123 Tech Avenue, Innovation City", 105, 35, null, null, "center");
     doc.text("contact@alphabridge.com", 105, 40, null, null, "center");
 
@@ -141,7 +141,7 @@ export const sendInvoiceEmail = async (invoiceId) => {
         const { error } = await supabase.functions.invoke('send-email', {
             body: {
                 to: invoice.email,
-                subject: `Invoice ${invoice.invoice_number} from Beyond Enterprise`,
+                subject: `Invoice ${invoice.invoice_number} from Alpha Bridge`,
                 htmlBody: `
                     <h1>Invoice Available</h1>
                     <p>Dear ${invoice.client_name},</p>

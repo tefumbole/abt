@@ -183,7 +183,7 @@ export const sendPendingAgreementViaWhatsApp = async (
     const { sharesCount, totalInvestment, referenceNumber } = details || {};
     const message = `Dear ${shareholderName},
 
-Thank you for submitting your shareholder agreement with Beyond Enterprise.
+Thank you for submitting your shareholder agreement with Alpha Bridge.
 
 Your signed agreement copy is attached in the next message.
 
@@ -194,7 +194,7 @@ Status: Pending Approval
 
 We will review your request and contact you shortly.
 
-Beyond Enterprise
+Alpha Bridge
 The Technological Bridge to Kigali`;
 
     const result = await sendDocumentBuffer(
@@ -225,15 +225,15 @@ export const sendPaymentConfirmationViaWhatsApp = async (shareholderPhone, share
     const { sharesCount, totalInvestment } = details || {};
     const message = `Dear ${shareholderName},
 
-Your payment for your Beyond Enterprise share investment has been confirmed.
+Your payment for your Alpha Bridge share investment has been confirmed.
 
 Payment Status: Paid
 Shares: ${sharesCount || 0}
 Total Investment: ${formatPrice(totalInvestment || 0)}
 
-Thank you for your investment. Welcome to Beyond Enterprise!
+Thank you for your investment. Welcome to Alpha Bridge!
 
-Beyond Enterprise
+Alpha Bridge
 The Technological Bridge to Kigali`;
 
     const { sendWhatsAppMessage } = await import('@/services/wasenderapiService');
@@ -263,7 +263,7 @@ export const sendAgreementViaWhatsApp = async (
     const phone = shareholderPhone;
     const formattedPhone = formatPhoneNumber(phone);
     if (!formattedPhone) {
-      throw new Error(`Invalid phone number: ${phone}. Use international format e.g. +237675321739`);
+      throw new Error(`Invalid phone number: ${phone}. Use international format e.g. +250794006160`);
     }
 
     const { approvedShares, sharePrice, totalInvestment } = investmentDetails || {};
@@ -278,10 +278,10 @@ Investment Summary:
 
 Your signed shareholder agreement PDF is attached in the next message.
 
-Thank you for investing with Beyond Enterprise.
+Thank you for investing with Alpha Bridge.
 
 Best regards,
-Beyond Enterprise Team`;
+Alpha Bridge Team`;
 
     const result = await sendDocumentBuffer(
       formattedPhone,

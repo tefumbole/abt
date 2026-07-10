@@ -103,7 +103,7 @@ const AdminLetterComposerPage = () => {
                             {/* Letterhead Mock */}
                             <div className="flex justify-between items-start border-b-2 border-[#D4AF37] pb-6 mb-8">
                                 <div>
-                                    <h2 className="text-2xl font-bold text-[#003D82] uppercase tracking-wider">Beyond Enterprise</h2>
+                                    <h2 className="text-2xl font-bold text-[#003D82] uppercase tracking-wider">Alpha Bridge</h2>
                                     <p className="text-sm text-gray-500">Technologies Ltd</p>
                                 </div>
                                 <div className="text-right text-sm text-gray-600">
@@ -123,7 +123,7 @@ const AdminLetterComposerPage = () => {
                             </div>
 
                             <div className="mt-16 pt-8 border-t border-gray-100 flex flex-col items-end">
-                                <p className="font-bold">Beyond Enterprise Administration</p>
+                                <p className="font-bold">Alpha Bridge Administration</p>
                                 <p className="text-sm text-gray-500">Authorized Signature</p>
                             </div>
                         </CardContent>

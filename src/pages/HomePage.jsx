@@ -98,7 +98,7 @@ function HomePage() {
   const testimonials = [{
     name: 'Client A',
     role: tl('home', 'CEO, Tech Company'),
-    content: tl('home', 'Beyond Enterprise delivered exceptional networking solutions for our office. Professional and reliable.')
+    content: tl('home', 'Alpha Bridge delivered exceptional networking solutions for our office. Professional and reliable.')
   }, {
     name: 'Client B',
     role: tl('home', 'Event Organizer'),
@@ -294,7 +294,7 @@ function HomePage() {
       <section className="py-16 bg-[#003D82]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
-            <h2 className="text-4xl font-bold text-white mb-4">{th('why_alpha_bridge', 'Why Beyond Enterprise?')}</h2>
+            <h2 className="text-4xl font-bold text-white mb-4">{th('why_alpha_bridge', 'Why Alpha Bridge?')}</h2>
             <p className="text-xl text-gray-300">{th('why_alpha_bridge_subtitle', 'Excellence in every solution we deliver')}</p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
@@ -385,7 +385,7 @@ function HomePage() {
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <WhatsAppButton className="px-8 py-6 text-lg rounded-lg shadow-xl hover:shadow-2xl" />
             
-            <a href="mailto:info@beyondtechworld.com">
+            <a href="mailto:info@alpha-bridge.net">
               <Button className="bg-white text-[#003D82] hover:bg-gray-100 px-8 py-6 text-lg rounded-lg shadow-xl hover:shadow-2xl font-semibold">
                 <Mail className="w-5 h-5 mr-2" />
                 {th('email_us', 'Email Us')}

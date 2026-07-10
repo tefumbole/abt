@@ -20,7 +20,7 @@ export const sendOTPViaTwilio = async (phoneNumber, otpCode) => {
     return { success: false, message: "System configuration error: Missing Twilio credentials." };
   }
 
-  const messageBody = `Your Beyond Enterprise login OTP is: ${otpCode}. Valid for 10 minutes.`;
+  const messageBody = `Your Alpha Bridge login OTP is: ${otpCode}. Valid for 10 minutes.`;
   const url = `https://api.twilio.com/2010-04-01/Accounts/${TWILIO_ACCOUNT_SID}/Messages.json`;
 
   try {

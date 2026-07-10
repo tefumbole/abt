@@ -52,7 +52,7 @@ function ServicesPage() {
   return (
     <>
       <Helmet>
-        <title>Our Services | Beyond Enterprise</title>
+        <title>Our Services | Alpha Bridge</title>
         <meta
           name="description"
           content="Comprehensive IT consultancy, AI solutions, cloud computing, cybersecurity, VoIP, network infrastructure, and CCTV services in Kigali, Rwanda. Professional technology solutions for businesses and events."

@@ -74,9 +74,9 @@ const RegistrationPage = () => {
 
     const [formData, setFormData] = useState({
         client_name: 'Sr. Engr. Mbole',
-        client_email: 'info@beyondtechworld.com',
-        client_phone: '+237 675 321 739',
-        company_name: 'Beyond Enterprise.'
+        client_email: 'info@alpha-bridge.net',
+        client_phone: '+250 794 006 160',
+        company_name: 'Alpha Bridge.'
     });
 
     const { toast } = useToast();
@@ -225,7 +225,7 @@ const RegistrationPage = () => {
                     </div>
                     <h1 className="text-3xl font-bold text-gray-900 mb-2">Registration Complete!</h1>
                     <p className="text-gray-600 mb-8">
-                        Thank you for registering with Beyond Enterprise. A confirmation email has been sent to <span className="font-semibold">{formData.client_email}</span>.
+                        Thank you for registering with Alpha Bridge. A confirmation email has been sent to <span className="font-semibold">{formData.client_email}</span>.
                     </p>
                     <div className="flex justify-center gap-4">
                          <Button onClick={() => window.location.href='/'} variant="outline">Back to Home</Button>
@@ -376,7 +376,7 @@ const RegistrationPage = () => {
                                                 <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                                                 <Input 
                                                     id="client_email" name="client_email" type="email" required 
-                                                    className="pl-9" placeholder="info@beyondtechworld.com"
+                                                    className="pl-9" placeholder="info@alpha-bridge.net"
                                                     value={formData.client_email} onChange={handleInputChange}
                                                 />
                                             </div>
@@ -388,7 +388,7 @@ const RegistrationPage = () => {
                                                 <Phone className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                                                 <Input 
                                                     id="client_phone" name="client_phone"
-                                                    className="pl-9" placeholder="+237 675 321 739"
+                                                    className="pl-9" placeholder="+250 794 006 160"
                                                     value={formData.client_phone} onChange={handleInputChange}
                                                 />
                                             </div>
@@ -400,7 +400,7 @@ const RegistrationPage = () => {
                                                 <Building className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                                                 <Input 
                                                     id="company_name" name="company_name"
-                                                    className="pl-9" placeholder="Beyond Enterprise."
+                                                    className="pl-9" placeholder="Alpha Bridge."
                                                     value={formData.company_name} onChange={handleInputChange}
                                                 />
                                             </div>

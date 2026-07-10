@@ -236,7 +236,7 @@ export async function sendTextMessage(toPhone, text, messageType = 'text') {
 }
 
 export async function sendOtp(toPhone, otp, context = null) {
-  let message = `Your Beyond Enterprise verification code is: *${otp}*`;
+  let message = `Your Alpha Bridge verification code is: *${otp}*`;
   if (context) message += `\n\n${context}`;
   message += '\n\nThis code expires in 10 minutes. Do not share it with anyone.';
   return sendTextMessage(toPhone, message, 'otp');

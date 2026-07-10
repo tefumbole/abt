@@ -126,7 +126,7 @@ function Header() {
             {/* Desktop Contact Links & Login */}
             <div className="hidden lg:flex items-center space-x-4">
               <a
-                href="tel:+237675321739"
+                href="tel:+250794006160"
                 className="flex items-center space-x-2 text-white hover:text-[#D4AF37] transition-colors"
                 title="Call Us"
               >
@@ -314,11 +314,11 @@ function Header() {
 
                 <div className="pt-2 space-y-3 border-t border-gray-700 mt-2">
                   <a
-                    href="tel:+237675321739"
+                    href="tel:+250794006160"
                     className="flex items-center space-x-2 text-white hover:text-[#D4AF37] transition-colors"
                   >
                     <Phone className="w-5 h-5" />
-                    <span>+237 675 321 739</span>
+                    <span>+250 794 006 160</span>
                   </a>
                   <a
                     href="https://mail.hostinger.com"

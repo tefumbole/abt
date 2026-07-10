@@ -232,7 +232,7 @@ export function HrAttestationLetterPage() {
     <HrLetterComposePage
       letterType="attestation_of_work"
       title="Attestation of Work"
-      subtitle="Certify that a staff member has worked with Beyond Enterprise."
+      subtitle="Certify that a staff member has worked with Alpha Bridge."
     />
   );
 }

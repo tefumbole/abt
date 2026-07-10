@@ -52,7 +52,7 @@ const TimeSheetLoginPage = () => {
                 <Clock className="w-8 h-8 text-[#D4AF37]" />
             </div>
             <CardTitle className="text-2xl font-bold">Employee Time Sheet</CardTitle>
-            <p className="text-blue-200 text-sm">Beyond Enterprise</p>
+            <p className="text-blue-200 text-sm">Alpha Bridge</p>
         </CardHeader>
         <CardContent className="pt-8">
             <form onSubmit={handleLogin} className="space-y-4">

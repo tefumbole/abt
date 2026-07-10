@@ -44,7 +44,7 @@ const AgreementAcceptanceSection = () => {
         
         <h3 className="text-2xl font-bold text-white">Accept Terms & Invest</h3>
         <p className="text-gray-300">
-          By acknowledging this agreement, you confirm your understanding of the risks and rewards associated with investing in Beyond Enterprise.
+          By acknowledging this agreement, you confirm your understanding of the risks and rewards associated with investing in Alpha Bridge.
         </p>
 
         <div className="flex items-center space-x-3 bg-white/5 p-4 rounded-lg border border-white/10 w-full justify-center transition-colors hover:bg-white/10">

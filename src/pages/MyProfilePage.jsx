@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { useToast } from '@/components/ui/use-toast';
 import { Loader2, UserCog } from 'lucide-react';
 
-const looksGenerated = (email) => !email || email.includes('@customers.beyondtechworld.com');
+const looksGenerated = (email) => !email || email.includes('@customers.alpha-bridge.net');
 
 const MyProfilePage = () => {
   const { user, profile, loading: authLoading, getProfile } = useAuth();

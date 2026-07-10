@@ -76,7 +76,7 @@ function ProjectsPage() {
   return (
     <>
       <Helmet>
-        <title>Our Projects | Beyond Enterprise</title>
+        <title>Our Projects | Alpha Bridge</title>
         <meta
           name="description"
           content="Explore our recent projects in IT consultancy, networking, and audio-visual installations across Kigali, Rwanda."

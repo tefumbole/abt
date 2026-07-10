@@ -107,7 +107,7 @@ const StorageMonitoringPanel = () => {
                     <CardTitle className="flex items-center gap-2">
                         <Database className="w-5 h-5 text-[#003D82]" /> Enterprise Storage
                     </CardTitle>
-                    <CardDescription>Beyond Enterprise Pro Plan (100GB Quota)</CardDescription>
+                    <CardDescription>Alpha Bridge Pro Plan (100GB Quota)</CardDescription>
                 </div>
                 <Button variant="ghost" size="sm" onClick={refreshStorageData} disabled={loading}>
                     <RefreshCcw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />

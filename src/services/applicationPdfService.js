@@ -123,7 +123,7 @@ export const generateApplicationPDF = (application, job, qrCodeUrl) => {
   const footerY = doc.internal.pageSize.getHeight() - 20;
   doc.setFontSize(9);
   doc.setTextColor(150, 150, 150);
-  doc.text("Beyond Enterprise.", margin, footerY);
+  doc.text("Alpha Bridge.", margin, footerY);
   doc.text("This document confirms that your application has been received.", margin, footerY + 5);
 
   return doc;

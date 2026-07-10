@@ -292,7 +292,7 @@ const LoginPage = () => {
         <div className="bg-white rounded-2xl shadow-2xl overflow-hidden">
           <div className="bg-[#D4AF37] p-8 text-center relative">
              <div className="absolute top-0 left-0 w-full h-full bg-[#003D82] opacity-10 pattern-grid-lg"></div>
-             <h1 className="text-3xl font-bold text-[#003D82] relative z-10">Beyond Enterprise</h1>
+             <h1 className="text-3xl font-bold text-[#003D82] relative z-10">Alpha Bridge</h1>
              <p className="text-[#003D82] font-medium text-sm tracking-wider uppercase relative z-10 opacity-80">Technologies Ltd</p>
              <p className="text-[#003D82] text-xs font-semibold relative z-10 mt-2 opacity-90">
                {APP_VERSION_LABEL} {APP_VERSION}
@@ -305,7 +305,7 @@ const LoginPage = () => {
                 <p className="text-gray-500 text-sm">Sign in with your Email or Username</p>
                 {import.meta.env.DEV && import.meta.env.VITE_DEV_SKIP_OTP === 'true' && (
                   <p className="mt-3 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs text-blue-900">
-                    Local dev login: <strong>admin@beyondtechworld.com</strong> / <strong>ChangeMe@123456</strong>
+                    Local dev login: <strong>admin@alpha-bridge.net</strong> / <strong>ChangeMe@123456</strong>
                   </p>
                 )}
             </div>

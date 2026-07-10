@@ -273,7 +273,7 @@ const AppLoadingScreen = () => (
       <div className="mb-6">
         <Loader2 className="w-16 h-16 animate-spin text-[#D4AF37] mx-auto" />
       </div>
-      <h2 className="text-2xl font-bold text-white mb-2">Beyond Enterprise</h2>
+      <h2 className="text-2xl font-bold text-white mb-2">Alpha Bridge</h2>
       <p className="text-gray-300">Initializing application...</p>
     </div>
   </div>

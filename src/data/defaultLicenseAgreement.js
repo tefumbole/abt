@@ -5,7 +5,7 @@ export const DEFAULT_LICENSE_SECTIONS = [
     icon: 'Info',
     title: 'About the Company',
     paragraphs: [
-      'Beyond Enterprise is a private limited company registered in Rwanda, specializing in IT consultancy, networking, and security systems.',
+      'Alpha Bridge is a private limited company registered in Rwanda, specializing in IT consultancy, networking, and security systems.',
     ],
   },
   {

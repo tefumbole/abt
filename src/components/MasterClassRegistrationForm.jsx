@@ -25,12 +25,12 @@ const TRAINING_MODULES = [
 const MasterClassRegistrationForm = ({ onSubmit, isSubmitting, initialModule }) => {
   const [formData, setFormData] = useState({
     fullName: 'Sr. Engr. Mbole',
-    email: 'info@beyondtechworld.com',
-    phone: '+237 675 321 739',
+    email: 'info@alpha-bridge.net',
+    phone: '+250 794 006 160',
     modules: [],
     paymentPreference: 'pay_now', // pay_now or pay_later
     notes: '',
-    company: 'Beyond Enterprise.'
+    company: 'Alpha Bridge.'
   });
 
   const nameInputRef = useRef(null);
@@ -103,7 +103,7 @@ const MasterClassRegistrationForm = ({ onSubmit, isSubmitting, initialModule }) 
                   id="email"
                   name="email"
                   type="email"
-                  placeholder="info@beyondtechworld.com"
+                  placeholder="info@alpha-bridge.net"
                   className="pl-10 border-gray-300 focus:border-[#D4AF37] focus:ring-[#D4AF37]"
                   value={formData.email}
                   onChange={handleChange}
@@ -120,7 +120,7 @@ const MasterClassRegistrationForm = ({ onSubmit, isSubmitting, initialModule }) 
                 <Input
                   id="phone"
                   name="phone"
-                  placeholder="+237 675 321 739"
+                  placeholder="+250 794 006 160"
                   className="pl-10 border-gray-300 focus:border-[#D4AF37] focus:ring-[#D4AF37]"
                   value={formData.phone}
                   onChange={handleChange}

@@ -30,7 +30,7 @@ const AdminShortlistedApplicationsPage = () => {
   // Invite Modal
   const [inviteModalOpen, setInviteModalOpen] = useState(false);
   const [inviteData, setInviteData] = useState({
-    date: '', time: '', location: 'Beyond Enterprise Office', contactPerson: 'HR', contactPhone: ''
+    date: '', time: '', location: 'Alpha Bridge Office', contactPerson: 'HR', contactPhone: ''
   });
   const [invitingApp, setInvitingApp] = useState(null);
   const [sendingInvite, setSendingInvite] = useState(false);

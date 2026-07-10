@@ -24,9 +24,9 @@ const RegisterNowTab = () => {
     // Form State with pre-filled values
     const [formData, setFormData] = useState({
         client_name: 'Sr. Engr. Mbole',
-        client_email: 'info@beyondtechworld.com',
-        client_phone: '+237 675 321 739',
-        company_name: 'Beyond Enterprise.'
+        client_email: 'info@alpha-bridge.net',
+        client_phone: '+250 794 006 160',
+        company_name: 'Alpha Bridge.'
     });
     const [submitting, setSubmitting] = useState(false);
     const [successId, setSuccessId] = useState(null);

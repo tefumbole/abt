@@ -150,7 +150,7 @@ const SignUpModal = ({ isOpen, onClose, onSwitchToLogin, redirectOnSuccess }) =>
 
           <div className="text-center mb-6">
             <h2 className="text-3xl font-bold text-[#003D82] tracking-tight">Create Account</h2>
-            <p className="text-gray-500 mt-2">Join Beyond Enterprise</p>
+            <p className="text-gray-500 mt-2">Join Alpha Bridge</p>
           </div>
 
           {success ? (

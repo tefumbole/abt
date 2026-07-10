@@ -27,7 +27,7 @@ export function getAppBaseUrl() {
   if (typeof window !== 'undefined' && window.location?.origin) {
     return window.location.origin;
   }
-  return import.meta.env.VITE_APP_URL || 'https://beyondtechworld.com';
+  return import.meta.env.VITE_APP_URL || 'https://alpha-bridge.net';
 }
 
 export function buildTaskInviteUrl(inviteToken) {
@@ -60,4 +60,4 @@ You have been assigned a new task:
 👉 Open this link to *Accept* or *Reject* your task:
 {login_link}
 
-_Beyond Enterprise_`;
+_Alpha Bridge_`;

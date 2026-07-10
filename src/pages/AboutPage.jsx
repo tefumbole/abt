@@ -21,8 +21,8 @@ function AboutPage() {
   }];
   return <>
       <Helmet>
-        <title>About Beyond Enterprise | Our Vision & Team</title>
-        <meta name="description" content="Learn about Beyond Enterprise — our history, mission, leadership, and commitment to technological excellence in Rwanda and beyond." />
+        <title>About Alpha Bridge | Our Vision & Team</title>
+        <meta name="description" content="Learn about Alpha Bridge — our history, mission, leadership, and commitment to technological excellence in Rwanda and beyond." />
       </Helmet>
 
       {/* Hero Section */}

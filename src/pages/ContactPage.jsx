@@ -87,9 +87,9 @@ function ContactPage() {
     }
 
     // Create email body
-    const subject = 'New Website Inquiry — Beyond Enterprise';
+    const subject = 'New Website Inquiry — Alpha Bridge';
     const body = `Name: ${formData.name}%0D%0APhone: ${formData.phone}%0D%0AEmail: ${formData.email}%0D%0AService: ${formData.service}%0D%0A%0D%0AMessage:%0D%0A${formData.message}`;
-    const mailtoUrl = `mailto:info@beyondtechworld.com?subject=${encodeURIComponent(subject)}&body=${body}`;
+    const mailtoUrl = `mailto:info@alpha-bridge.net?subject=${encodeURIComponent(subject)}&body=${body}`;
 
     // Show success toast
     toast({
@@ -104,10 +104,10 @@ function ContactPage() {
   return (
     <>
       <Helmet>
-        <title>Contact Us | Beyond Enterprise</title>
+        <title>Contact Us | Alpha Bridge</title>
         <meta
           name="description"
-          content="Get in touch with Beyond Enterprise. Contact us via WhatsApp, email, or our contact form for IT consultancy and technology solutions in Kigali."
+          content="Get in touch with Alpha Bridge. Contact us via WhatsApp, email, or our contact form for IT consultancy and technology solutions in Kigali."
         />
       </Helmet>
 
@@ -191,7 +191,7 @@ function ContactPage() {
                     onChange={handleChange}
                     required
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0066CC] focus:border-transparent transition-all bg-white text-gray-900"
-                    placeholder="info@beyondtechworld.com"
+                    placeholder="info@alpha-bridge.net"
                   />
                 </div>
 
@@ -272,12 +272,12 @@ function ContactPage() {
                     <div>
                       <h3 className="font-semibold text-[#003D82] mb-1">WhatsApp</h3>
                       <a
-                        href="https://wa.me/237675321739"
+                        href="https://wa.me/250794006160"
                         target="_blank"
                         rel="noopener noreferrer"
                         className="text-gray-700 hover:text-[#0066CC] transition-colors"
                       >
-                        +237 675 321 739
+                        +250 794 006 160
                       </a>
                     </div>
                   </div>
@@ -289,10 +289,10 @@ function ContactPage() {
                     <div>
                       <h3 className="font-semibold text-[#003D82] mb-1">Phone</h3>
                       <a
-                        href="tel:+237675321739"
+                        href="tel:+250794006160"
                         className="text-gray-700 hover:text-[#0066CC] transition-colors"
                       >
-                        +237 675 321 739
+                        +250 794 006 160
                       </a>
                     </div>
                   </div>
@@ -304,10 +304,10 @@ function ContactPage() {
                     <div>
                       <h3 className="font-semibold text-[#003D82] mb-1">Email</h3>
                       <a
-                        href="mailto:info@beyondtechworld.com"
+                        href="mailto:info@alpha-bridge.net"
                         className="text-gray-700 hover:text-[#0066CC] transition-colors"
                       >
-                        info@beyondtechworld.com
+                        info@alpha-bridge.net
                       </a>
                     </div>
                   </div>
@@ -319,12 +319,12 @@ function ContactPage() {
                     <div>
                       <h3 className="font-semibold text-[#003D82] mb-1">Website</h3>
                       <a
-                        href="https://www.beyondtechworld.com"
+                        href="https://www.alpha-bridge.net"
                         target="_blank"
                         rel="noopener noreferrer"
                         className="text-gray-700 hover:text-[#0066CC] transition-colors"
                       >
-                        www.beyondtechworld.com
+                        www.alpha-bridge.net
                       </a>
                     </div>
                   </div>

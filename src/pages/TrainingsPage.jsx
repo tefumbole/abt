@@ -42,7 +42,7 @@ function TrainingsPage() {
   return (
     <>
       <Helmet>
-        <title>Professional IT Training Programs 2026 | Beyond Enterprise</title>
+        <title>Professional IT Training Programs 2026 | Alpha Bridge</title>
         <meta
           name="description"
           content="Advanced technical training in AI, Cloud Computing, Cybersecurity, IT Consultancy, VoIP, Network Infrastructure, and CCTV Systems. Professional hands-on learning in Kigali, Rwanda."
@@ -290,7 +290,7 @@ function TrainingsPage() {
             Ready to Transform Your Career?
           </h2>
           <p className="text-xl text-blue-100 mb-10 max-w-2xl mx-auto">
-            Join thousands of professionals who have upgraded their skills with Beyond Enterprise
+            Join thousands of professionals who have upgraded their skills with Alpha Bridge
           </p>
           
           <div className="flex flex-col items-center space-y-6">
@@ -303,12 +303,12 @@ function TrainingsPage() {
             </Link>
             
             <div className="flex flex-col sm:flex-row items-center gap-6 mt-8 text-blue-200 text-sm">
-              <a href="mailto:info@beyondtechworld.com" className="hover:text-[#D4AF37] transition-colors">
-                info@beyondtechworld.com
+              <a href="mailto:info@alpha-bridge.net" className="hover:text-[#D4AF37] transition-colors">
+                info@alpha-bridge.net
               </a>
               <span className="hidden sm:inline text-blue-400">•</span>
-              <a href="tel:+237675321739" className="hover:text-[#D4AF37] transition-colors">
-                +237 675 321 739
+              <a href="tel:+250794006160" className="hover:text-[#D4AF37] transition-colors">
+                +250 794 006 160
               </a>
             </div>
           </div>

@@ -114,7 +114,7 @@ export const createCertificatePDF = (cert) => {
     doc.text(`Date: ${dateStr}`, 60, 160);
     doc.line(50, 165, 100, 165);
     
-    doc.text("Director, Beyond Enterprise", 200, 170);
+    doc.text("Director, Alpha Bridge", 200, 170);
     doc.line(180, 165, 250, 165); // Signature Line
     
     // ID

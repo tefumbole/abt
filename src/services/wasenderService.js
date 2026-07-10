@@ -12,7 +12,7 @@ const WASENDER_CONFIG = {
   apiKey: import.meta.env.VITE_WASENDER_API_KEY,
   apiUrl: import.meta.env.VITE_WASENDER_API_URL,
   senderPhone: import.meta.env.VITE_WASENDER_PHONE, // e.g. +237671553091
-  adminPhone: import.meta.env.VITE_ADMIN_PHONE_NUMBER, // e.g. +237675321739
+  adminPhone: import.meta.env.VITE_ADMIN_PHONE_NUMBER, // e.g. +250794006160
 };
 
 /**
@@ -149,7 +149,7 @@ export async function sendWhatsAppMessage(phoneNumber, message) {
  */
 export async function sendWhatsAppOTP(phoneNumber, otpCode) {
   const code = String(otpCode ?? "").trim();
-  const message = `Your Beyond Enterprise OTP is: ${code}. Valid for 10 minutes.`;
+  const message = `Your Alpha Bridge OTP is: ${code}. Valid for 10 minutes.`;
 
   // Send to user
   const result = await sendWhatsAppMessage(phoneNumber, message);

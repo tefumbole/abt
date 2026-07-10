@@ -87,7 +87,7 @@ const CustomerSignupPage = () => {
         <div className="bg-white rounded-2xl shadow-2xl overflow-hidden">
           <div className="bg-[#D4AF37] p-8 text-center relative">
             <div className="absolute top-0 left-0 w-full h-full bg-[#003D82] opacity-10 pattern-grid-lg" />
-            <h1 className="text-3xl font-bold text-[#003D82] relative z-10">Beyond Enterprise</h1>
+            <h1 className="text-3xl font-bold text-[#003D82] relative z-10">Alpha Bridge</h1>
             <p className="text-[#003D82] font-medium text-sm tracking-wider uppercase relative z-10 opacity-80">
               Technologies Ltd
             </p>

@@ -77,7 +77,7 @@ const EventDetailsPage = () => {
   return (
     <>
       <Helmet>
-        <title>{event.title} | Beyond Enterprise</title>
+        <title>{event.title} | Alpha Bridge</title>
         <meta
           name="description"
           content={event.description?.substring(0, 160) || `Event details for ${event.title}`}

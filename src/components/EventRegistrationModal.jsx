@@ -16,7 +16,7 @@ function EventRegistrationModal({ isOpen, onClose }) {
     // 1. Prepare data for "Backend" (Mock/Simulated)
     // In a real app, this would be: await fetch('/api/send-email', { method: 'POST', body: JSON.stringify(data) })
     const emailPayload = {
-      to: 'info@beyondtechworld.com',
+      to: 'info@alpha-bridge.net',
       subject: 'New Event Registration: Grand Launching',
       body: `Name: ${data.fullName}\nAddress: ${data.address}\nRole: ${finalRole}`
     };
@@ -33,9 +33,9 @@ function EventRegistrationModal({ isOpen, onClose }) {
       console.log('-----------------------');
 
       // 2. Send via WhatsApp (Client-side execution)
-      const whatsappMessage = `Hello Beyond Enterprise, I'm registering for the Grand Launching event on April 5th 2026. Name: ${data.fullName}, Address: ${data.address}, Role: ${finalRole}. Please confirm my registration.`;
+      const whatsappMessage = `Hello Alpha Bridge, I'm registering for the Grand Launching event on April 5th 2026. Name: ${data.fullName}, Address: ${data.address}, Role: ${finalRole}. Please confirm my registration.`;
       const encodedMessage = encodeURIComponent(whatsappMessage);
-      const whatsappUrl = `https://wa.me/237675321739?text=${encodedMessage}`;
+      const whatsappUrl = `https://wa.me/250794006160?text=${encodedMessage}`;
       
       // Open WhatsApp in new tab
       window.open(whatsappUrl, '_blank');

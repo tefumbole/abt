@@ -1,8 +1,8 @@
 import { supabase } from '@/lib/customSupabaseClient';
 
 const DEFAULTS = {
-  company_name: import.meta.env.VITE_COMPANY_NAME || 'Beyond Enterprise',
-  default_header: import.meta.env.VITE_COMPANY_NAME || 'Beyond Enterprise',
+  company_name: import.meta.env.VITE_COMPANY_NAME || 'Alpha Bridge',
+  default_header: import.meta.env.VITE_COMPANY_NAME || 'Alpha Bridge',
   serial_prefix: 'ABT/ANN',
   next_serial: 1,
   serial_padding: 6,

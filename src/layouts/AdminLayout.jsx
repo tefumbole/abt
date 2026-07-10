@@ -414,7 +414,7 @@ const AdminLayout = () => {
         sidebarOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
       )}>
         <div className="p-6 border-b border-[#D4AF37]/30 bg-[#002855] shrink-0">
-          <h1 className="text-2xl font-bold text-[#D4AF37]">Beyond Enterprise</h1>
+          <h1 className="text-2xl font-bold text-[#D4AF37]">Alpha Bridge</h1>
           <p className="text-xs text-gray-300 mt-1 uppercase tracking-widest">Technologies Ltd</p>
         </div>
 

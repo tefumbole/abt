@@ -38,7 +38,7 @@ export async function generateHrPayslipPdf(data, format = 'a4') {
   doc.rect(0, 0, cfg.width, cfg.headerH, 'F');
   doc.setTextColor(255, 255, 255);
   doc.setFontSize(format === 'thermal' ? 9 : 14);
-  doc.text('Beyond Enterprise', cfg.margin, cfg.headerH * 0.45);
+  doc.text('Alpha Bridge', cfg.margin, cfg.headerH * 0.45);
   doc.setFontSize(format === 'thermal' ? 8 : 11);
   doc.text('PAYSLIP', cfg.margin, cfg.headerH * 0.8);
 

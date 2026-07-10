@@ -6,7 +6,7 @@ import { getSystemSettings } from '@/services/settingsService';
  * Renders the company logo. Default PNG has a transparent background — no blend tricks.
  */
 const BrandLogo = ({
-  alt = 'Beyond Enterprise',
+  alt = 'Alpha Bridge',
   className = 'h-[40px] md:h-[50px] lg:h-[60px] w-auto object-contain',
   variant = 'onDark',
   preferSystemLogo = true,

@@ -20,14 +20,14 @@ export const getSystemSettings = async () => {
              // Create default row if it doesn't exist
              const { data: newData, error: insertError } = await supabase
                 .from('system_settings')
-                .insert([{ developed_by: 'Beyond Enterprise', copyright_text: 'All rights reserved' }])
+                .insert([{ developed_by: 'Alpha Bridge', copyright_text: 'All rights reserved' }])
                 .select()
                 .single();
              if (!insertError) return enrichSystemSettingsAssets(newData);
         }
         console.warn('getSystemSettings error:', error.message);
         return enrichSystemSettingsAssets({
-            developed_by: 'Beyond Enterprise',
+            developed_by: 'Alpha Bridge',
             copyright_text: 'All rights reserved',
             logo_url: null
         });

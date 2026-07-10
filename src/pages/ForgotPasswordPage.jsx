@@ -85,7 +85,7 @@ const ForgotPasswordPage = () => {
                   <Input
                     id="phone"
                     type="tel"
-                    placeholder="+237675321739"
+                    placeholder="+250794006160"
                     className="pl-10"
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}

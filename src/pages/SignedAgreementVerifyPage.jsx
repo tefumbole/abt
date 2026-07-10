@@ -46,7 +46,7 @@ const SignedAgreementVerifyPage = () => {
   return (
     <>
       <Helmet>
-        <title>Verify Signed Agreement | Beyond Enterprise</title>
+        <title>Verify Signed Agreement | Alpha Bridge</title>
       </Helmet>
 
       <div className="min-h-screen bg-gray-100 py-8 px-4">

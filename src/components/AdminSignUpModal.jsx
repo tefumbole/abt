@@ -195,7 +195,7 @@ const AdminSignUpModal = ({ isOpen, onClose, onSwitchToLogin }) => {
                         <div className="space-y-1.5">
                             <Label htmlFor="signup-email" className="text-gray-700">Email Address</Label>
                             <Input 
-                                id="signup-email" name="email" type="email" placeholder="admin@beyondtechworld.com" 
+                                id="signup-email" name="email" type="email" placeholder="admin@alpha-bridge.net" 
                                 value={formData.email} onChange={handleChange} 
                                 required className="focus:border-[#D4AF37] focus:ring-[#D4AF37]/20" 
                             />

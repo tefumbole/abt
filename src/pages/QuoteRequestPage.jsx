@@ -96,7 +96,7 @@ const QuoteRequestPage = () => {
     return (
         <>
             <Helmet>
-                <title>Request a Quote | Beyond Enterprise</title>
+                <title>Request a Quote | Alpha Bridge</title>
                 <meta name="description" content="Get a custom quote for IT consultancy, networking, audio engineering, or security systems." />
             </Helmet>
 
@@ -117,7 +117,7 @@ const QuoteRequestPage = () => {
                             </div>
                             
                             <div className="bg-white/10 backdrop-blur-md rounded-xl p-6 border border-white/10">
-                                <h3 className="font-semibold text-[#D4AF37] mb-2">Why Beyond Enterprise?</h3>
+                                <h3 className="font-semibold text-[#D4AF37] mb-2">Why Alpha Bridge?</h3>
                                 <ul className="space-y-2 text-sm text-gray-200">
                                     <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-[#D4AF37]" /> Industry Standard Equipment</li>
                                     <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-[#D4AF37]" /> Expert Engineers</li>

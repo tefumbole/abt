@@ -6,7 +6,7 @@ export function generateHrLetterPdf({ subject, body, staff, referenceCode }) {
   doc.rect(0, 0, 210, 28, 'F');
   doc.setTextColor(255, 255, 255);
   doc.setFontSize(14);
-  doc.text('Beyond Enterprise', 14, 12);
+  doc.text('Alpha Bridge', 14, 12);
   doc.setFontSize(10);
   doc.text('Official HR Letter', 14, 20);
 

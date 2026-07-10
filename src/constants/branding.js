@@ -1,28 +1,28 @@
 /** Canonical brand assets and contact details — single source of truth */
 
 export const COMPANY_NAME =
-  import.meta.env.VITE_COMPANY_NAME || 'Beyond Enterprise';
+  import.meta.env.VITE_COMPANY_NAME || 'Alpha Bridge';
 
 export const COMPANY_NAME_SHORT =
-  import.meta.env.VITE_COMPANY_NAME_SHORT || 'Beyond Enterprise';
+  import.meta.env.VITE_COMPANY_NAME_SHORT || 'Alpha Bridge';
 
 export const WHATSAPP_PHONE =
-  import.meta.env.VITE_ADMIN_PHONE_NUMBER || '+237675321739';
+  import.meta.env.VITE_ADMIN_PHONE_NUMBER || '+250794006160';
 
 /** Digits only — for wa.me links */
 export const WHATSAPP_WA_ME = WHATSAPP_PHONE.replace(/\D/g, '');
 
 export const CONTACT_PHONE_DISPLAY =
-  import.meta.env.VITE_CONTACT_PHONE_DISPLAY || '+237 675 321 739';
+  import.meta.env.VITE_CONTACT_PHONE_DISPLAY || '+250 794 006 160';
 
 export const WEBSITE_URL =
-  import.meta.env.VITE_SITE_URL || 'https://beyondtechworld.com';
+  import.meta.env.VITE_SITE_URL || 'https://alpha-bridge.net';
 
 export const WEBSITE_HOST =
-  import.meta.env.VITE_WEBSITE_HOST || 'www.beyondtechworld.com';
+  import.meta.env.VITE_WEBSITE_HOST || 'www.alpha-bridge.net';
 
 export const CONTACT_EMAIL =
-  import.meta.env.VITE_CONTACT_EMAIL || 'info@beyondtechworld.com';
+  import.meta.env.VITE_CONTACT_EMAIL || 'info@alpha-bridge.net';
 
 export const DEFAULT_LOGO_URL =
   import.meta.env.VITE_LOGO_URL || '/branding/beyond-logo.png';

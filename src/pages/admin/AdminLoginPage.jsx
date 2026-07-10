@@ -89,7 +89,7 @@ const AdminLoginPage = () => {
         {/* Branding Header */}
         <div className="bg-[#1E3A8A] p-8 text-center relative overflow-hidden">
           <div className="relative z-10">
-            <h1 className="text-3xl font-bold text-[#D4AF37] tracking-tight">Beyond Enterprise</h1>
+            <h1 className="text-3xl font-bold text-[#D4AF37] tracking-tight">Alpha Bridge</h1>
             <p className="text-blue-100 mt-2 text-sm uppercase tracking-wider">Technologies Ltd</p>
             <div className="mt-4 inline-flex items-center gap-2 px-3 py-1 bg-[#D4AF37] text-[#1E3A8A] text-xs font-bold rounded-full">
               <ShieldCheck className="w-3 h-3" /> SECURE ADMIN PORTAL

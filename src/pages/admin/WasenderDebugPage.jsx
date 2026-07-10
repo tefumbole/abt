@@ -9,7 +9,7 @@ import { CheckCircle2, XCircle, Send, Phone, KeyRound, Server } from 'lucide-rea
 
 const WasenderDebugPage = () => {
   const [testPhone, setTestPhone] = useState('');
-  const [testMsg, setTestMsg] = useState('Hello! This is a test message from Beyond Enterprise system diagnostics.');
+  const [testMsg, setTestMsg] = useState('Hello! This is a test message from Alpha Bridge system diagnostics.');
   const [status, setStatus] = useState(null);
   const [loading, setLoading] = useState(false);
   const [config, setConfig] = useState({

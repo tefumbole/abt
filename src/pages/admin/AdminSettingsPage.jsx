@@ -94,7 +94,7 @@ const AdminSettingsPage = () => {
 
   // Specific task function: Update to requested phone number
   const handleQuickPhoneUpdate = async () => {
-      const targetPhone = '+237675321739';
+      const targetPhone = '+250794006160';
       setFormData(prev => ({ ...prev, phone: targetPhone }));
       
       // We also trigger the save immediately for better UX

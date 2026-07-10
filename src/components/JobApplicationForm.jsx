@@ -26,9 +26,9 @@ const JobApplicationForm = ({ isOpen, onClose, job, onSuccess }) => {
   const { register, handleSubmit, control, formState: { errors }, reset, setValue, watch } = useForm({
     defaultValues: {
       full_name: "Engr. Mbole",
-      email: "info@beyondtechworld.com",
+      email: "info@alpha-bridge.net",
       countryCode: '+250',
-      phone: "675321739",
+      phone: "794006160",
       availability: 'Immediately'
     }
   });
@@ -128,8 +128,8 @@ const JobApplicationForm = ({ isOpen, onClose, job, onSuccess }) => {
         countryCode: '+250', 
         availability: 'Immediately',
         full_name: "Engr. Mbole",
-        email: "info@beyondtechworld.com",
-        phone: "675321739"
+        email: "info@alpha-bridge.net",
+        phone: "794006160"
       });
       setResumeFile(null);
       onClose();

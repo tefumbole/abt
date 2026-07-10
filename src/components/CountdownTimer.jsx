@@ -59,7 +59,7 @@ const CountdownTimer = ({ className = "" }) => {
         
         <h3 className="text-xl md:text-2xl font-bold text-white flex items-center justify-center gap-3">
           <Rocket className="w-5 h-5 md:w-6 md:h-6 text-[#D4AF37]" />
-          Beyond Enterprise Grand Launch
+          Alpha Bridge Grand Launch
         </h3>
         <p className="text-gray-300 mt-1 font-medium text-sm">April 5th, 2026 • 11:00 AM</p>
       </div>

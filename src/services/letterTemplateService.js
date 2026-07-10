@@ -7,8 +7,8 @@ const init = () => {
             id: 'tmpl-welcome',
             category_id: 'cat-general',
             name: 'Welcome Letter',
-            subject: 'Welcome to Beyond Enterprise',
-            body: 'Dear {USER_NAME},\n\nWe are delighted to welcome you to Beyond Enterprise.\n\nSincerely,\n{ADMIN_NAME}',
+            subject: 'Welcome to Alpha Bridge',
+            body: 'Dear {USER_NAME},\n\nWe are delighted to welcome you to Alpha Bridge.\n\nSincerely,\n{ADMIN_NAME}',
             placeholders: ['{USER_NAME}', '{ADMIN_NAME}'],
             created_at: new Date().toISOString()
         }]));

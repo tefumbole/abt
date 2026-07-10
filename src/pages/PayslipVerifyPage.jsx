@@ -54,7 +54,7 @@ export default function PayslipVerifyPage() {
               <div className="flex justify-between border-b py-2"><span className="text-gray-500">Date of employment</span><span>{data.hire_date || '—'}</span></div>
               <div className="flex justify-between border-b py-2"><span className="text-gray-500">Payroll</span><span>{data.payroll_title}</span></div>
               <div className="flex justify-between py-2"><span className="text-gray-500">Net pay</span><span className="font-bold text-[#003D82]">{Number(data.net_amount || 0).toLocaleString()} FCFA</span></div>
-              <p className="text-xs text-center text-gray-400 pt-2">Beyond Enterprise</p>
+              <p className="text-xs text-center text-gray-400 pt-2">Alpha Bridge</p>
             </>
           )}
         </CardContent>

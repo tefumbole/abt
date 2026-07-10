@@ -79,7 +79,7 @@ function WhatsAppModal() {
               <div className="bg-navy px-6 py-4 flex items-center justify-between">
                 <div className="flex items-center space-x-2 text-white">
                   <MessageCircle className="w-6 h-6 text-gold" />
-                  <h3 className="text-lg font-bold">Chat with Beyond Enterprise</h3>
+                  <h3 className="text-lg font-bold">Chat with Alpha Bridge</h3>
                 </div>
                 <button 
                   onClick={closeModal}

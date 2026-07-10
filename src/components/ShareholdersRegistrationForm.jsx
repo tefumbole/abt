@@ -19,10 +19,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 const SHAREHOLDER_AGREEMENT_TEXT = `
 SHAREHOLDER AGREEMENT
 
-This Shareholder Agreement ("Agreement") is entered into between Beyond Enterprise ("Company") and the undersigned shareholder ("Shareholder").
+This Shareholder Agreement ("Agreement") is entered into between Alpha Bridge ("Company") and the undersigned shareholder ("Shareholder").
 
 1. SHARE OWNERSHIP
-The Shareholder agrees to purchase shares in Beyond Enterprise at the agreed price per share.
+The Shareholder agrees to purchase shares in Alpha Bridge at the agreed price per share.
 
 2. RIGHTS AND OBLIGATIONS
 - Shareholders have voting rights proportional to their share ownership
@@ -63,7 +63,7 @@ const ShareholdersRegistrationForm = () => {
   const [formData, setFormData] = useState({
     full_name: '',
     email: '',
-    country_code: '+237',
+    country_code: '+250',
     phone_number: '',
     company_name: '',
     address: '',
@@ -398,7 +398,7 @@ const ShareholdersRegistrationForm = () => {
         setFormData({
           full_name: '',
           email: '',
-          country_code: '+237',
+          country_code: '+250',
           phone_number: '',
           company_name: '',
           address: '',
@@ -473,7 +473,7 @@ const ShareholdersRegistrationForm = () => {
         <CardHeader className="bg-gradient-to-r from-[#003D82] to-[#002855] text-white">
           <CardTitle className="text-2xl">{tForm('form_title', 'Become a Shareholder')}</CardTitle>
           <CardDescription className="text-blue-100">
-            {tForm('form_subtitle', 'Book your shares in Beyond Enterprise (No login required)')}
+            {tForm('form_subtitle', 'Book your shares in Alpha Bridge (No login required)')}
           </CardDescription>
         </CardHeader>
 
@@ -566,7 +566,7 @@ const ShareholdersRegistrationForm = () => {
                       id="phone_number" 
                       name="phone_number"
                       type="tel"
-                      placeholder="675321739"
+                      placeholder="794006160"
                       className={`pl-10 bg-white text-gray-900 ${fieldErrors.phone_number ? 'border-red-500' : ''}`}
                       value={formData.phone_number}
                       onChange={handlePhoneNumberChange}
@@ -588,7 +588,7 @@ const ShareholdersRegistrationForm = () => {
                     <Input 
                       id="company_name" 
                       name="company_name" 
-                      placeholder="Beyond Enterprise"
+                      placeholder="Alpha Bridge"
                       className="pl-10 bg-white text-gray-900"
                       value={formData.company_name}
                       onChange={handleChange}

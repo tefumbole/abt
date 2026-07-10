@@ -33,7 +33,7 @@ const CompleteProfilePage = () => {
         ...prev,
         full_name: profile.full_name || prev.full_name,
         username: profile.username && !/^\d+$/.test(profile.username) ? profile.username : prev.username,
-        email: profile.email && !profile.email.includes('@customers.beyondtechworld.com') ? profile.email : prev.email,
+        email: profile.email && !profile.email.includes('@customers.alpha-bridge.net') ? profile.email : prev.email,
         address: profile.address || prev.address,
       }));
     }

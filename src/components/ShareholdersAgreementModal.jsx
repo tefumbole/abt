@@ -55,7 +55,7 @@ const ShareholdersAgreementModal = ({ isOpen, onClose, onAccept }) => {
                 <ShieldCheck className="w-6 h-6 text-[#D4AF37]" />
                 <div>
                   <h2 className="text-xl font-bold">Shareholders Agreement</h2>
-                  <p className="text-xs text-blue-200">Beyond Enterprise</p>
+                  <p className="text-xs text-blue-200">Alpha Bridge</p>
                 </div>
               </div>
               <button
@@ -76,7 +76,7 @@ const ShareholdersAgreementModal = ({ isOpen, onClose, onAccept }) => {
               </div>
 
               <AgreementSection title="1. About the Company">
-                <p>Beyond Enterprise is a private limited company registered in Rwanda. We specialize in IT consultancy, networking, security systems, and AV engineering. By investing, you are becoming a part of our growth story.</p>
+                <p>Alpha Bridge is a private limited company registered in Rwanda. We specialize in IT consultancy, networking, security systems, and AV engineering. By investing, you are becoming a part of our growth story.</p>
               </AgreementSection>
 
               <AgreementSection title="2. Share Price & Investment Amount">
@@ -124,7 +124,7 @@ const ShareholdersAgreementModal = ({ isOpen, onClose, onAccept }) => {
                     <ShieldCheck className="w-5 h-5" /> Transparency & Trust
                  </h3>
                  <p className="text-sm text-gray-600 mb-4">
-                    Beyond Enterprise commits to regular financial reporting, Annual General Meetings (AGM), and open communication lines for all investors.
+                    Alpha Bridge commits to regular financial reporting, Annual General Meetings (AGM), and open communication lines for all investors.
                  </p>
                  
                  <div className="bg-gray-100 p-4 rounded-lg">

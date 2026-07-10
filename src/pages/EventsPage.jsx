@@ -61,7 +61,7 @@ const EventsPage = () => {
           <Calendar className="w-16 h-16 text-gray-400 mx-auto mb-4" />
           <h2 className="text-2xl font-bold text-gray-800 mb-2">No Events Yet</h2>
           <p className="text-gray-600">
-            Check back soon for upcoming events and highlights from Beyond Enterprise.
+            Check back soon for upcoming events and highlights from Alpha Bridge.
           </p>
         </div>
       </div>
@@ -71,10 +71,10 @@ const EventsPage = () => {
   return (
     <>
       <Helmet>
-        <title>Events & Highlights | Beyond Enterprise</title>
+        <title>Events & Highlights | Alpha Bridge</title>
         <meta
           name="description"
-          content="Discover upcoming events, workshops, and highlights from Beyond Enterprise. Join us for networking, training, and technology showcases."
+          content="Discover upcoming events, workshops, and highlights from Alpha Bridge. Join us for networking, training, and technology showcases."
         />
       </Helmet>
 

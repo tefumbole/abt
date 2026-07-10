@@ -97,7 +97,7 @@ const MembersSection = () => {
         <div className="text-center mb-16">
           <h2 className="text-4xl font-bold text-white mb-4">Our Leadership</h2>
           <div className="h-1 w-24 bg-[#D4AF37] mx-auto"></div>
-          <p className="mt-4 text-xl text-gray-300">The visionaries driving Beyond Enterprise forward</p>
+          <p className="mt-4 text-xl text-gray-300">The visionaries driving Alpha Bridge forward</p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
