@@ -7,7 +7,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/components/ui/use-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import { X, Upload, Loader2, Trash2, Image as ImageIcon } from 'lucide-react';
+import { Loader2, Trash2 } from 'lucide-react';
+import ImageUploadZone from '@/components/ui/ImageUploadZone';
 
 const EventForm = ({ event = null, onClose }) => {
   const { toast } = useToast();
@@ -34,9 +35,9 @@ const EventForm = ({ event = null, onClose }) => {
     }
   };
 
-  const handleImageUpload = async (e) => {
-    const files = Array.from(e.target.files || []);
-    if (files.length === 0) return;
+  const uploadImageFiles = async (files) => {
+    const list = Array.from(files || []).filter((f) => f?.type?.startsWith('image/'));
+    if (list.length === 0) return;
 
     if (!isEditing) {
       toast({
@@ -50,7 +51,7 @@ const EventForm = ({ event = null, onClose }) => {
     setUploadingImages(true);
 
     try {
-      for (const file of files) {
+      for (const file of list) {
         const { publicUrl, path } = await uploadEventImage(event.id, file);
         const imageData = await addEventImage(event.id, {
           image_url: publicUrl,
@@ -64,7 +65,7 @@ const EventForm = ({ event = null, onClose }) => {
 
       toast({
         title: 'Images Uploaded',
-        description: `${files.length} image(s) uploaded successfully`,
+        description: `${list.length} image(s) uploaded successfully`,
         className: 'bg-green-600 text-white'
       });
     } catch (err) {
@@ -252,37 +253,16 @@ const EventForm = ({ event = null, onClose }) => {
           {/* Image Gallery Upload (Only for editing) */}
           {isEditing && (
             <div className="space-y-4 border-t pt-6">
-              <div className="flex items-center justify-between">
-                <Label className="text-lg font-semibold">Image Gallery</Label>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => document.getElementById('image-upload')?.click()}
-                  disabled={uploadingImages}
-                >
-                  {uploadingImages ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Uploading...
-                    </>
-                  ) : (
-                    <>
-                      <Upload className="w-4 h-4 mr-2" />
-                      Upload Images
-                    </>
-                  )}
-                </Button>
-                <input
-                  id="image-upload"
-                  type="file"
-                  multiple
-                  accept="image/*"
-                  onChange={handleImageUpload}
-                  className="hidden"
-                />
-              </div>
+              <Label className="text-lg font-semibold">Image Gallery</Label>
+              <ImageUploadZone
+                disabled={uploadingImages}
+                accept="image/*"
+                onFile={(file) => uploadImageFiles([file])}
+                title={uploadingImages ? 'Uploading…' : 'Click, drop, or paste event images'}
+                hint="Ctrl/Cmd+V supported — save the event first before uploading"
+              />
 
-              {images.length > 0 ? (
+              {images.length > 0 && (
                 <div className="grid grid-cols-3 gap-4">
                   {images.map((img) => (
                     <div key={img.id} className="relative group">
@@ -302,11 +282,6 @@ const EventForm = ({ event = null, onClose }) => {
                       </Button>
                     </div>
                   ))}
-                </div>
-              ) : (
-                <div className="text-center py-8 bg-gray-50 rounded-lg border-2 border-dashed">
-                  <ImageIcon className="w-12 h-12 text-gray-400 mx-auto mb-2" />
-                  <p className="text-gray-600 text-sm">No images uploaded yet</p>
                 </div>
               )}
             </div>

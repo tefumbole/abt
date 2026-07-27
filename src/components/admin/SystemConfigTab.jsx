@@ -7,6 +7,7 @@ import { Loader2, UploadCloud, Trash2, Image as ImageIcon, Save } from 'lucide-r
 import { useToast } from '@/components/ui/use-toast';
 import { getSystemSettings, updateSystemSettings } from '@/services/settingsService';
 import { uploadLogo, uploadPdfLetterheadImage, deleteStoredAsset } from '@/services/logoUploadService';
+import ImageUploadZone from '@/components/ui/ImageUploadZone';
 
 const SystemConfigTab = () => {
     const { toast } = useToast();
@@ -113,6 +114,20 @@ const SystemConfigTab = () => {
             toast({ variant: "destructive", title: "Upload Failed", description: error.message });
         } finally {
             setUploading(false);
+        }
+    };
+
+    const handlePasteLogo = (e) => {
+        const items = Array.from(e.clipboardData?.items || []);
+        for (const item of items) {
+            if (item.kind === 'file' && item.type.startsWith('image/')) {
+                const file = item.getAsFile();
+                if (file) {
+                    e.preventDefault();
+                    handleFile(file);
+                }
+                break;
+            }
         }
     };
 
@@ -234,10 +249,12 @@ const SystemConfigTab = () => {
                 accept="image/png, image/jpeg, image/webp, image/svg+xml"
                 onChange={(e) => handleLetterheadUpload(e.target.files?.[0], type)}
             />
-            <div className="border-2 border-dashed border-gray-200 rounded-xl p-6 flex flex-col items-center justify-center min-h-[180px] bg-gray-50/50">
-                {isUploading ? (
+            {isUploading ? (
+                <div className="border-2 border-dashed border-gray-200 rounded-xl p-6 flex items-center justify-center min-h-[180px] bg-gray-50/50">
                     <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
-                ) : imageUrl ? (
+                </div>
+            ) : imageUrl ? (
+                <div className="border-2 border-dashed border-gray-200 rounded-xl p-6 flex flex-col items-center justify-center min-h-[180px] bg-gray-50/50">
                     <div className="w-full flex flex-col items-center gap-3">
                         <div className="w-full bg-white rounded-lg border p-2 flex items-center justify-center">
                             <img src={imageUrl} alt={label} className="max-w-full max-h-28 object-contain" />
@@ -250,17 +267,18 @@ const SystemConfigTab = () => {
                                 <Trash2 className="w-4 h-4" />
                             </Button>
                         </div>
+                        <p className="text-xs text-gray-500">Or paste a new image (Ctrl/Cmd+V) after clicking Replace area</p>
                     </div>
-                ) : (
-                    <div className="text-center space-y-3">
-                        <UploadCloud className="w-8 h-8 text-blue-600 mx-auto" />
-                        <p className="text-sm text-gray-600">Upload {label.toLowerCase()} image</p>
-                        <Button variant="outline" size="sm" onClick={() => inputRef.current?.click()}>
-                            Select Image
-                        </Button>
-                    </div>
-                )}
-            </div>
+                </div>
+            ) : (
+                <ImageUploadZone
+                    accept="image/png,image/jpeg,image/webp,image/svg+xml"
+                    onFile={(file) => handleLetterheadUpload(file, type)}
+                    title={`Click, drop, or paste ${label.toLowerCase()}`}
+                    hint="PNG, JPG, WebP, SVG — Ctrl/Cmd+V supported"
+                    className="min-h-[180px]"
+                />
+            )}
         </div>
     );
 
@@ -282,13 +300,16 @@ const SystemConfigTab = () => {
                     </CardHeader>
                     <CardContent>
                         <div 
-                            className={`relative border-2 border-dashed rounded-xl p-8 flex flex-col items-center justify-center transition-all duration-200 ${
+                            data-image-upload="true"
+                            tabIndex={0}
+                            className={`relative border-2 border-dashed rounded-xl p-8 flex flex-col items-center justify-center transition-all duration-200 outline-none focus-visible:ring-2 focus-visible:ring-[#003D82]/30 ${
                                 dragActive ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-blue-300 hover:bg-gray-50'
                             }`}
                             onDragEnter={handleDrag}
                             onDragLeave={handleDrag}
                             onDragOver={handleDrag}
                             onDrop={handleDrop}
+                            onPaste={handlePasteLogo}
                         >
                             <input 
                                 type="file" 
@@ -326,7 +347,7 @@ const SystemConfigTab = () => {
                                     <div className="bg-blue-100 p-3 rounded-full w-12 h-12 flex items-center justify-center mx-auto mb-3">
                                         <UploadCloud className="w-6 h-6 text-blue-600" />
                                     </div>
-                                    <p className="font-medium text-gray-900">Click to upload or drag and drop</p>
+                                    <p className="font-medium text-gray-900">Click, drag & drop, or paste (Ctrl/Cmd+V)</p>
                                     <p className="text-sm text-gray-500 mt-1">SVG, PNG, JPG or WebP (max 5MB)</p>
                                     <Button 
                                         variant="outline" 

@@ -7,11 +7,12 @@ import { useToast } from '@/components/ui/use-toast';
 import { createMember, updateMember } from '@/services/membersService';
 import { uploadMemberImage, deleteMemberImage, validateFile } from '@/services/imageUploadService';
 import { formatBytes } from '@/utils/imageCompression';
-import { Upload, X, Loader2, AlertCircle, RefreshCw } from 'lucide-react';
+import { X, Loader2, AlertCircle, RefreshCw } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { useAuth } from '@/context/AuthContext';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { COUNTRY_FLAGS, getFlagByCountry } from '@/utils/countryFlags';
+import ImageUploadZone from '@/components/ui/ImageUploadZone';
 
 const AddMemberForm = ({ initialData, onSuccess, onCancel }) => {
   const [formData, setFormData] = useState({
@@ -47,8 +48,7 @@ const AddMemberForm = ({ initialData, onSuccess, onCancel }) => {
     if (errors.submit) setErrors(prev => ({ ...prev, submit: null }));
   };
 
-  const handleFileChange = (e) => {
-    const file = e.target.files[0];
+  const selectPhotoFile = (file) => {
     if (!file) return;
 
     setUploadProgress(0);
@@ -76,7 +76,7 @@ const AddMemberForm = ({ initialData, onSuccess, onCancel }) => {
         compressed: "Pending upload..."
       });
       
-      toast({ title: "Photo Selected", description: "Image will be uploaded when you click Save." });
+      toast({ title: "Photo Selected", description: "Image will be uploaded when you click Save. Tip: you can also paste images (Ctrl/Cmd+V)." });
     } catch (error) {
       toast({ title: "File Error", description: "Could not process selected file.", variant: "destructive" });
     }
@@ -219,18 +219,13 @@ const AddMemberForm = ({ initialData, onSuccess, onCancel }) => {
         )}
 
         {!preview ? (
-          <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 flex flex-col items-center justify-center bg-gray-50 hover:bg-gray-100 transition-colors relative group">
-            <Input 
-              type="file" 
-              accept="image/jpeg,image/png,image/webp,image/gif" 
-              onChange={handleFileChange} 
-              disabled={loading}
-              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
-            />
-            <Upload className="w-8 h-8 text-gray-400 mb-2 group-hover:scale-110 transition-transform" />
-            <p className="text-sm text-gray-600 font-medium">Click to Upload Image</p>
-            <p className="text-xs text-gray-400 mt-1">JPG, PNG, WebP (Max 5MB)</p>
-          </div>
+          <ImageUploadZone
+            disabled={loading}
+            accept="image/jpeg,image/png,image/webp,image/gif"
+            onFile={selectPhotoFile}
+            title="Click, drop, or paste a profile photo"
+            hint="JPG, PNG, WebP (Max 5MB) — Ctrl/Cmd+V supported"
+          />
         ) : (
           <div className="space-y-3">
              <div className="flex items-center gap-4 bg-gray-50 p-3 rounded-lg border border-gray-100">

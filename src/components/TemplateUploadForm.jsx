@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { uploadTemplateImage, createTemplate } from '@/services/templateService';
 import { validateImageFile, generateThumbnail } from '@/services/imageService';
@@ -7,13 +7,13 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import { UploadCloud, X, Loader2 } from 'lucide-react';
+import { X, Loader2 } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
+import ImageUploadZone from '@/components/ui/ImageUploadZone';
 
 const TemplateUploadForm = ({ isOpen, onClose, onSuccess }) => {
   const { user } = useAuth();
   const { toast } = useToast();
-  const fileInputRef = useRef(null);
   
   const [loading, setLoading] = useState(false);
   const [file, setFile] = useState(null);
@@ -24,17 +24,6 @@ const TemplateUploadForm = ({ isOpen, onClose, onSuccess }) => {
     category: 'General',
     description: ''
   });
-
-  const handleFileChange = (e) => {
-    const selectedFile = e.target.files[0];
-    if (selectedFile) processFile(selectedFile);
-  };
-
-  const handleDrop = (e) => {
-    e.preventDefault();
-    const droppedFile = e.dataTransfer.files[0];
-    if (droppedFile) processFile(droppedFile);
-  };
 
   const processFile = (selectedFile) => {
     const validation = validateImageFile(selectedFile);
@@ -49,7 +38,6 @@ const TemplateUploadForm = ({ isOpen, onClose, onSuccess }) => {
   const removeFile = () => {
     setFile(null);
     setPreviewUrl('');
-    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   const handleSubmit = async (e) => {
@@ -155,23 +143,12 @@ const TemplateUploadForm = ({ isOpen, onClose, onSuccess }) => {
             <Label>Background Image *</Label>
             
             {!previewUrl ? (
-              <div 
-                className="border-2 border-dashed border-gray-300 rounded-lg p-8 flex flex-col items-center justify-center cursor-pointer hover:bg-gray-50 transition-colors"
-                onDragOver={(e) => e.preventDefault()}
-                onDrop={handleDrop}
-                onClick={() => fileInputRef.current?.click()}
-              >
-                <UploadCloud className="w-10 h-10 text-gray-400 mb-2" />
-                <p className="text-sm font-medium text-gray-600">Click or drag image to upload</p>
-                <p className="text-xs text-gray-400 mt-1">JPG, PNG or WebP (max 5MB)</p>
-                <input 
-                  type="file" 
-                  className="hidden" 
-                  ref={fileInputRef} 
-                  accept="image/jpeg,image/png,image/webp" 
-                  onChange={handleFileChange} 
-                />
-              </div>
+              <ImageUploadZone
+                accept="image/jpeg,image/png,image/webp"
+                onFile={processFile}
+                title="Click, drop, or paste a background image"
+                hint="JPG, PNG or WebP (max 5MB) — Ctrl/Cmd+V supported"
+              />
             ) : (
               <div className="relative rounded-lg overflow-hidden border">
                 <img src={previewUrl} alt="Preview" className="w-full h-40 object-cover" />

@@ -6,6 +6,7 @@ import { MENU_PERMISSIONS, itemVisible } from '@/config/adminMenuPermissions';
 import { formatRoleLabel } from '@/services/roleService';
 import HrTopNav from '@/components/hr/HrTopNav';
 import HrLettersTopNav from '@/components/hr/HrLettersTopNav';
+import { COLORED_TAB_BASE, getTabTheme } from '@/components/admin/tabTheme';
 import { 
   LayoutDashboard, 
   Users, 
@@ -93,14 +94,14 @@ const AdminLayout = () => {
           icon: ListTodo,
           permission: MENU_PERMISSIONS.tasks,
           submenu: [
-            { label: 'Task Dashboard', path: '/admin/tasks/dashboard', icon: LayoutDashboard },
-            { label: 'Create Task', path: '/admin/tasks/create', icon: PlusCircle },
-            { label: 'All Tasks', path: '/admin/tasks', icon: ListTodo },
-            { label: 'Scheduled', path: '/admin/tasks/scheduled', icon: CalendarClock },
-            { label: 'Reminders', path: '/admin/tasks/reminders', icon: Clock },
-            { label: 'My Tasks', path: '/admin/tasks/my-tasks', icon: CheckCircle },
-            { label: 'Pending Acceptances', path: '/admin/tasks/pending-acceptances', icon: Inbox },
-            { label: 'Task Settings', path: '/admin/tasks/settings', icon: Settings },
+            { label: 'Task Dashboard', path: '/admin/tasks/dashboard', icon: LayoutDashboard, color: 'navy' },
+            { label: 'Create Task', path: '/admin/tasks/create', icon: PlusCircle, color: 'green' },
+            { label: 'All Tasks', path: '/admin/tasks', icon: ListTodo, color: 'blue' },
+            { label: 'Scheduled', path: '/admin/tasks/scheduled', icon: CalendarClock, color: 'purple' },
+            { label: 'Reminders', path: '/admin/tasks/reminders', icon: Clock, color: 'orange' },
+            { label: 'My Tasks', path: '/admin/tasks/my-tasks', icon: CheckCircle, color: 'teal' },
+            { label: 'Pending Acceptances', path: '/admin/tasks/pending-acceptances', icon: Inbox, color: 'gold' },
+            { label: 'Task Settings', path: '/admin/tasks/settings', icon: Settings, color: 'slate' },
           ]
         },
         { 
@@ -108,11 +109,11 @@ const AdminLayout = () => {
           icon: Briefcase,
           permission: MENU_PERMISSIONS.jobs,
           submenu: [
-            { label: 'Recruitment Dashboard', path: '/admin/recruitment-dashboard' },
-            { label: 'Manage Jobs', path: '/admin/jobs' },
-            { label: 'All Applications', path: '/admin/applications' },
-            { label: 'Shortlisted', path: '/admin/applications/shortlisted' },
-            { label: 'Rejected', path: '/admin/applications/rejected' },
+            { label: 'Recruitment Dashboard', path: '/admin/recruitment-dashboard', color: 'navy' },
+            { label: 'Manage Jobs', path: '/admin/jobs', color: 'blue' },
+            { label: 'All Applications', path: '/admin/applications', color: 'purple' },
+            { label: 'Shortlisted', path: '/admin/applications/shortlisted', color: 'green' },
+            { label: 'Rejected', path: '/admin/applications/rejected', color: 'rose' },
           ]
         },
         { label: 'Event Management', path: '/admin/events', icon: CalendarDays, permission: MENU_PERMISSIONS.events },
@@ -128,12 +129,12 @@ const AdminLayout = () => {
           icon: Megaphone,
           permission: MENU_PERMISSIONS.announcements,
           submenu: [
-            { label: 'Compose', path: '/admin/announcements/compose', icon: PenLine },
-            { label: 'All Announcements', path: '/admin/announcements/list', icon: FileText },
-            { label: 'Scheduled', path: '/admin/announcements/scheduled', icon: Clock },
-            { label: 'Templates', path: '/admin/announcements/templates', icon: FileText },
-            { label: 'Categories', path: '/admin/announcements/categories', icon: FileText },
-            { label: 'Settings', path: '/admin/announcements/settings', icon: Settings },
+            { label: 'Compose', path: '/admin/announcements/compose', icon: PenLine, color: 'navy' },
+            { label: 'All Announcements', path: '/admin/announcements/list', icon: FileText, color: 'blue' },
+            { label: 'Scheduled', path: '/admin/announcements/scheduled', icon: Clock, color: 'gold' },
+            { label: 'Templates', path: '/admin/announcements/templates', icon: FileText, color: 'purple' },
+            { label: 'Categories', path: '/admin/announcements/categories', icon: FileText, color: 'teal' },
+            { label: 'Settings', path: '/admin/announcements/settings', icon: Settings, color: 'slate' },
           ]
         },
         { label: 'Gallery', path: '/admin/gallery', icon: ImageIcon, permission: MENU_PERMISSIONS.gallery },
@@ -246,8 +247,8 @@ const AdminLayout = () => {
           icon: Users,
           permission: MENU_PERMISSIONS.members,
           submenu: [
-            { label: 'Member List', path: '/admin/members' },
-            { label: 'Add Member', path: '/admin/members?action=new' }, 
+            { label: 'Member List', path: '/admin/members', color: 'navy' },
+            { label: 'Add Member', path: '/admin/members?action=new', color: 'green' },
           ]
         },
         { 
@@ -255,13 +256,13 @@ const AdminLayout = () => {
           icon: PieChart,
           permission: MENU_PERMISSIONS.shareholders,
           submenu: [
-            { label: 'Dashboard', path: '/admin/shareholders/dashboard' },
-            { label: 'List View', path: '/admin/shareholders/list' },
-            { label: 'Trash', path: '/admin/shareholders/trash', icon: Trash2 },
-            { label: 'Pending Approvals', path: '/admin/shareholders/pending-approvals', icon: ClipboardCheck },
-            { label: 'Pending Payment', path: '/admin/shareholders/pending-payments', icon: CreditCard },
-            { label: 'Signed Agreements', path: '/admin/shareholders/signed-agreements', icon: FileCheck },
-            { label: 'Settings', path: '/admin/shareholders/settings' }
+            { label: 'Dashboard', path: '/admin/shareholders/dashboard', color: 'navy' },
+            { label: 'List View', path: '/admin/shareholders/list', color: 'blue' },
+            { label: 'Trash', path: '/admin/shareholders/trash', icon: Trash2, color: 'rose' },
+            { label: 'Pending Approvals', path: '/admin/shareholders/pending-approvals', icon: ClipboardCheck, color: 'gold' },
+            { label: 'Pending Payment', path: '/admin/shareholders/pending-payments', icon: CreditCard, color: 'orange' },
+            { label: 'Signed Agreements', path: '/admin/shareholders/signed-agreements', icon: FileCheck, color: 'green' },
+            { label: 'Settings', path: '/admin/shareholders/settings', color: 'slate' }
           ]
         },
       ]
@@ -478,20 +479,16 @@ const AdminLayout = () => {
           ) : activeSection.label === 'HR Letters' ? (
             <HrLettersTopNav />
           ) : (
-          <div className="mb-6 -mx-1 overflow-x-auto scrollbar-thin">
-            <nav className="flex gap-1 border-b border-gray-200 min-w-max pb-px">
-              {activeSection.submenu.map((sub) => {
+          <div className="mb-6 overflow-x-auto scrollbar-thin">
+            <nav className="flex flex-wrap gap-2 min-w-max rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
+              {activeSection.submenu.map((sub, index) => {
                 const active = pathMatches(sub.path);
+                const theme = getTabTheme(sub.color || index);
                 return (
                   <Link
                     key={sub.path}
                     to={sub.path}
-                    className={cn(
-                      'inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium whitespace-nowrap border-b-2 -mb-px transition-colors',
-                      active
-                        ? 'border-[#003D82] text-[#003D82] bg-white rounded-t-md'
-                        : 'border-transparent text-gray-500 hover:text-[#003D82] hover:border-gray-300'
-                    )}
+                    className={cn(COLORED_TAB_BASE, active ? theme.active : theme.idle)}
                   >
                     {sub.icon && <sub.icon className="w-4 h-4 shrink-0" />}
                     {tl('menu', sub.label)}

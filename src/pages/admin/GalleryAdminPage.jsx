@@ -24,6 +24,7 @@ import {
   updateGalleryItem,
   uploadGalleryFile,
 } from '@/services/galleryService';
+import ImageUploadZone from '@/components/ui/ImageUploadZone';
 
 const EMPTY_FORM = {
   type: 'image',
@@ -181,18 +182,35 @@ export default function GalleryAdminPage() {
         {isFileType ? (
           <div className="space-y-2">
             <Label>Upload file</Label>
-            <Input
-              type="file"
-              accept={
-                form.type === 'image'
-                  ? 'image/*'
-                  : form.type === 'video'
-                    ? 'video/*'
-                    : 'audio/*'
-              }
-              onChange={(e) => setForm((f) => ({ ...f, file: e.target.files?.[0] || null }))}
-            />
-            <p className="text-xs text-gray-500">Max 50MB. Images, videos, or audio depending on type.</p>
+            {form.type === 'image' ? (
+              form.file ? (
+                <div className="flex items-center justify-between gap-3 rounded-xl border bg-white px-4 py-3">
+                  <p className="text-sm text-gray-700 truncate">{form.file.name}</p>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setForm((f) => ({ ...f, file: null }))}
+                  >
+                    Clear
+                  </Button>
+                </div>
+              ) : (
+                <ImageUploadZone
+                  accept="image/*"
+                  onFile={(file) => setForm((f) => ({ ...f, file }))}
+                  title="Click, drop, or paste a gallery image"
+                  hint="Max 50MB — Ctrl/Cmd+V supported"
+                />
+              )
+            ) : (
+              <Input
+                type="file"
+                accept={form.type === 'video' ? 'video/*' : 'audio/*'}
+                onChange={(e) => setForm((f) => ({ ...f, file: e.target.files?.[0] || null }))}
+              />
+            )}
+            <p className="text-xs text-gray-500">Max 50MB. Images support paste from clipboard.</p>
           </div>
         ) : (
           <div className="space-y-2">

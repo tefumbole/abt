@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
+import { COLORED_TAB_BASE, getTabTheme } from '@/components/admin/tabTheme';
 
 /**
  * Horizontal sub-navigation shown on admin section pages (events, invitations, etc.)
@@ -28,22 +29,21 @@ const AdminHorizontalNav = ({ items = [], title, description }) => {
           {description && <p className="text-sm text-gray-500 mt-1">{description}</p>}
         </div>
       )}
-      <nav className="flex flex-wrap gap-2 border-b border-gray-200 pb-3">
-        {items.map((item) => (
-          <Link
-            key={item.path}
-            to={item.path}
-            className={cn(
-              'inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-colors border',
-              isActive(item.path)
-                ? 'bg-[#003D82] text-white border-[#003D82]'
-                : 'bg-white text-gray-700 border-gray-200 hover:border-[#003D82] hover:text-[#003D82]'
-            )}
-          >
-            {item.icon && <item.icon className="w-4 h-4" />}
-            {item.label}
-          </Link>
-        ))}
+      <nav className="flex flex-wrap gap-2 rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
+        {items.map((item, index) => {
+          const theme = getTabTheme(item.color || index);
+          const active = isActive(item.path);
+          return (
+            <Link
+              key={item.path}
+              to={item.path}
+              className={cn(COLORED_TAB_BASE, active ? theme.active : theme.idle)}
+            >
+              {item.icon && <item.icon className="w-4 h-4 shrink-0" />}
+              {item.label}
+            </Link>
+          );
+        })}
       </nav>
     </div>
   );

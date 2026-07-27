@@ -11,7 +11,8 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/components/ui/use-toast';
-import { Loader2, ImagePlus } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
+import ImageUploadZone from '@/components/ui/ImageUploadZone';
 
 const CreateMealPage = () => {
   const [form, setForm] = useState({ name: '', description: '', category: 'General', image_url: '' });
@@ -21,8 +22,7 @@ const CreateMealPage = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  const handleImageUpload = async (e) => {
-    const file = e.target.files?.[0];
+  const uploadMealImage = async (file) => {
     if (!file) return;
 
     if (!file.type.startsWith('image/')) {
@@ -87,21 +87,27 @@ const CreateMealPage = () => {
             </div>
             <div className="space-y-2">
               <Label>Meal Photo</Label>
-              <div className="flex items-center gap-4">
-                <label className="inline-flex items-center gap-2 px-4 py-2 border rounded-md cursor-pointer hover:bg-gray-50">
-                  {uploadingImage ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : (
-                    <ImagePlus className="w-4 h-4" />
-                  )}
-                  <span>{uploadingImage ? 'Uploading…' : 'Choose image'}</span>
-                  <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} disabled={uploadingImage} />
-                </label>
-                {imagePreview && (
-                  <img src={imagePreview} alt="Meal preview" className="h-16 w-16 rounded-lg object-cover border" />
-                )}
-              </div>
-              <p className="text-xs text-gray-500">Add a photo so guests can identify this meal easily.</p>
+              {imagePreview ? (
+                <div className="flex items-center gap-4">
+                  <img src={imagePreview} alt="Meal preview" className="h-20 w-20 rounded-lg object-cover border" />
+                  <ImageUploadZone
+                    disabled={uploadingImage}
+                    accept="image/*"
+                    onFile={uploadMealImage}
+                    title="Replace photo — click, drop, or paste"
+                    hint="Ctrl/Cmd+V supported"
+                    className="flex-1 py-4"
+                  />
+                </div>
+              ) : (
+                <ImageUploadZone
+                  disabled={uploadingImage}
+                  accept="image/*"
+                  onFile={uploadMealImage}
+                  title="Click, drop, or paste a meal photo"
+                  hint="So guests can identify this meal — Ctrl/Cmd+V supported"
+                />
+              )}
             </div>
             <Button type="submit" disabled={loading || uploadingImage} className="bg-[#003D82]">
               {loading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null} Save Meal

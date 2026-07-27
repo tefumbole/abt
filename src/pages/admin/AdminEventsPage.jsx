@@ -9,8 +9,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Card, CardContent } from '@/components/ui/card';
 import { useToast } from '@/components/ui/use-toast';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, Edit, Trash2, Calendar, Clock, Upload, X } from 'lucide-react';
+import { Plus, Edit, Trash2, Calendar, Clock, X } from 'lucide-react';
 import EventsCountdownDisplay from '@/components/EventsCountdownDisplay';
+import ImageUploadZone from '@/components/ui/ImageUploadZone';
 
 const AdminEventsPage = () => {
   const [events, setEvents] = useState([]);
@@ -47,20 +48,18 @@ const AdminEventsPage = () => {
     setFormData(prev => ({ ...prev, enable_countdown: checked }));
   };
 
-  const handleImageUpload = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      if(file.size > 2 * 1024 * 1024) {
-          toast({ title: "File too large", description: "Max 2MB", variant: "destructive" });
-          return;
-      }
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setImagePreview(reader.result);
-        setFormData(prev => ({ ...prev, image_url: reader.result }));
-      };
-      reader.readAsDataURL(file);
+  const selectEventImage = (file) => {
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) {
+      toast({ title: "File too large", description: "Max 2MB", variant: "destructive" });
+      return;
     }
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setImagePreview(reader.result);
+      setFormData(prev => ({ ...prev, image_url: reader.result }));
+    };
+    reader.readAsDataURL(file);
   };
 
   const resetForm = () => {
@@ -183,20 +182,28 @@ const AdminEventsPage = () => {
 
                  <div className="grid gap-2">
                    <Label htmlFor="image">Event Image</Label>
-                   <div className="flex gap-4 items-start">
-                     {imagePreview ? (
+                   {imagePreview ? (
+                     <div className="flex gap-4 items-start">
                        <div className="relative w-32 h-24 rounded border overflow-hidden shrink-0">
-                         <img src={imagePreview} className="w-full h-full object-cover" />
+                         <img src={imagePreview} className="w-full h-full object-cover" alt="Event preview" />
                          <button type="button" onClick={() => { setImagePreview(null); setFormData(p => ({...p, image_url: ''}))}} className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full"><X className="w-3 h-3"/></button>
                        </div>
-                     ) : (
-                       <div className="w-32 h-24 border-2 border-dashed rounded flex items-center justify-center bg-gray-50 text-gray-400 text-xs shrink-0">No Image</div>
-                     )}
-                     <div className="flex-1">
-                       <Input id="image" type="file" accept="image/*" onChange={handleImageUpload} />
-                       <p className="text-xs text-gray-500 mt-1">Upload a cover image (Max 2MB)</p>
+                       <ImageUploadZone
+                         accept="image/*"
+                         onFile={selectEventImage}
+                         title="Replace — click, drop, or paste"
+                         hint="Max 2MB — Ctrl/Cmd+V supported"
+                         className="flex-1 py-4"
+                       />
                      </div>
-                   </div>
+                   ) : (
+                     <ImageUploadZone
+                       accept="image/*"
+                       onFile={selectEventImage}
+                       title="Click, drop, or paste a cover image"
+                       hint="Max 2MB — Ctrl/Cmd+V supported"
+                     />
+                   )}
                  </div>
 
                  <div className="grid gap-2">

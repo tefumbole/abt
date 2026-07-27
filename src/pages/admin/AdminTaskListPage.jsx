@@ -14,11 +14,13 @@ import { Link } from 'react-router-dom';
 import EditTaskModal from '@/components/admin/EditTaskModal';
 import { getPriorityColor, getStatusColor } from '@/components/admin/TaskDashboardCard';
 import { getEffectiveTaskStatus } from '@/utils/taskDeadline';
+import { COLORED_TAB_BASE, getTabTheme } from '@/components/admin/tabTheme';
+import { cn } from '@/lib/utils';
 
 const TASK_TABS = [
-  { id: 'uncompleted', label: 'Uncompleted Tasks' },
-  { id: 'completed', label: 'Completed Tasks' },
-  { id: 'overdue', label: 'Overdue' },
+  { id: 'uncompleted', label: 'Uncompleted Tasks', color: 'orange' },
+  { id: 'completed', label: 'Completed Tasks', color: 'green' },
+  { id: 'overdue', label: 'Overdue', color: 'rose' },
 ];
 
 const tabForTask = (task) => {
@@ -175,23 +177,20 @@ const AdminTaskListPage = () => {
         </Button>
       </div>
 
-      <div className="flex flex-wrap gap-2 border-b">
+      <div className="flex flex-wrap gap-2 rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
         {TASK_TABS.map(tab => {
           const count = tasks.filter(t => tabForTask(t) === tab.id).length;
           const active = activeTab === tab.id;
+          const theme = getTabTheme(tab.color);
           return (
             <button
               key={tab.id}
               type="button"
               onClick={() => setActiveTab(tab.id)}
-              className={`px-4 py-2 text-sm font-medium -mb-px border-b-2 transition-colors ${
-                active
-                  ? 'border-[#003D82] text-[#003D82]'
-                  : 'border-transparent text-gray-500 hover:text-gray-700'
-              }`}
+              className={cn(COLORED_TAB_BASE, active ? theme.active : theme.idle)}
             >
               {tab.label}
-              <span className={`ml-2 text-xs px-1.5 py-0.5 rounded-full ${active ? 'bg-[#003D82] text-white' : 'bg-gray-100 text-gray-600'}`}>
+              <span className={`ml-1.5 text-xs px-1.5 py-0.5 rounded-full ${active ? 'bg-white/25 text-white' : 'bg-white/80 text-inherit'}`}>
                 {count}
               </span>
             </button>
