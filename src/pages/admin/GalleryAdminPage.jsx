@@ -1,7 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
-  ChevronDown, ChevronUp, ChevronsDown, ChevronsUp,
+  ChevronDown, ChevronUp, ChevronsDown, ChevronsUp, GripVertical,
   ExternalLink, Image as ImageIcon, Loader2, Plus, Trash2, Upload,
 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -27,6 +27,7 @@ import {
   uploadGalleryFile,
 } from '@/services/galleryService';
 import ImageUploadZone from '@/components/ui/ImageUploadZone';
+import { cn } from '@/lib/utils';
 
 const EMPTY_FORM = {
   type: 'image',
@@ -41,6 +42,9 @@ export default function GalleryAdminPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [reordering, setReordering] = useState(false);
+  const [dragIndex, setDragIndex] = useState(null);
+  const [overIndex, setOverIndex] = useState(null);
+  const dragFromRef = useRef(null);
   const [form, setForm] = useState(EMPTY_FORM);
 
   const load = async () => {
@@ -150,6 +154,60 @@ export default function GalleryAdminPage() {
     if (edge === 'first') next.unshift(item);
     else next.push(item);
     await persistOrder(next, edge === 'first' ? 'Moved to first' : 'Moved to last');
+  };
+
+  const moveItemToIndex = async (fromIndex, toIndex) => {
+    if (
+      fromIndex == null
+      || toIndex == null
+      || fromIndex === toIndex
+      || fromIndex < 0
+      || toIndex < 0
+      || fromIndex >= items.length
+      || toIndex >= items.length
+    ) {
+      return;
+    }
+    const next = [...items];
+    const [item] = next.splice(fromIndex, 1);
+    next.splice(toIndex, 0, item);
+    await persistOrder(next, `Moved to position #${toIndex + 1}`);
+  };
+
+  const onCardDragStart = (e, index) => {
+    if (reordering) {
+      e.preventDefault();
+      return;
+    }
+    dragFromRef.current = index;
+    setDragIndex(index);
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', String(index));
+    // Improve drag ghost visibility in some browsers
+    if (e.currentTarget instanceof HTMLElement) {
+      e.dataTransfer.setDragImage(e.currentTarget, 40, 24);
+    }
+  };
+
+  const onCardDragOver = (e, index) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    if (overIndex !== index) setOverIndex(index);
+  };
+
+  const onCardDrop = async (e, index) => {
+    e.preventDefault();
+    const from = dragFromRef.current ?? Number(e.dataTransfer.getData('text/plain'));
+    setDragIndex(null);
+    setOverIndex(null);
+    dragFromRef.current = null;
+    await moveItemToIndex(from, index);
+  };
+
+  const onCardDragEnd = () => {
+    setDragIndex(null);
+    setOverIndex(null);
+    dragFromRef.current = null;
   };
 
   return (
@@ -269,7 +327,7 @@ export default function GalleryAdminPage() {
           <div>
             <h2 className="font-semibold text-[#003D82]">Items ({items.length})</h2>
             <p className="text-xs text-gray-500 mt-0.5">
-              Use the arrows to decide which item appears first on the public gallery.
+              Drag a card to a new spot (or use the arrows). Order controls the public gallery.
             </p>
           </div>
           {reordering && (
@@ -287,11 +345,34 @@ export default function GalleryAdminPage() {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {items.map((item, index) => (
-              <div key={item.id} className="relative border rounded-xl overflow-hidden bg-white shadow-sm">
-                <div className="absolute top-2 left-2 z-10 rounded-full bg-[#003D82] text-white text-[10px] font-bold px-2 py-0.5 shadow">
-                  #{index + 1}
+              <div
+                key={item.id}
+                draggable={!reordering}
+                onDragStart={(e) => onCardDragStart(e, index)}
+                onDragOver={(e) => onCardDragOver(e, index)}
+                onDrop={(e) => onCardDrop(e, index)}
+                onDragEnd={onCardDragEnd}
+                className={cn(
+                  'relative border rounded-xl overflow-hidden bg-white shadow-sm transition-all',
+                  !reordering && 'cursor-grab active:cursor-grabbing',
+                  dragIndex === index && 'opacity-40 scale-[0.98]',
+                  overIndex === index && dragIndex !== index && 'ring-2 ring-[#003D82] ring-offset-2',
+                )}
+              >
+                <div className="absolute top-2 left-2 z-10 flex items-center gap-1">
+                  <span
+                    className="inline-flex items-center gap-0.5 rounded-full bg-[#003D82] text-white text-[10px] font-bold px-2 py-0.5 shadow"
+                    title="Drag to reorder"
+                  >
+                    <GripVertical className="w-3 h-3 opacity-90" />
+                    #{index + 1}
+                  </span>
                 </div>
-                <div className="absolute top-2 right-2 z-10 flex flex-col gap-0.5 rounded-lg border bg-white/95 p-0.5 shadow-sm">
+                <div
+                  className="absolute top-2 right-2 z-10 flex flex-col gap-0.5 rounded-lg border bg-white/95 p-0.5 shadow-sm"
+                  onMouseDown={(e) => e.stopPropagation()}
+                  onDragStart={(e) => e.preventDefault()}
+                >
                   <Button
                     type="button"
                     variant="ghost"
@@ -337,11 +418,11 @@ export default function GalleryAdminPage() {
                     <ChevronsDown className="w-4 h-4" />
                   </Button>
                 </div>
-                <div className="h-40 bg-gray-100 flex items-center justify-center overflow-hidden">
+                <div className="h-40 bg-gray-100 flex items-center justify-center overflow-hidden pointer-events-none">
                   {item.type === 'image' && item.file_url ? (
-                    <img src={item.file_url} alt="" className="w-full h-full object-cover" />
+                    <img src={item.file_url} alt="" className="w-full h-full object-cover" draggable={false} />
                   ) : item.type === 'video' && item.file_url ? (
-                    <video src={item.file_url} className="w-full h-full object-cover" muted />
+                    <video src={item.file_url} className="w-full h-full object-cover" muted draggable={false} />
                   ) : (
                     <span className="text-xs font-bold uppercase tracking-wide text-[#003D82] bg-[#e8f0fb] px-2 py-1 rounded-full">
                       {GALLERY_TYPES[item.type] || item.type}
@@ -352,7 +433,11 @@ export default function GalleryAdminPage() {
                   <p className="font-semibold text-[#003D82] text-sm truncate">
                     {item.title || GALLERY_TYPES[item.type] || item.type}
                   </p>
-                  <div className="flex gap-2">
+                  <div
+                    className="flex gap-2"
+                    onMouseDown={(e) => e.stopPropagation()}
+                    onDragStart={(e) => e.preventDefault()}
+                  >
                     <Button
                       type="button"
                       size="sm"
