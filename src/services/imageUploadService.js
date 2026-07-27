@@ -1,12 +1,13 @@
 import { supabase } from '@/lib/customSupabaseClient';
-import { compressImage } from '@/utils/imageCompression';
+import { compressImageToMaxBytes, MEMBER_PHOTO_MAX_BYTES } from '@/utils/imageCompression';
 
 /**
  * Service for handling secure image uploads for members
  */
 
-const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
-const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+/** Allow large pastes/uploads; we compress down to ~1MB before storing. */
+const MAX_INPUT_FILE_SIZE = 25 * 1024 * 1024; // 25MB source
+const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/jpg'];
 
 /**
  * Validates a file before processing
@@ -16,17 +17,18 @@ const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
 export const validateFile = (file) => {
   if (!file) return { valid: false, error: "No file selected." };
   
-  if (!ALLOWED_TYPES.includes(file.type)) {
+  const typeOk = ALLOWED_TYPES.includes(file.type) || String(file.type || '').startsWith('image/');
+  if (!typeOk) {
     return { 
       valid: false, 
       error: "Invalid file type. Only JPG, PNG, WEBP, and GIF are allowed." 
     };
   }
   
-  if (file.size > MAX_FILE_SIZE) {
+  if (file.size > MAX_INPUT_FILE_SIZE) {
     return { 
       valid: false, 
-      error: "File size exceeds 5MB limit. Please choose a smaller image." 
+      error: "File is too large to process (max 25MB). Please choose a smaller image." 
     };
   }
   
@@ -47,21 +49,22 @@ export const uploadMemberImage = async (file, memberId = 'temp') => {
   }
 
   try {
-    // 2. Compress Image
-    const compressedBlob = await compressImage(file);
+    // 2. Compress to ~1MB for fast public page loads
+    const compressedFile = await compressImageToMaxBytes(file, MEMBER_PHOTO_MAX_BYTES);
 
     // 3. Prepare File Path
     const timestamp = Date.now();
     // Sanitize filename to avoid special char issues
-    const sanitizedName = file.name.replace(/[^a-zA-Z0-9.]/g, '_'); 
+    const sanitizedName = String(compressedFile.name || file.name || 'photo.jpg').replace(/[^a-zA-Z0-9.]/g, '_'); 
     const filePath = `members/${memberId}/${timestamp}-${sanitizedName}`;
 
     // 4. Upload to Supabase
     const { data, error: uploadError } = await supabase.storage
       .from('members-photos')
-      .upload(filePath, compressedBlob, {
+      .upload(filePath, compressedFile, {
         cacheControl: '3600',
-        upsert: false
+        upsert: false,
+        contentType: compressedFile.type || 'image/jpeg',
       });
 
     if (uploadError) {

@@ -6,7 +6,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/components/ui/use-toast';
 import { createMember, updateMember } from '@/services/membersService';
 import { uploadMemberImage, deleteMemberImage, validateFile } from '@/services/imageUploadService';
-import { formatBytes } from '@/utils/imageCompression';
+import { compressImageToMaxBytes, formatBytes, MEMBER_PHOTO_MAX_BYTES } from '@/utils/imageCompression';
 import { X, Loader2, AlertCircle, RefreshCw } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { useAuth } from '@/context/AuthContext';
@@ -27,6 +27,7 @@ const AddMemberForm = ({ initialData, onSuccess, onCancel }) => {
   
   const [preview, setPreview] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [optimizing, setOptimizing] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [selectedFile, setSelectedFile] = useState(null);
   const [fileStats, setFileStats] = useState(null);
@@ -48,8 +49,8 @@ const AddMemberForm = ({ initialData, onSuccess, onCancel }) => {
     if (errors.submit) setErrors(prev => ({ ...prev, submit: null }));
   };
 
-  const selectPhotoFile = useCallback((file) => {
-    if (!file || loading) return;
+  const selectPhotoFile = useCallback(async (file) => {
+    if (!file || loading || optimizing) return;
 
     setUploadProgress(0);
     setFileStats(null);
@@ -66,21 +67,35 @@ const AddMemberForm = ({ initialData, onSuccess, onCancel }) => {
       return;
     }
 
+    setOptimizing(true);
     try {
-      const objectUrl = URL.createObjectURL(file);
+      const optimized = await compressImageToMaxBytes(file, MEMBER_PHOTO_MAX_BYTES);
+      const objectUrl = URL.createObjectURL(optimized);
       setPreview(objectUrl);
-      setSelectedFile(file);
-      
+      setSelectedFile(optimized);
+
       setFileStats({
         original: formatBytes(file.size),
-        compressed: "Pending upload..."
+        compressed: formatBytes(optimized.size),
       });
-      
-      toast({ title: "Photo Selected", description: "Image will be uploaded when you click Save." });
+
+      toast({
+        title: file.size > MEMBER_PHOTO_MAX_BYTES ? 'Photo optimized' : 'Photo selected',
+        description:
+          file.size > MEMBER_PHOTO_MAX_BYTES
+            ? `Reduced from ${formatBytes(file.size)} to ${formatBytes(optimized.size)} (max ~1MB) for faster loading.`
+            : 'Image will be uploaded when you click Save.',
+      });
     } catch (error) {
-      toast({ title: "File Error", description: "Could not process selected file.", variant: "destructive" });
+      toast({
+        title: 'File Error',
+        description: error?.message || 'Could not process selected file.',
+        variant: 'destructive',
+      });
+    } finally {
+      setOptimizing(false);
     }
-  }, [loading, toast]);
+  }, [loading, optimizing, toast]);
 
   // While this modal form is open, Ctrl/Cmd+V with an image sets the profile photo
   // (works for both New Team Member and Edit Profile, even with a photo already selected).
@@ -246,15 +261,17 @@ const AddMemberForm = ({ initialData, onSuccess, onCancel }) => {
                     />
                 </div>
                 <div className="flex flex-col gap-2 flex-1">
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between gap-2">
                         <span className="text-sm font-medium text-gray-700">Selected Photo</span>
                         {fileStats && (
-                            <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">
-                                {fileStats.original}
+                            <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full whitespace-nowrap">
+                                {fileStats.original === fileStats.compressed
+                                  ? fileStats.compressed
+                                  : `${fileStats.original} → ${fileStats.compressed}`}
                             </span>
                         )}
                     </div>
-                    <p className="text-xs text-gray-500">Paste a new image (Ctrl/Cmd+V) or use Replace below.</p>
+                    <p className="text-xs text-gray-500">Heavy images are auto-compressed to ~1MB. Paste (Ctrl/Cmd+V) or Replace below.</p>
                     
                     <div className="flex gap-2">
                         <Button 
@@ -262,7 +279,7 @@ const AddMemberForm = ({ initialData, onSuccess, onCancel }) => {
                             variant="destructive" 
                             size="sm" 
                             onClick={removeImage}
-                            disabled={loading}
+                            disabled={loading || optimizing}
                             className="h-7 text-xs"
                         >
                             <X className="w-3 h-3 mr-2" /> Remove
@@ -273,7 +290,7 @@ const AddMemberForm = ({ initialData, onSuccess, onCancel }) => {
                             variant="outline" 
                             size="sm" 
                             onClick={handleSubmit}
-                            disabled={loading}
+                            disabled={loading || optimizing}
                             className="h-7 text-xs border-orange-200 text-orange-700 hover:bg-orange-50 hover:text-orange-800"
                           >
                             <RefreshCw className="w-3 h-3 mr-2" /> Retry Upload
@@ -284,14 +301,20 @@ const AddMemberForm = ({ initialData, onSuccess, onCancel }) => {
             </div>
 
             <ImageUploadZone
-              disabled={loading}
+              disabled={loading || optimizing}
               accept="image/jpeg,image/png,image/webp,image/gif"
               onFile={selectPhotoFile}
-              title="Replace photo — click, drop, or paste"
-              hint="JPG, PNG, WebP (Max 5MB) — Ctrl/Cmd+V works anywhere in this form"
+              title={optimizing ? 'Optimizing photo…' : 'Replace photo — click, drop, or paste'}
+              hint="Large images are compressed to ~1MB for faster member page loads"
               className="py-4"
             />
             
+            {optimizing && (
+              <div className="flex items-center gap-2 text-xs text-[#003D82]">
+                <Loader2 className="w-3.5 h-3.5 animate-spin" /> Compressing to ~1MB…
+              </div>
+            )}
+
             {loading && uploadProgress > 0 && uploadProgress < 100 && (
                <div className="space-y-1 animate-in fade-in slide-in-from-top-1 duration-300">
                   <div className="flex justify-between text-xs text-gray-500 font-medium">
@@ -303,13 +326,20 @@ const AddMemberForm = ({ initialData, onSuccess, onCancel }) => {
             )}
           </div>
         ) : (
-          <ImageUploadZone
-            disabled={loading}
-            accept="image/jpeg,image/png,image/webp,image/gif"
-            onFile={selectPhotoFile}
-            title="Click, drop, or paste a profile photo"
-            hint="JPG, PNG, WebP (Max 5MB) — Ctrl/Cmd+V works anywhere in this form"
-          />
+          <div className="space-y-2">
+            <ImageUploadZone
+              disabled={loading || optimizing}
+              accept="image/jpeg,image/png,image/webp,image/gif"
+              onFile={selectPhotoFile}
+              title={optimizing ? 'Optimizing photo…' : 'Click, drop, or paste a profile photo'}
+              hint="Large images are compressed to ~1MB for faster member page loads"
+            />
+            {optimizing && (
+              <div className="flex items-center gap-2 text-xs text-[#003D82]">
+                <Loader2 className="w-3.5 h-3.5 animate-spin" /> Compressing to ~1MB…
+              </div>
+            )}
+          </div>
         )}
       </div>
 

@@ -2,12 +2,17 @@
  * Utility for client-side image compression using HTML5 Canvas
  */
 
+const COMPRESSIBLE_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/jpg'];
+
+/** Target size for member / profile photos after client compression */
+export const MEMBER_PHOTO_MAX_BYTES = 1024 * 1024; // ~1MB
+
 /**
  * Compresses an image file to specified dimensions and quality
  * @param {File} file - The image file to compress
  * @param {number} maxWidth - Maximum width of the output image (default 1200px)
  * @param {number} maxHeight - Maximum height of the output image
- * @param {number} quality - JPEG compression quality (0 to 1, updated to 0.6 for aggressive compression)
+ * @param {number} quality - JPEG compression quality (0 to 1)
  * @returns {Promise<Blob>} - The compressed image as a Blob
  */
 export const compressImage = async (file, maxWidth = 1200, maxHeight = 1200, quality = 0.6) => {
@@ -17,9 +22,8 @@ export const compressImage = async (file, maxWidth = 1200, maxHeight = 1200, qua
             return;
         }
 
-        const validTypes = ['image/jpeg', 'image/png', 'image/webp'];
-        if (!validTypes.includes(file.type)) {
-            reject(new Error("Invalid file type. Only JPG, PNG, and WebP are allowed."));
+        if (!COMPRESSIBLE_TYPES.includes(file.type) && !String(file.type || '').startsWith('image/')) {
+            reject(new Error("Invalid file type. Only image files are allowed."));
             return;
         }
 
@@ -42,11 +46,14 @@ export const compressImage = async (file, maxWidth = 1200, maxHeight = 1200, qua
                 }
 
                 const canvas = document.createElement('canvas');
-                canvas.width = width;
-                canvas.height = height;
+                canvas.width = Math.max(1, Math.round(width));
+                canvas.height = Math.max(1, Math.round(height));
 
                 const ctx = canvas.getContext('2d');
-                ctx.drawImage(img, 0, 0, width, height);
+                // White background so transparent PNGs don't become black as JPEG
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
 
                 canvas.toBlob(
                     (blob) => {
@@ -61,10 +68,51 @@ export const compressImage = async (file, maxWidth = 1200, maxHeight = 1200, qua
                 );
             };
 
-            img.onerror = (err) => reject(new Error("Failed to load image"));
+            img.onerror = () => reject(new Error("Failed to load image"));
         };
 
-        reader.onerror = (err) => reject(new Error("Failed to read file"));
+        reader.onerror = () => reject(new Error("Failed to read file"));
+    });
+};
+
+/**
+ * Compress until the result is at or under maxBytes (~1MB by default).
+ * Returns a JPEG File suitable for member profile uploads.
+ */
+export const compressImageToMaxBytes = async (
+    file,
+    maxBytes = 1024 * 1024,
+    { maxWidth = 1600, maxHeight = 1600, minQuality = 0.35 } = {}
+) => {
+    if (!file) throw new Error('No file provided');
+
+    // Already small enough — keep original (faster load/upload)
+    if (file.size <= maxBytes) {
+        return file;
+    }
+
+    let width = maxWidth;
+    let height = maxHeight;
+    let quality = 0.82;
+    let blob = await compressImage(file, width, height, quality);
+    let guard = 0;
+
+    while (blob.size > maxBytes && guard < 12) {
+        guard += 1;
+        if (quality > minQuality) {
+            quality = Math.max(minQuality, quality - 0.12);
+        } else {
+            width = Math.max(480, Math.floor(width * 0.82));
+            height = Math.max(480, Math.floor(height * 0.82));
+            quality = Math.min(0.75, quality + 0.05);
+        }
+        blob = await compressImage(file, width, height, quality);
+    }
+
+    const baseName = String(file.name || 'photo').replace(/\.[^.]+$/, '') || 'photo';
+    return new File([blob], `${baseName}.jpg`, {
+        type: 'image/jpeg',
+        lastModified: Date.now(),
     });
 };
 
