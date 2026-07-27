@@ -5,11 +5,23 @@ import { Image as ImageIcon, Loader2, X } from 'lucide-react';
 import { COMPANY_NAME } from '@/constants/branding';
 import GalleryItemCard from '@/components/gallery/GalleryItemCard';
 import { listPublishedGalleryItems } from '@/services/galleryService';
+import { useSiteContent } from '@/hooks/useSiteContent';
 
 export default function GalleryPage() {
+  const { field } = useSiteContent();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [lightbox, setLightbox] = useState(null);
+  const heroTitle = field(
+    'gallery',
+    'hero_title',
+    'Our <span class="text-[#D4AF37]">Gallery</span>'
+  );
+  const heroSubtitle = field(
+    'gallery',
+    'hero_subtitle',
+    `Events and moments from ${COMPANY_NAME}.`
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -44,16 +56,15 @@ export default function GalleryPage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             className="text-4xl md:text-6xl font-bold mb-4"
-          >
-            Our <span className="text-[#D4AF37]">Gallery</span>
-          </motion.h1>
+            dangerouslySetInnerHTML={{ __html: heroTitle }}
+          />
           <motion.p
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.15 }}
             className="text-xl text-white/90 max-w-3xl mx-auto font-light"
           >
-            Events, projects, and moments from {COMPANY_NAME}.
+            {heroSubtitle}
           </motion.p>
         </div>
       </section>

@@ -10,12 +10,26 @@ import BrandLogo from '@/components/BrandLogo';
 import { usePageT } from '@/hooks/useSiteLabel';
 import { useSiteLabel } from '@/hooks/useSiteLabel';
 import { COMPANY_NAME, HERO_IMAGE_URL } from '@/constants/branding';
+import { useSiteContent } from '@/hooks/useSiteContent';
 
 function HomePage() {
   const th = usePageT('home');
   const tl = useSiteLabel();
+  const { field } = useSiteContent();
   const navigate = useNavigate();
   const [upcomingEvents, setUpcomingEvents] = useState([]);
+  const heroImage = field('home', 'hero_image', '') || HERO_IMAGE_URL;
+  const heroTitleHtml = field(
+    'home',
+    'hero_title',
+    `Your Technology Bridge to <span class="text-[#D4AF37]">Kigali</span>`
+  );
+  const heroSubtitle = field(
+    'home',
+    'hero_subtitle',
+    th('hero_subtitle', 'Professional IT Consultancy, Enterprise Networking, and Audio-Visual Production, Cloud, AI and Cyber')
+  );
+  const ctaPrimary = field('home', 'cta_primary', th('get_free_quote', 'Get a Free Quote'));
   useEffect(() => {
     let isMounted = true;
     const initData = async () => {
@@ -120,7 +134,7 @@ function HomePage() {
         <motion.div
           className="absolute inset-0 bg-cover bg-center bg-no-repeat"
           style={{
-            backgroundImage: `url(${HERO_IMAGE_URL})`,
+            backgroundImage: `url(${heroImage})`,
             backgroundPosition: 'center',
             backgroundSize: 'cover',
           }}
@@ -172,23 +186,15 @@ function HomePage() {
                animate={{ opacity: 1, y: 0 }}
                transition={{ duration: 0.7, delay: 0.35 }}
                className="text-4xl md:text-6xl lg:text-7xl font-bold text-white mb-4 drop-shadow-2xl tracking-tight"
-             >
-               {th('hero_title_line1', 'Your Technology Bridge to')}{' '}
-               <motion.span
-                 className="text-[#D4AF37] inline-block"
-                 animate={{ scale: [1, 1.03, 1] }}
-                 transition={{ duration: 2.5, repeat: Infinity }}
-               >
-                 {th('hero_title_highlight', 'Kigali')}
-               </motion.span>
-             </motion.h1>
+               dangerouslySetInnerHTML={{ __html: heroTitleHtml }}
+             />
              <motion.p
                initial={{ opacity: 0 }}
                animate={{ opacity: 1 }}
                transition={{ duration: 0.8, delay: 0.55 }}
                className="text-xl md:text-2xl text-white/90 font-light max-w-3xl mx-auto drop-shadow-md"
              >
-                {th('hero_subtitle', 'Professional IT Consultancy, Enterprise Networking, and Audio-Visual Production, Cloud, AI and Cyber')}
+                {heroSubtitle}
              </motion.p>
           </motion.div>
           
@@ -201,7 +207,7 @@ function HomePage() {
             
             <Link to="/contact">
                 <Button className="bg-[#D4AF37] hover:bg-[#b5952f] text-[#003D82] h-14 px-8 text-lg font-bold shadow-[0_0_15px_rgba(212,175,55,0.4)] w-full sm:w-auto rounded-full hover:scale-105 transition-transform">
-                  {th('get_free_quote', 'Get a Free Quote')} <ArrowRight className="ml-2 w-5 h-5" />
+                  {ctaPrimary} <ArrowRight className="ml-2 w-5 h-5" />
                 </Button>
             </Link>
 
@@ -266,8 +272,8 @@ function HomePage() {
       <section className="py-16 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
-            <h2 className="text-4xl font-bold text-[#003D82] mb-4">{th('our_services', 'Our Services')}</h2>
-            <p className="text-xl text-gray-600">{th('our_services_subtitle', 'Comprehensive technology solutions for your needs')}</p>
+            <h2 className="text-4xl font-bold text-[#003D82] mb-4">{field('home', 'services_heading', th('our_services', 'Our Services'))}</h2>
+            <p className="text-xl text-gray-600">{field('home', 'services_subheading', th('our_services_subtitle', 'Comprehensive technology solutions for your needs'))}</p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {services.map((service, index) => <motion.div key={index} initial={{
@@ -294,8 +300,8 @@ function HomePage() {
       <section className="py-16 bg-[#003D82]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
-            <h2 className="text-4xl font-bold text-white mb-4">{th('why_alpha_bridge', 'Why Alpha Bridge?')}</h2>
-            <p className="text-xl text-gray-300">{th('why_alpha_bridge_subtitle', 'Excellence in every solution we deliver')}</p>
+            <h2 className="text-4xl font-bold text-white mb-4">{field('home', 'why_heading', th('why_alpha_bridge', 'Why Alpha Bridge?'))}</h2>
+            <p className="text-xl text-gray-300">{field('home', 'why_subheading', th('why_alpha_bridge_subtitle', 'Excellence in every solution we deliver'))}</p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
             {whyChooseUs.map((feature, index) => <motion.div key={index} initial={{
@@ -322,8 +328,8 @@ function HomePage() {
       <section className="py-16 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
-            <h2 className="text-4xl font-bold text-[#003D82] mb-4">{th('industries_we_serve', 'Industries We Serve')}</h2>
-            <p className="text-xl text-gray-600">{th('industries_subtitle', 'Trusted by diverse organizations across Africa and the World')}</p>
+            <h2 className="text-4xl font-bold text-[#003D82] mb-4">{field('home', 'industries_heading', th('industries_we_serve', 'Industries We Serve'))}</h2>
+            <p className="text-xl text-gray-600">{field('home', 'industries_subheading', th('industries_subtitle', 'Trusted by diverse organizations across Africa and the World'))}</p>
           </div>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6">
             {industries.map((industry, index) => <motion.div key={index} initial={{
@@ -349,8 +355,8 @@ function HomePage() {
       <section className="py-16 bg-gray-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
-            <h2 className="text-4xl font-bold text-[#003D82] mb-4">{th('testimonials_title', 'What Our Clients Say')}</h2>
-            <p className="text-xl text-gray-600">{th('testimonials_subtitle', 'Trusted by businesses and organizations across Kigali')}</p>
+            <h2 className="text-4xl font-bold text-[#003D82] mb-4">{field('home', 'testimonials_heading', th('testimonials_title', 'What Our Clients Say'))}</h2>
+            <p className="text-xl text-gray-600">{field('home', 'testimonials_subheading', th('testimonials_subtitle', 'Trusted by businesses and organizations across Kigali'))}</p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {testimonials.map((testimonial, index) => <motion.div key={index} initial={{
@@ -378,9 +384,9 @@ function HomePage() {
       {/* CTA Banner */}
       <section className="py-16 bg-gradient-to-r from-[#003D82] via-[#0066CC] to-[#003D82]">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-4xl font-bold text-white mb-6">{th('cta_title', 'Ready to Get Started?')}</h2>
+          <h2 className="text-4xl font-bold text-white mb-6">{field('home', 'cta_heading', th('cta_title', 'Ready to Get Started?'))}</h2>
           <p className="text-xl text-gray-200 mb-8">
-            {th('cta_subtitle', 'Contact us today for a consultation and let us bridge your technology needs.')}
+            {field('home', 'cta_text', th('cta_subtitle', 'Contact us today for a consultation and let us bridge your technology needs.'))}
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <WhatsAppButton className="px-8 py-6 text-lg rounded-lg shadow-xl hover:shadow-2xl" />

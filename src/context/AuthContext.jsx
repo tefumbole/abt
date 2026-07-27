@@ -363,7 +363,8 @@ export const AuthProvider = ({ children }) => {
 
         console.log('[AuthContext] Login successful. User ID:', data.session?.user?.id);
         
-        // Wipe old OTP flag for security
+        // Wipe old OTP flag for security — every password login requires a fresh OTP
+        // (unless local VITE_DEV_SKIP_OTP is enabled).
         setOtpVerified(false);
         try {
           if (typeof window !== 'undefined' && window.localStorage) {
@@ -375,6 +376,16 @@ export const AuthProvider = ({ children }) => {
 
         if (data?.session?.user) {
           await applySession(data.session);
+          if (import.meta.env.VITE_DEV_SKIP_OTP !== 'true') {
+            setOtpVerified(false);
+            try {
+              if (typeof window !== 'undefined' && window.localStorage) {
+                localStorage.removeItem(OTP_VERIFIED_KEY);
+              }
+            } catch {
+              /* ignore */
+            }
+          }
           startSessionRefresh();
           return { success: true, user: data.session.user };
         }

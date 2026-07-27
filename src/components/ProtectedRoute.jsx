@@ -63,9 +63,11 @@ const ProtectedRoute = ({
     profile,
     loading: authLoading,
     isProfileLoading,
+    otpVerified,
   } = useAuth();
   const { hasPermission, permissions, loading: permLoading, hasStaffAccess } = usePermission();
   const location = useLocation();
+  const skipOtp = import.meta.env.VITE_DEV_SKIP_OTP === 'true';
 
   const needsRoleCheck = requireAdmin || requireSuperAdmin || requiredPermission;
   const fallbackRole = location.state?.verifiedRole;
@@ -87,6 +89,22 @@ const ProtectedRoute = ({
 
   if (!user || !session) {
     return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+
+  // OTP is required for every authenticated user (password alone is not enough).
+  if (
+    !skipOtp
+    && !otpVerified
+    && location.pathname !== '/otp-verification'
+    && location.pathname !== '/login'
+  ) {
+    return (
+      <Navigate
+        to="/otp-verification"
+        replace
+        state={{ from: location, redirect: location.pathname + location.search }}
+      />
+    );
   }
 
   if (!needsRoleCheck) {

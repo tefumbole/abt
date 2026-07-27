@@ -79,6 +79,9 @@ export const SCHEMA_PATCHES = [
   'ALTER TABLE profiles ADD COLUMN must_change_credentials TINYINT(1) NOT NULL DEFAULT 0',
   // Team member country flag
   'ALTER TABLE members ADD COLUMN country VARCHAR(100) NULL',
+  // Public team display order (drag-and-drop in admin)
+  'ALTER TABLE members ADD COLUMN sort_order INT NOT NULL DEFAULT 0',
+  'CREATE INDEX idx_members_sort_order ON members (sort_order)',
 ];
 
 export const CREATE_STATEMENTS = [
@@ -504,6 +507,13 @@ export const CREATE_STATEMENTS = [
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     INDEX idx_gallery_items_published (is_published, sort_order)
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
+
+  `CREATE TABLE IF NOT EXISTS site_settings (
+    \`key\` VARCHAR(191) NOT NULL PRIMARY KEY,
+    value LONGTEXT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
 ];
 

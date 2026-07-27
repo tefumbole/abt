@@ -45,7 +45,16 @@ const LoginPage = () => {
   const [isCheckingSession, setIsCheckingSession] = useState(true);
   const [errorMsg, setErrorMsg] = useState('');
 
-  const { loginWithCredentials, user, session, role, loading: authLoading, error: authError } = useAuth();
+  const {
+    loginWithCredentials,
+    user,
+    session,
+    role,
+    loading: authLoading,
+    error: authError,
+    otpVerified,
+  } = useAuth();
+  const skipOtp = import.meta.env.VITE_DEV_SKIP_OTP === 'true';
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const redirectOverride = searchParams.get('redirect');
@@ -104,8 +113,8 @@ const LoginPage = () => {
         
         if (!mounted) return;
 
-        if (isValid && profile) {
-           console.log(`[LoginPage] Active session confirmed. Redirecting... Profile Role: ${profile.role}`);
+        if (isValid && profile && (skipOtp || otpVerified)) {
+           console.log(`[LoginPage] Active OTP-verified session. Redirecting... Profile Role: ${profile.role}`);
            
            const destination = getRedirectDestination(profile.role, redirectOverride, profile);
            console.log(`[LoginPage] Redirect Decision -> Role: ${profile.role}, Destination: ${destination}, UserId: ${profile.id}, Timestamp: ${new Date().toISOString()}`);
@@ -117,6 +126,21 @@ const LoginPage = () => {
            });
            
            navigate(destination, { replace: true });
+        } else if (isValid && profile && !otpVerified && !skipOtp) {
+           console.log("[LoginPage] Session exists but OTP not verified — sending to OTP screen.");
+           try {
+             const otpResult = await otpService.sendOTP(profile.id);
+             if (otpResult?.success) {
+               toast({
+                 title: "WhatsApp code sent",
+                 description: `Open WhatsApp on ${otpResult.maskedPhone || 'your phone'} for the 6-digit code.`,
+                 className: "bg-blue-600 text-white",
+               });
+             }
+           } catch (otpErr) {
+             console.warn("[LoginPage] Could not auto-resend OTP on resume:", otpErr);
+           }
+           navigate('/otp-verification', { replace: true });
         } else {
            console.log("[LoginPage] No valid session detected. Ready for manual login.");
         }
@@ -134,7 +158,7 @@ const LoginPage = () => {
     }
 
     return () => { mounted = false; };
-  }, [authLoading, user, session, role, navigate, toast]);
+  }, [authLoading, user, session, role, navigate, toast, otpVerified, skipOtp, redirectOverride]);
 
   // Display auth context errors
   useEffect(() => {
@@ -170,10 +194,15 @@ const LoginPage = () => {
         console.log("[LoginPage] Validating existing session before allowing new login...");
         const preCheck = await validateUserSession();
         
-        if (preCheck.isValid && preCheck.profile) {
-           console.log("[LoginPage] Pre-validation caught an active session. Aborting new login and redirecting.");
+        if (preCheck.isValid && preCheck.profile && (skipOtp || otpVerified)) {
+           console.log("[LoginPage] Pre-validation caught an OTP-verified session. Aborting new login and redirecting.");
            const dest = getRedirectDestination(preCheck.profile.role, redirectOverride, preCheck.profile);
            navigate(dest, { replace: true });
+           return;
+        }
+        if (preCheck.isValid && preCheck.profile && !otpVerified && !skipOtp) {
+           console.log("[LoginPage] Pre-validation: session without OTP — continuing to OTP.");
+           navigate('/otp-verification', { replace: true });
            return;
         }
 
@@ -196,8 +225,8 @@ const LoginPage = () => {
         const profileData = await profileService.getProfile(authUser.id);
         const userRole = profileData?.role || authUser?.app_metadata?.role || authUser?.user_metadata?.role;
 
-        // Skip WhatsApp OTP when VITE_DEV_SKIP_OTP=true (local / initial VPS bootstrap)
-        if (import.meta.env.VITE_DEV_SKIP_OTP === 'true') {
+        // Skip WhatsApp OTP only in local/dev when explicitly enabled
+        if (skipOtp) {
             console.log('[LoginPage] OTP skipped (VITE_DEV_SKIP_OTP). Redirecting by role:', userRole);
             toast({
                 title: 'Login Successful',

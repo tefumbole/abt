@@ -6,6 +6,7 @@ import { ShieldCheck, Info, Scale, PieChart, DollarSign, Users, RefreshCw, XCirc
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
 import { getSharePrice, formatPrice, getSystemSettings } from '@/services/sharePriceService';
+import { useSiteContent } from '@/hooks/useSiteContent';
 
 const SectionCard = ({ number, icon: Icon, title, children }) => (
   <div className="bg-white/5 border border-white/10 rounded-xl p-6 mb-6 hover:bg-white/10 transition-colors duration-300">
@@ -29,7 +30,18 @@ const SectionCard = ({ number, icon: Icon, title, children }) => (
 const ShareholdersPage = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { field } = useSiteContent();
   const contentRef = useRef(null);
+  const heroTitle = field(
+    'shareholders',
+    'hero_title',
+    'Become a <span class="text-[#D4AF37]">Shareholder</span>'
+  );
+  const heroSubtitle = field(
+    'shareholders',
+    'hero_subtitle',
+    'Invest in Alpha Bridge Technologies and share in our growth across Africa.'
+  );
 
   const [priceLoading, setPriceLoading] = useState(true);
   const [agreeing, setAgreeing] = useState(false);
@@ -91,11 +103,13 @@ const ShareholdersPage = () => {
       {/* Header */}
       <div className="bg-[#002855] border-b border-[#D4AF37]/30 py-8 sticky top-[80px] z-30 shadow-lg">
         <div className="max-w-4xl mx-auto px-4 text-center">
-           <h1 className="text-2xl md:text-3xl font-bold text-white flex items-center justify-center gap-3">
-             <ShieldCheck className="w-8 h-8 text-[#D4AF37]" />
-             Shareholder Agreement
+           <h1
+             className="text-2xl md:text-3xl font-bold text-white flex items-center justify-center gap-3"
+           >
+             <ShieldCheck className="w-8 h-8 text-[#D4AF37] shrink-0" />
+             <span dangerouslySetInnerHTML={{ __html: heroTitle }} />
            </h1>
-           <p className="text-gray-300 mt-2 text-sm">Please read the following terms carefully before proceeding.</p>
+           <p className="text-gray-300 mt-2 text-sm">{heroSubtitle}</p>
         </div>
       </div>
 
@@ -218,7 +232,7 @@ const ShareholdersPage = () => {
                     className="flex-1 sm:flex-none !bg-[#D4AF37] !text-[#003D82] hover:!bg-[#b5952f] disabled:!opacity-70 font-bold px-8 shadow-lg shadow-[#D4AF37]/20 border border-[#D4AF37]/40"
                 >
                     {agreeing ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <CheckCircle className="w-4 h-4 mr-2" />}
-                    I Agree
+                    {field('shareholders', 'cta_primary', 'I Agree')}
                 </Button>
             </div>
         </div>

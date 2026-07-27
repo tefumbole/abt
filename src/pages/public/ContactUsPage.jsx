@@ -6,8 +6,10 @@ import { useToast } from '@/components/ui/use-toast';
 import { MapPin, Phone, Mail, Clock, Send, MessageSquare, Globe, User } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { sendContactMessageViaWhatsApp } from '@/services/contactService';
+import { useSiteContent } from '@/hooks/useSiteContent';
 
 const ContactUsPage = () => {
+  const { field } = useSiteContent();
   const [formData, setFormData] = useState({
     name: 'Sr. Engr. Mbole',
     email: 'info@alpha-bridge.net',
@@ -16,6 +18,10 @@ const ContactUsPage = () => {
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
+  const phone = field('contact', 'phone', '+250 794 006 160');
+  const email = field('contact', 'email', 'info@alpha-bridge.net');
+  const website = field('contact', 'website', 'www.alpha-bridge.net');
+  const phoneDigits = phone.replace(/\D/g, '');
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -45,7 +51,10 @@ const ContactUsPage = () => {
   };
 
   const handleWhatsAppClick = () => {
-    window.open(`https://wa.me/250794006160?text=${encodeURIComponent("Hello Alpha Bridge, I would like to inquire about...")}`, '_blank');
+    window.open(
+      `https://wa.me/${phoneDigits}?text=${encodeURIComponent('Hello Alpha Bridge, I would like to inquire about...')}`,
+      '_blank'
+    );
   };
 
   return (
@@ -54,9 +63,15 @@ const ContactUsPage = () => {
         
         {/* Header Section */}
         <div className="text-center mb-16">
-          <h1 className="text-4xl md:text-5xl font-extrabold text-[#003D82] mb-4">Get in Touch</h1>
+          <h1 className="text-4xl md:text-5xl font-extrabold text-[#003D82] mb-4">
+            {field('contact', 'heading', 'Get in Touch')}
+          </h1>
           <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-            Have a question, need assistance, or want to explore partnership opportunities? We're here to help. Reach out to the Alpha Bridge team today.
+            {field(
+              'contact',
+              'intro',
+              "Have a question, need assistance, or want to explore partnership opportunities? We're here to help. Reach out to the Alpha Bridge team today."
+            )}
           </p>
         </div>
 
@@ -70,9 +85,9 @@ const ContactUsPage = () => {
                     <MapPin className="w-5 h-5" /> Office Location
                 </h3>
                 <div className="space-y-3 text-gray-600">
-                    <p className="font-semibold text-gray-800">Alpha Bridge.</p>
-                    <p>Norrsken House Kigali</p>
-                    <p>Kigali, Rwanda</p>
+                    <p className="font-semibold text-gray-800">{field('contact', 'office_name', 'Alpha Bridge.')}</p>
+                    <p>{field('contact', 'office_line1', 'Norrsken House Kigali')}</p>
+                    <p>{field('contact', 'office_line2', 'Kigali, Rwanda')}</p>
                 </div>
               </CardContent>
             </Card>
@@ -84,8 +99,8 @@ const ContactUsPage = () => {
                 </h3>
                 <div className="space-y-4 text-gray-600">
                     <div>
-                        <p className="font-bold text-gray-800">Nasrah Umwela</p>
-                        <p className="text-sm text-gray-500">Lead Technical Director</p>
+                        <p className="font-bold text-gray-800">{field('contact', 'person_name', 'Sr. Engr. Mbole')}</p>
+                        <p className="text-sm text-gray-500">{field('contact', 'person_role', 'Lead Technical Director')}</p>
                     </div>
                     
                     <div className="flex items-center gap-3 pt-2">
@@ -93,7 +108,7 @@ const ContactUsPage = () => {
                             <Phone className="w-4 h-4" />
                         </div>
                         <div>
-                            <p className="font-medium">+250 794 006 160</p>
+                            <p className="font-medium">{phone}</p>
                             <Button variant="link" className="p-0 h-auto text-[#D4AF37] hover:text-[#003D82] text-xs font-semibold" onClick={handleWhatsAppClick}>
                                 <MessageSquare className="w-3 h-3 mr-1" /> Chat on WhatsApp
                             </Button>
@@ -104,8 +119,8 @@ const ContactUsPage = () => {
                         <div className="bg-yellow-100 p-2 rounded-full text-[#D4AF37]">
                             <Mail className="w-4 h-4" />
                         </div>
-                        <a href="mailto:info@alpha-bridge.net" className="font-medium hover:text-[#003D82] transition-colors">
-                            info@alpha-bridge.net
+                        <a href={`mailto:${email}`} className="font-medium hover:text-[#003D82] transition-colors">
+                            {email}
                         </a>
                     </div>
                     
@@ -113,8 +128,8 @@ const ContactUsPage = () => {
                         <div className="bg-gray-200 p-2 rounded-full text-gray-700">
                             <Globe className="w-4 h-4" />
                         </div>
-                        <a href="https://alpha-bridge.net" className="font-medium hover:text-[#003D82] transition-colors">
-                            www.alpha-bridge.net
+                        <a href={`https://${website.replace(/^https?:\/\//, '')}`} className="font-medium hover:text-[#003D82] transition-colors">
+                            {website}
                         </a>
                     </div>
                 </div>
@@ -132,11 +147,11 @@ const ContactUsPage = () => {
                   <div className="space-y-1">
                       <div className="flex justify-between text-sm">
                           <span className="text-blue-100">Mon - Fri:</span>
-                          <span className="font-medium">9:00 AM - 6:00 PM</span>
+                          <span className="font-medium">{field('contact', 'hours_weekday', '9:00 AM - 6:00 PM')}</span>
                       </div>
                       <div className="flex justify-between text-sm">
                           <span className="text-blue-100">Sat & Sun:</span>
-                          <span className="font-medium opacity-80">Closed</span>
+                          <span className="font-medium opacity-80">{field('contact', 'hours_weekend', 'Closed')}</span>
                       </div>
                   </div>
                 </div>

@@ -6,11 +6,23 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Calendar, MapPin, ArrowRight, Loader2, AlertCircle } from 'lucide-react';
 import { format } from 'date-fns';
+import { useSiteContent } from '@/hooks/useSiteContent';
 
 const EventsPage = () => {
+  const { field } = useSiteContent();
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const heroTitle = field(
+    'events',
+    'hero_title',
+    'Upcoming <span class="text-[#D4AF37]">Events</span>'
+  );
+  const heroSubtitle = field(
+    'events',
+    'hero_subtitle',
+    'Join Alpha Bridge at our next gathering, workshop, or masterclass.'
+  );
 
   useEffect(() => {
     const fetchEvents = async () => {
@@ -59,9 +71,15 @@ const EventsPage = () => {
       <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
         <div className="text-center max-w-md">
           <Calendar className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-          <h2 className="text-2xl font-bold text-gray-800 mb-2">No Events Yet</h2>
+          <h2 className="text-2xl font-bold text-gray-800 mb-2">
+            {field('events', 'empty_title', 'No events yet')}
+          </h2>
           <p className="text-gray-600">
-            Check back soon for upcoming events and highlights from Alpha Bridge.
+            {field(
+              'events',
+              'empty_text',
+              'Check back soon for upcoming events and programs.'
+            )}
           </p>
         </div>
       </div>
@@ -82,11 +100,12 @@ const EventsPage = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           {/* Header */}
           <div className="text-center mb-12">
-            <h1 className="text-4xl md:text-5xl font-bold text-[#003D82] mb-4">
-              Events & Highlights
-            </h1>
+            <h1
+              className="text-4xl md:text-5xl font-bold text-[#003D82] mb-4"
+              dangerouslySetInnerHTML={{ __html: heroTitle }}
+            />
             <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-              Join us at our upcoming events, workshops, and technology showcases
+              {heroSubtitle}
             </p>
           </div>
 

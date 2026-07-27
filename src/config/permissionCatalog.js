@@ -39,6 +39,10 @@ export const PERMISSION_CATALOG = [
 
   ...crudModule('Gallery', 'gallery', 'Gallery'),
 
+  ...VIEW_EDIT.flatMap((a) =>
+    crudModule('Site Content', 'site_content', 'Site Content', [a])
+  ),
+
   ...crudModule('Letters & Messaging', 'letters.send', 'Send Letters'),
   ...crudModule('Letters & Messaging', 'letters.templates', 'Letter Templates'),
   ...crudModule('Letters & Messaging', 'letters.history', 'Letters History'),
@@ -120,6 +124,7 @@ export const PERMISSION_CATALOG = [
     'menu.courses': 'Menu: Courses',
     'menu.announcements': 'Menu: Announcements',
     'menu.gallery': 'Menu: Gallery',
+    'menu.site_content': 'Menu: Site Content',
     'menu.timesheets': 'Menu: Timesheets',
     'menu.operations': 'Menu: Operations',
     'menu.hr': 'Menu: HR & Payroll',

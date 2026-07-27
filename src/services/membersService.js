@@ -1,29 +1,36 @@
 import { supabase } from '@/lib/customSupabaseClient';
 
 /**
- * Service for managing member data in Supabase.
- * Handles Create, Read, Update, and Delete operations for the 'members' table.
+ * Service for managing member data.
+ * Handles Create, Read, Update, Delete, and reorder for the 'members' table.
  */
 
-// Fetch all members
+// Fetch all members (public + admin) in display order
 export const getAllMembers = async () => {
   try {
     const { data, error } = await supabase
       .from('members')
       .select('*')
+      .order('sort_order', { ascending: true })
       .order('created_at', { ascending: true });
 
     if (error) throw error;
     return data || [];
   } catch (error) {
-    console.error("getAllMembers Error:", error);
+    console.error('getAllMembers Error:', error);
     throw error;
   }
 };
 
 export const createMember = async (memberData) => {
   try {
-    // Explicitly map fields including photo_url
+    let sort_order = memberData.sort_order;
+    if (sort_order == null) {
+      const existing = await getAllMembers();
+      const maxOrder = existing.reduce((max, m) => Math.max(max, Number(m.sort_order) || 0), 0);
+      sort_order = maxOrder + 1;
+    }
+
     const payload = {
       name: memberData.name,
       title: memberData.title,
@@ -32,6 +39,7 @@ export const createMember = async (memberData) => {
       phone: memberData.phone || null,
       photo_url: memberData.photo_url || null,
       country: memberData.country || null,
+      sort_order,
     };
 
     const { data, error } = await supabase
@@ -43,7 +51,7 @@ export const createMember = async (memberData) => {
     if (error) throw error;
     return data;
   } catch (error) {
-    console.error("createMember Error:", error);
+    console.error('createMember Error:', error);
     throw error;
   }
 };
@@ -60,41 +68,53 @@ export const updateMember = async (id, updates) => {
     if (error) throw error;
     return data;
   } catch (error) {
-    console.error("updateMember Error:", error);
+    console.error('updateMember Error:', error);
     throw error;
   }
 };
 
+/** Persist display order for the public team page (1-based). */
+export const reorderMembers = async (ids = []) => {
+  if (!Array.isArray(ids) || ids.length === 0) {
+    throw new Error('ids array required');
+  }
+  await Promise.all(
+    ids.map(async (id, index) => {
+      const { error } = await supabase
+        .from('members')
+        .update({ sort_order: index + 1 })
+        .eq('id', id);
+      if (error) throw error;
+    })
+  );
+  return true;
+};
+
 export const deleteMember = async (id) => {
   try {
-    console.log(`[MembersService] Deleting member ${id}...`);
-    
-    // 1. Delete the record
     const { error } = await supabase
       .from('members')
       .delete()
       .eq('id', id);
 
     if (error) {
-        console.error("Delete SQL Error:", error);
-        throw new Error(`Database error: ${error.message}`);
+      console.error('Delete SQL Error:', error);
+      throw new Error(`Database error: ${error.message}`);
     }
 
-    // 2. Verification (Optional but good for debugging)
     const { data: check } = await supabase
-        .from('members')
-        .select('id')
-        .eq('id', id)
-        .maybeSingle();
-        
+      .from('members')
+      .select('id')
+      .eq('id', id)
+      .maybeSingle();
+
     if (check) {
-        throw new Error("Member still exists after deletion attempt (RLS issue?).");
+      throw new Error('Member still exists after deletion attempt (RLS issue?).');
     }
 
-    console.log(`[MembersService] Member ${id} deleted successfully.`);
     return true;
   } catch (error) {
-    console.error("deleteMember Exception:", error);
+    console.error('deleteMember Exception:', error);
     throw error;
   }
 };

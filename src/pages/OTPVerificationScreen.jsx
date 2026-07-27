@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,6 +20,8 @@ const OTPVerificationScreen = () => {
 
   const { verifyOTP, resendOTP, logout, user, getProfile } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const [searchParams] = useSearchParams();
   const { toast } = useToast();
 
   const SECURITY_IMAGE =
@@ -60,6 +62,10 @@ const OTPVerificationScreen = () => {
       case "task_assignee":
       case "customer":
         return "/user/tasks/pending-acceptances";
+      case "staff":
+      case "employee":
+      case "teacher":
+        return "/user/tasks";
       default:
         return "/";
     }
@@ -105,9 +111,16 @@ const OTPVerificationScreen = () => {
   };
 
   const handleSuccess = (profileData) => {
-    const destination = profileData.must_change_credentials
-      ? "/complete-profile"
-      : redirectBasedOnRole(profileData.role);
+    const redirectOverride =
+      location.state?.redirect
+      || searchParams.get("redirect")
+      || null;
+
+    let destination = profileData.must_change_credentials
+      ? (redirectOverride
+          ? `/complete-profile?redirect=${encodeURIComponent(redirectOverride)}`
+          : "/complete-profile")
+      : (redirectOverride || redirectBasedOnRole(profileData.role));
 
     toast({
       title: "Access Granted",

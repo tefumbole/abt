@@ -12,6 +12,7 @@ import { getTrainingPrograms } from '@/services/coursesService';
 import { trainingModules } from '@/utils/trainingCourseUtils';
 import { usePageT } from '@/hooks/useSiteLabel';
 import { useSiteLabel } from '@/hooks/useSiteLabel';
+import { useSiteContent } from '@/hooks/useSiteContent';
 
 const iconMap = {
   Brain, Cloud, Shield, Briefcase, Phone, Network, Video
@@ -20,9 +21,20 @@ const iconMap = {
 function TrainingsPage() {
   const tt = usePageT('training');
   const tl = useSiteLabel();
+  const { field } = useSiteContent();
   const [expandedModule, setExpandedModule] = useState(null);
   const [programs, setPrograms] = useState(trainingModules);
   const navigate = useNavigate();
+  const heroTitle = field(
+    'trainings',
+    'hero_title',
+    `Professional <span class="text-[#D4AF37]">IT Training</span>`
+  );
+  const heroSubtitle = field(
+    'trainings',
+    'hero_subtitle',
+    tt('hero_subtitle', 'Master cutting-edge technologies with industry-leading programs')
+  );
 
   useEffect(() => {
     getTrainingPrograms()
@@ -58,14 +70,12 @@ function TrainingsPage() {
             transition={{ duration: 0.8 }}
             className="text-center"
           >
-            <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold text-white mb-6">
-              {tt('hero_title_prefix', 'Professional')} <span className="text-[#D4AF37]">{tt('hero_title_highlight', 'IT Training')}</span>
-            </h1>
-            <p className="text-xl md:text-2xl text-blue-100 mb-4 max-w-4xl mx-auto">
-              {tt('hero_subtitle', 'Master cutting-edge technologies with industry-leading programs')}
-            </p>
-            <p className="text-lg text-blue-200 mb-8 max-w-3xl mx-auto">
-              {tt('hero_subtitle_2', 'Hands-on training in AI, Cloud, Security, Networking, and more — designed for 2026 and beyond')}
+            <h1
+              className="text-5xl md:text-6xl lg:text-7xl font-bold text-white mb-6"
+              dangerouslySetInnerHTML={{ __html: heroTitle }}
+            />
+            <p className="text-xl md:text-2xl text-blue-100 mb-8 max-w-4xl mx-auto">
+              {heroSubtitle}
             </p>
             
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mt-8">
@@ -117,10 +127,14 @@ function TrainingsPage() {
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2 className="text-4xl md:text-5xl font-bold text-[#003D82] mb-4">
-              {tt('programs_title', 'Training Programs')}
+              {field('trainings', 'heading', tt('programs_title', 'Training Programs'))}
             </h2>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              {tl('training', 'Select a program to explore the comprehensive curriculum, tools, and career opportunities')}
+              {field(
+                'trainings',
+                'subheading',
+                tl('training', 'Select a program to explore the comprehensive curriculum, tools, and career opportunities')
+              )}
             </p>
           </div>
 

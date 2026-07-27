@@ -4,6 +4,7 @@ import { getAllMembers } from '@/services/membersService';
 import { Loader2, AlertCircle, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { getFlagByCountry } from '@/utils/countryFlags';
+import { useSiteContent } from '@/hooks/useSiteContent';
 
 // Public Member Section - Privacy Enforced (No Email/Phone)
 
@@ -42,6 +43,7 @@ const MemberImage = ({ src, alt, className }) => {
 };
 
 const MembersSection = () => {
+  const { field } = useSiteContent();
   const [members, setMembers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -95,9 +97,13 @@ const MembersSection = () => {
     <section className="py-20 bg-[#003D82]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-16">
-          <h2 className="text-4xl font-bold text-white mb-4">Our Leadership</h2>
+          <h2 className="text-4xl font-bold text-white mb-4">
+            {field('about', 'leadership_heading', 'Our Leadership')}
+          </h2>
           <div className="h-1 w-24 bg-[#D4AF37] mx-auto"></div>
-          <p className="mt-4 text-xl text-gray-300">The visionaries driving Alpha Bridge forward</p>
+          <p className="mt-4 text-xl text-gray-300">
+            {field('about', 'leadership_subtext', 'The visionaries driving Alpha Bridge forward')}
+          </p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">

@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { getAllMembers, deleteMember } from '@/services/membersService';
+import { getAllMembers, deleteMember, reorderMembers } from '@/services/membersService';
 import AddMemberForm from '@/components/admin/AddMemberForm';
 import MemberCard from '@/components/admin/MemberCard';
 import { Button } from '@/components/ui/button';
@@ -17,9 +17,10 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+} from '@/components/ui/alert-dialog';
 import { useAuth } from '@/context/AuthContext';
 import AccessDeniedPage from '@/components/AccessDeniedPage';
+import { cn } from '@/lib/utils';
 
 const ADMIN_ROLES = ['admin', 'super_admin', 'director', 'manager'];
 
@@ -31,6 +32,10 @@ const AdminMembersPage = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [deleteId, setDeleteId] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [reordering, setReordering] = useState(false);
+  const [dragIndex, setDragIndex] = useState(null);
+  const [overIndex, setOverIndex] = useState(null);
+  const dragFromRef = useRef(null);
 
   const { toast } = useToast();
   const { user, role, profile, loading: authLoading } = useAuth();
@@ -39,8 +44,8 @@ const AdminMembersPage = () => {
   const userRole = String(role || profile?.role || user?.app_metadata?.role || '').toLowerCase();
   const isAdmin = ADMIN_ROLES.includes(userRole);
   const adminCheckLoading = authLoading;
+  const searchActive = Boolean(search.trim());
 
-  // Load members data only if user is admin
   useEffect(() => {
     if (isAdmin && !adminCheckLoading) {
       loadData();
@@ -66,11 +71,11 @@ const AdminMembersPage = () => {
       const data = await getAllMembers();
       setMembers(data || []);
     } catch (error) {
-      console.error("Failed to load members:", error);
-      toast({ 
-        title: "Connection Error", 
-        description: "Failed to load team members. Please try again.", 
-        variant: "destructive" 
+      console.error('Failed to load members:', error);
+      toast({
+        title: 'Connection Error',
+        description: 'Failed to load team members. Please try again.',
+        variant: 'destructive',
       });
       setMembers([]);
     } finally {
@@ -88,18 +93,18 @@ const AdminMembersPage = () => {
     setIsDeleting(true);
     try {
       await deleteMember(deleteId);
-      setMembers(prev => prev.filter(m => m.id !== deleteId));
-      toast({ 
-        title: "Member Deleted", 
-        description: "The team member has been removed successfully." 
+      setMembers((prev) => prev.filter((m) => m.id !== deleteId));
+      toast({
+        title: 'Member Deleted',
+        description: 'The team member has been removed successfully.',
       });
       setDeleteId(null);
     } catch (error) {
-      console.error("Delete failed:", error);
-      toast({ 
-        title: "Deletion Failed", 
-        description: error.message || "Could not delete member. Please check permissions.", 
-        variant: "destructive" 
+      console.error('Delete failed:', error);
+      toast({
+        title: 'Deletion Failed',
+        description: error.message || 'Could not delete member. Please check permissions.',
+        variant: 'destructive',
       });
     } finally {
       setIsDeleting(false);
@@ -120,14 +125,87 @@ const AdminMembersPage = () => {
     setIsModalOpen(false);
     loadData();
     toast({
-      title: editingItem ? "Member Updated" : "Member Added",
-      description: editingItem 
-        ? "Team member profile has been updated successfully." 
-        : "New team member has been added successfully."
+      title: editingItem ? 'Member Updated' : 'Member Added',
+      description: editingItem
+        ? 'Team member profile has been updated successfully.'
+        : 'New team member has been added successfully.',
     });
   };
 
-  // Show loading state while checking admin status
+  const persistOrder = async (nextMembers) => {
+    const previous = members;
+    setMembers(nextMembers);
+    setReordering(true);
+    try {
+      await reorderMembers(nextMembers.map((m) => m.id));
+      toast({ title: 'Order updated', description: 'Team display order saved for the public page.' });
+    } catch (error) {
+      setMembers(previous);
+      toast({
+        title: 'Reorder failed',
+        description: error.message || 'Could not save member order.',
+        variant: 'destructive',
+      });
+    } finally {
+      setReordering(false);
+    }
+  };
+
+  const moveMemberToIndex = async (fromIndex, toIndex) => {
+    if (
+      fromIndex == null
+      || toIndex == null
+      || fromIndex === toIndex
+      || fromIndex < 0
+      || toIndex < 0
+      || fromIndex >= members.length
+      || toIndex >= members.length
+    ) {
+      return;
+    }
+    const next = [...members];
+    const [item] = next.splice(fromIndex, 1);
+    next.splice(toIndex, 0, item);
+    await persistOrder(next);
+  };
+
+  const onCardDragStart = (e, index) => {
+    if (reordering || searchActive) {
+      e.preventDefault();
+      return;
+    }
+    dragFromRef.current = index;
+    setDragIndex(index);
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', String(index));
+    if (e.currentTarget instanceof HTMLElement) {
+      e.dataTransfer.setDragImage(e.currentTarget, 40, 24);
+    }
+  };
+
+  const onCardDragOver = (e, index) => {
+    if (searchActive) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    if (overIndex !== index) setOverIndex(index);
+  };
+
+  const onCardDrop = async (e, index) => {
+    e.preventDefault();
+    if (searchActive) return;
+    const from = dragFromRef.current ?? Number(e.dataTransfer.getData('text/plain'));
+    setDragIndex(null);
+    setOverIndex(null);
+    dragFromRef.current = null;
+    await moveMemberToIndex(from, index);
+  };
+
+  const onCardDragEnd = () => {
+    setDragIndex(null);
+    setOverIndex(null);
+    dragFromRef.current = null;
+  };
+
   if (authLoading || adminCheckLoading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen">
@@ -137,32 +215,32 @@ const AdminMembersPage = () => {
     );
   }
 
-  // Show access denied if not admin
   if (!isAdmin) {
     return <AccessDeniedPage />;
   }
 
-  // Filter members based on search
-  const filtered = members.filter(m =>
-    (m.name?.toLowerCase() || '').includes(search.toLowerCase()) ||
-    (m.title?.toLowerCase() || '').includes(search.toLowerCase()) ||
-    (m.email?.toLowerCase() || '').includes(search.toLowerCase())
+  const filtered = members.filter(
+    (m) =>
+      (m.name?.toLowerCase() || '').includes(search.toLowerCase()) ||
+      (m.title?.toLowerCase() || '').includes(search.toLowerCase()) ||
+      (m.email?.toLowerCase() || '').includes(search.toLowerCase())
   );
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
-      {/* Header Section */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b pb-6">
         <div>
           <h1 className="text-3xl font-bold text-[#003D82] flex items-center gap-3">
             <Users className="w-8 h-8" /> Team Members
           </h1>
-          <p className="text-gray-500 mt-1">Manage public profiles for leadership and staff.</p>
+          <p className="text-gray-500 mt-1">
+            Manage public profiles for leadership and staff. Drag cards to set who appears first.
+          </p>
         </div>
 
         <div className="flex gap-2 flex-wrap">
           <Button variant="outline" onClick={loadData} disabled={isLoading}>
-            <RefreshCw className={`w-4 h-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} /> 
+            <RefreshCw className={`w-4 h-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
             Refresh
           </Button>
 
@@ -175,21 +253,31 @@ const AdminMembersPage = () => {
         </div>
       </div>
 
-      {/* Search Bar */}
-      <div className="relative w-full max-w-sm">
-        <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-        <Input
-          placeholder="Search by name, title, or email..."
-          className="pl-9 bg-white border-gray-200 focus:border-[#003D82] h-10"
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-        />
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="relative w-full max-w-sm">
+          <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+          <Input
+            placeholder="Search by name, title, or email..."
+            className="pl-9 bg-white border-gray-200 focus:border-[#003D82] h-10"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </div>
+        {reordering && (
+          <span className="inline-flex items-center gap-1.5 text-xs text-[#003D82]">
+            <Loader2 className="w-3.5 h-3.5 animate-spin" /> Saving order…
+          </span>
+        )}
+        {searchActive && (
+          <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-1.5">
+            Clear search to drag and reorder members.
+          </p>
+        )}
       </div>
 
-      {/* Members Grid */}
       {isLoading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {[1, 2, 3].map(i => (
+          {[1, 2, 3].map((i) => (
             <div key={i} className="h-64 bg-gray-100 rounded-lg animate-pulse" />
           ))}
         </div>
@@ -205,20 +293,37 @@ const AdminMembersPage = () => {
               </Button>
             </div>
           ) : (
-            filtered.map(member => (
-              <MemberCard
-                key={member.id}
-                member={member}
-                onEdit={handleEdit}
-                onDelete={confirmDelete}
-                isAdminView={true}
-              />
-            ))
+            filtered.map((member) => {
+              const index = members.findIndex((m) => m.id === member.id);
+              return (
+                <div
+                  key={member.id}
+                  draggable={!reordering && !searchActive}
+                  onDragStart={(e) => onCardDragStart(e, index)}
+                  onDragOver={(e) => onCardDragOver(e, index)}
+                  onDrop={(e) => onCardDrop(e, index)}
+                  onDragEnd={onCardDragEnd}
+                  className={cn(
+                    'h-full transition-all',
+                    !reordering && !searchActive && 'cursor-grab active:cursor-grabbing',
+                    dragIndex === index && 'opacity-40 scale-[0.98]',
+                    overIndex === index && dragIndex !== index && 'ring-2 ring-[#003D82] ring-offset-2 rounded-xl'
+                  )}
+                >
+                  <MemberCard
+                    member={member}
+                    onEdit={handleEdit}
+                    onDelete={confirmDelete}
+                    isAdminView={true}
+                    orderIndex={index}
+                  />
+                </div>
+              );
+            })
           )}
         </div>
       )}
 
-      {/* Add/Edit Modal */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
@@ -234,7 +339,6 @@ const AdminMembersPage = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Delete Confirmation Alert */}
       <AlertDialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -242,13 +346,17 @@ const AdminMembersPage = () => {
               <AlertTriangle className="w-5 h-5" /> Confirm Deletion
             </AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to remove this team member? This action cannot be undone and will immediately remove them from the public website.
+              Are you sure you want to remove this team member? This action cannot be undone and will
+              immediately remove them from the public website.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
             <AlertDialogAction
-              onClick={(e) => { e.preventDefault(); handleDelete(); }}
+              onClick={(e) => {
+                e.preventDefault();
+                handleDelete();
+              }}
               className="bg-red-600 hover:bg-red-700 text-white"
               disabled={isDeleting}
             >
@@ -257,7 +365,7 @@ const AdminMembersPage = () => {
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" /> Deleting...
                 </>
               ) : (
-                "Delete Member"
+                'Delete Member'
               )}
             </AlertDialogAction>
           </AlertDialogFooter>

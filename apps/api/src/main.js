@@ -20,6 +20,7 @@ import hrRoutes from './routes/hr.js';
 import hrLettersRoutes from './routes/hr-letters.js';
 import activityLogsRoutes from './routes/activityLogs.js';
 import galleryRoutes from './routes/gallery.js';
+import siteContentRoutes from './routes/siteContent.js';
 import { APP_VERSION } from './constants/appVersion.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -89,6 +90,7 @@ app.use('/hr', hrRoutes);
 app.use('/hr/letters', hrLettersRoutes);
 app.use('/activity-logs', activityLogsRoutes);
 app.use('/gallery', galleryRoutes);
+app.use('/site-content', siteContentRoutes);
 
 app.use((err, _req, res, next) => {
   if (err?.code === 'LIMIT_FILE_SIZE') {

@@ -15,9 +15,7 @@ import SignUpModal from '@/components/SignUpModal';
 // Public Pages
 import HomePage from '@/pages/HomePage';
 import AboutPage from '@/pages/AboutPage';
-import ServicesPage from '@/pages/ServicesPage';
 import ContactUsPage from '@/pages/public/ContactUsPage';
-import ProjectsPage from '@/pages/ProjectsPage';
 import GalleryPage from '@/pages/GalleryPage';
 import TrainingsPage from '@/pages/TrainingsPage';
 import EventsPage from '@/pages/EventsPage';
@@ -126,6 +124,7 @@ import MailListingPage from '@/pages/admin/MailListingPage';
 import AnnouncementsManagementPage from '@/pages/admin/AnnouncementsManagementPage';
 import AnnouncementSettingsPage from '@/pages/admin/AnnouncementSettingsPage';
 import GalleryAdminPage from '@/pages/admin/GalleryAdminPage';
+import SiteContentPage from '@/pages/admin/SiteContentPage';
 import TemplateManagementPage from '@/pages/admin/TemplateManagementPage';
 
 // Time Sheet Admin Pages
@@ -349,7 +348,7 @@ const AppContent = () => {
           />
 
           <Route path="qr-scanner" element={<QRScannerPage />} />
-          <Route path="projects" element={<ProjectsPage />} />
+          <Route path="projects" element={<Navigate to="/gallery" replace />} />
           <Route path="gallery" element={<GalleryPage />} />
           <Route path="contact" element={<ContactUsPage />} />
           <Route path="student/progress" element={<StudentProgressPage />} />
@@ -970,6 +969,15 @@ const AppContent = () => {
             element={
               <ProtectedRoute requireAdmin={true}>
                 <GalleryAdminPage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="site-content"
+            element={
+              <ProtectedRoute requireAdmin={true}>
+                <SiteContentPage />
               </ProtectedRoute>
             }
           />

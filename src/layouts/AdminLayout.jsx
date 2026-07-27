@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { usePermission } from '@/context/PermissionContext';
@@ -53,12 +53,20 @@ import {
   UserCog,
   ScrollText,
   Image as ImageIcon,
+  Globe,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import LanguageSwitcher from '@/components/LanguageSwitcher';
 import { useSiteLabel } from '@/hooks/useSiteLabel';
+import { getAdminSiteContent } from '@/services/siteContentService';
+
+function orderIndex(order, key) {
+  if (!Array.isArray(order) || !key) return 9999;
+  const i = order.indexOf(key);
+  return i === -1 ? 9999 : i;
+}
 
 const AdminLayout = () => {
   const { logout, user, profile } = useAuth();
@@ -67,8 +75,22 @@ const AdminLayout = () => {
   const tl = useSiteLabel();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [openMenus, setOpenMenus] = useState({});
+  const [sideOrder, setSideOrder] = useState(null);
+  const [settingsOrder, setSettingsOrder] = useState(null);
   const { hasPermission, hasStaffAccess, loading: permLoading } = usePermission();
   const userRoleLabel = formatRoleLabel(profile?.role || user?.app_metadata?.role || user?.role || '');
+
+  useEffect(() => {
+    let cancelled = false;
+    getAdminSiteContent()
+      .then((data) => {
+        if (cancelled) return;
+        setSideOrder(data?.menus?.side?.order || null);
+        setSettingsOrder(data?.menus?.settings?.order || null);
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, []);
 
   const handleLogout = async () => {
     try {
@@ -83,7 +105,8 @@ const AdminLayout = () => {
     {
       label: 'Dashboard',
       items: [
-        { label: 'Dashboard', path: '/admin/dashboard', icon: LayoutDashboard, permission: MENU_PERMISSIONS.dashboard },
+        { label: 'Dashboard', path: '/admin/dashboard', icon: LayoutDashboard, permission: MENU_PERMISSIONS.dashboard, menuKey: 'dashboard' },
+        { label: 'Site Content', path: '/admin/site-content', icon: Globe, permission: MENU_PERMISSIONS.siteContent, menuKey: 'site-content' },
       ]
     },
     {
@@ -93,6 +116,7 @@ const AdminLayout = () => {
           label: 'Task Management', 
           icon: ListTodo,
           permission: MENU_PERMISSIONS.tasks,
+          menuKey: 'tasks',
           submenu: [
             { label: 'Task Dashboard', path: '/admin/tasks/dashboard', icon: LayoutDashboard, color: 'navy' },
             { label: 'Create Task', path: '/admin/tasks/create', icon: PlusCircle, color: 'green' },
@@ -108,6 +132,7 @@ const AdminLayout = () => {
           label: 'Job Board', 
           icon: Briefcase,
           permission: MENU_PERMISSIONS.jobs,
+          menuKey: 'jobs',
           submenu: [
             { label: 'Recruitment Dashboard', path: '/admin/recruitment-dashboard', color: 'navy' },
             { label: 'Manage Jobs', path: '/admin/jobs', color: 'blue' },
@@ -116,9 +141,9 @@ const AdminLayout = () => {
             { label: 'Rejected', path: '/admin/applications/rejected', color: 'rose' },
           ]
         },
-        { label: 'Event Management', path: '/admin/events', icon: CalendarDays, permission: MENU_PERMISSIONS.events },
-        { label: 'Digital Invitations', path: '/admin/invitations', icon: Ticket, permission: MENU_PERMISSIONS.invitations, activePaths: ['/admin/invitations', '/admin/check-in'] },
-        { label: 'Event Templates & Config', path: '/admin/events/templates', icon: Settings, permission: MENU_PERMISSIONS.eventTemplates, activePaths: ['/admin/events/templates', '/admin/events/wa-templates', '/admin/events/webhooks'] },
+        { label: 'Event Management', path: '/admin/events', icon: CalendarDays, permission: MENU_PERMISSIONS.events, menuKey: 'events' },
+        { label: 'Digital Invitations', path: '/admin/invitations', icon: Ticket, permission: MENU_PERMISSIONS.invitations, menuKey: 'invitations', activePaths: ['/admin/invitations', '/admin/check-in'] },
+        { label: 'Event Templates & Config', path: '/admin/events/templates', icon: Settings, permission: MENU_PERMISSIONS.eventTemplates, menuKey: 'event-templates', activePaths: ['/admin/events/templates', '/admin/events/wa-templates', '/admin/events/webhooks'] },
       ]
     },
     {
@@ -128,6 +153,7 @@ const AdminLayout = () => {
           label: 'Announcements',
           icon: Megaphone,
           permission: MENU_PERMISSIONS.announcements,
+          menuKey: 'announcements',
           submenu: [
             { label: 'Compose', path: '/admin/announcements/compose', icon: PenLine, color: 'navy' },
             { label: 'All Announcements', path: '/admin/announcements/list', icon: FileText, color: 'blue' },
@@ -137,7 +163,7 @@ const AdminLayout = () => {
             { label: 'Settings', path: '/admin/announcements/settings', icon: Settings, color: 'slate' },
           ]
         },
-        { label: 'Gallery', path: '/admin/gallery', icon: ImageIcon, permission: MENU_PERMISSIONS.gallery },
+        { label: 'Gallery', path: '/admin/gallery', icon: ImageIcon, permission: MENU_PERMISSIONS.gallery, menuKey: 'gallery' },
       ]
     },
     {
@@ -147,6 +173,7 @@ const AdminLayout = () => {
           label: 'TimeSheets (Employee)',
           icon: Clock,
           permission: MENU_PERMISSIONS.timesheets,
+          menuKey: 'timesheets',
           submenu: [
             { label: 'Create Activity', path: '/admin/timesheet/create-activity', icon: PlusCircle },
             { label: 'Fill Time Sheet', path: '/admin/timesheet/fill-timesheet', icon: Clock },
@@ -162,6 +189,7 @@ const AdminLayout = () => {
           label: 'TimeSheet Admin', 
           icon: BarChart,
           permission: MENU_PERMISSIONS.operations,
+          menuKey: 'timesheet-admin',
           submenu: [
             { label: 'TimeSheet Report', path: '/admin/timesheet-report' },
             { label: 'Overtime Report', path: '/admin/overtime-report' },
@@ -169,7 +197,7 @@ const AdminLayout = () => {
             { label: 'Categories', path: '/admin/timesheet-categories' } 
           ]
         },
-        { label: 'Payments', path: '/admin/payments', icon: CreditCard, permission: MENU_PERMISSIONS.operations }, 
+        { label: 'Payments', path: '/admin/payments', icon: CreditCard, permission: MENU_PERMISSIONS.operations, menuKey: 'payments' }, 
       ]
     },
     {
@@ -179,6 +207,7 @@ const AdminLayout = () => {
           label: 'Courses',
           icon: BookOpen,
           permission: MENU_PERMISSIONS.courses,
+          menuKey: 'courses',
           submenu: [
             { label: 'Course List', path: '/admin/courses' },
             { label: 'Add Course', path: '/admin/courses/add' },
@@ -198,6 +227,7 @@ const AdminLayout = () => {
           label: 'Human Resources',
           icon: Wallet,
           permission: MENU_PERMISSIONS.hr,
+          menuKey: 'hr',
           submenu: [
             { label: 'Staff Management', path: '/admin/hr/staff' },
             { label: 'Staff Categories', path: '/admin/hr/categories' },
@@ -216,6 +246,7 @@ const AdminLayout = () => {
           label: 'HR Letters',
           icon: FileText,
           permission: MENU_PERMISSIONS.hr,
+          menuKey: 'hr-letters',
           submenu: [
             { label: 'Leave of Absence', path: '/admin/hr/letters/leave' },
             { label: 'Permission', path: '/admin/hr/letters/permission' },
@@ -233,6 +264,7 @@ const AdminLayout = () => {
           label: 'Users', 
           icon: Users,
           permission: MENU_PERMISSIONS.users,
+          menuKey: 'users',
           submenu: [
             { label: 'All Users', path: '/admin/users' },
             { label: 'Add Customer', path: '/admin/users?action=customer', icon: UserPlus },
@@ -246,6 +278,7 @@ const AdminLayout = () => {
           label: 'Members (Team)', 
           icon: Users,
           permission: MENU_PERMISSIONS.members,
+          menuKey: 'members',
           submenu: [
             { label: 'Member List', path: '/admin/members', color: 'navy' },
             { label: 'Add Member', path: '/admin/members?action=new', color: 'green' },
@@ -255,6 +288,7 @@ const AdminLayout = () => {
           label: 'ShareHolders', 
           icon: PieChart,
           permission: MENU_PERMISSIONS.shareholders,
+          menuKey: 'shareholders',
           submenu: [
             { label: 'Dashboard', path: '/admin/shareholders/dashboard', color: 'navy' },
             { label: 'List View', path: '/admin/shareholders/list', color: 'blue' },
@@ -272,15 +306,56 @@ const AdminLayout = () => {
       collapsible: true,
       permission: MENU_PERMISSIONS.system,
       items: [
-        { label: 'Reports Hub', path: '/admin/reports', icon: FileBarChart },
-        { label: 'Activity Logs', path: '/admin/logs', icon: ScrollText },
-        { label: 'Backup & Restore', path: '/admin/backup-restore', icon: Database },
-        { label: 'General Settings', path: '/admin/general-settings', icon: Settings },
-        { label: 'Roles & Permissions', path: '/admin/roles-permissions', icon: Key, permission: MENU_PERMISSIONS.roles },
-        { label: 'System History', path: '/admin/history', icon: History },
+        { label: 'Reports Hub', path: '/admin/reports', icon: FileBarChart, menuKey: 'reports' },
+        { label: 'Activity Logs', path: '/admin/logs', icon: ScrollText, menuKey: 'logs' },
+        { label: 'Backup & Restore', path: '/admin/backup-restore', icon: Database, menuKey: 'backup' },
+        { label: 'General Settings', path: '/admin/general-settings', icon: Settings, menuKey: 'general-settings' },
+        { label: 'Roles & Permissions', path: '/admin/roles-permissions', icon: Key, permission: MENU_PERMISSIONS.roles, menuKey: 'roles' },
+        { label: 'System History', path: '/admin/history', icon: History, menuKey: 'history' },
       ]
     }
   ];
+
+  const menuGroupsOrdered = useMemo(() => {
+    const groups = menuGroups.map((group) => {
+      let items = [...(group.items || [])];
+      if (group.label === 'System' && settingsOrder) {
+        items = [...items].sort(
+          (a, b) => orderIndex(settingsOrder, a.menuKey) - orderIndex(settingsOrder, b.menuKey)
+        );
+      }
+      return { ...group, items };
+    });
+
+    if (!sideOrder) return groups;
+
+    const flat = [];
+    groups.forEach((group) => {
+      group.items.forEach((item) => {
+        flat.push({ item, groupLabel: group.label, groupMeta: group });
+      });
+    });
+    flat.sort(
+      (a, b) => orderIndex(sideOrder, a.item.menuKey) - orderIndex(sideOrder, b.item.menuKey)
+    );
+
+    const rebuilt = [];
+    const map = new Map();
+    flat.forEach(({ item, groupLabel, groupMeta }) => {
+      if (!map.has(groupLabel)) {
+        const g = {
+          label: groupLabel,
+          collapsible: groupMeta.collapsible,
+          permission: groupMeta.permission,
+          items: [],
+        };
+        map.set(groupLabel, g);
+        rebuilt.push(g);
+      }
+      map.get(groupLabel).items.push(item);
+    });
+    return rebuilt;
+  }, [sideOrder, settingsOrder]);
 
   const toggleMenu = (label) => {
     setOpenMenus(prev => ({
@@ -297,7 +372,7 @@ const AdminLayout = () => {
   };
 
   const findActiveSection = () => {
-    for (const group of menuGroups) {
+    for (const group of menuGroupsOrdered) {
       for (const item of group.items || []) {
         if (item.submenu?.some((sub) => pathMatches(sub.path))) {
           return item;
@@ -422,7 +497,7 @@ const AdminLayout = () => {
         </div>
 
         <nav className="flex-1 p-4 space-y-6 overflow-y-auto scrollbar-thin scrollbar-thumb-blue-800">
-          {menuGroups.map((group, idx) => (
+          {menuGroupsOrdered.map((group, idx) => (
             <MenuGroup key={idx} group={group} />
           ))}
         </nav>
