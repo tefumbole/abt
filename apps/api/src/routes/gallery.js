@@ -159,17 +159,6 @@ router.put('/:id', requireAuth, requireAdmin, async (req, res) => {
   }
 });
 
-router.delete('/:id', requireAuth, requireAdmin, async (req, res) => {
-  try {
-    const pool = getPool();
-    const [result] = await pool.query('DELETE FROM gallery_items WHERE id = ?', [req.params.id]);
-    if (!result.affectedRows) return res.status(404).json({ error: 'Not found' });
-    res.json({ success: true });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
 router.post('/reorder', requireAuth, requireAdmin, async (req, res) => {
   try {
     const ids = Array.isArray(req.body?.ids) ? req.body.ids : [];
@@ -190,6 +179,17 @@ router.post('/reorder', requireAuth, requireAdmin, async (req, res) => {
       conn.release();
     }
 
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.delete('/:id', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const pool = getPool();
+    const [result] = await pool.query('DELETE FROM gallery_items WHERE id = ?', [req.params.id]);
+    if (!result.affectedRows) return res.status(404).json({ error: 'Not found' });
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: err.message });

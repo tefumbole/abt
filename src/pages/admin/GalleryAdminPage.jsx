@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
+  ChevronDown, ChevronUp, ChevronsDown, ChevronsUp,
   ExternalLink, Image as ImageIcon, Loader2, Plus, Trash2, Upload,
 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -21,6 +22,7 @@ import {
   createGalleryItem,
   deleteGalleryItem,
   listAdminGalleryItems,
+  reorderGalleryItems,
   updateGalleryItem,
   uploadGalleryFile,
 } from '@/services/galleryService';
@@ -38,6 +40,7 @@ export default function GalleryAdminPage() {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [reordering, setReordering] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
 
   const load = async () => {
@@ -115,6 +118,38 @@ export default function GalleryAdminPage() {
     } catch (err) {
       toast.error(err.message || 'Update failed');
     }
+  };
+
+  const persistOrder = async (nextItems, successMessage) => {
+    const previous = items;
+    setItems(nextItems);
+    setReordering(true);
+    try {
+      await reorderGalleryItems(nextItems.map((i) => i.id));
+      toast.success(successMessage || 'Order updated');
+    } catch (err) {
+      setItems(previous);
+      toast.error(err.message || 'Could not save order');
+    } finally {
+      setReordering(false);
+    }
+  };
+
+  const moveItem = async (index, direction) => {
+    const target = index + direction;
+    if (target < 0 || target >= items.length) return;
+    const next = [...items];
+    [next[index], next[target]] = [next[target], next[index]];
+    await persistOrder(next, 'Order updated');
+  };
+
+  const moveItemToEdge = async (index, edge) => {
+    if (index < 0 || index >= items.length) return;
+    const next = [...items];
+    const [item] = next.splice(index, 1);
+    if (edge === 'first') next.unshift(item);
+    else next.push(item);
+    await persistOrder(next, edge === 'first' ? 'Moved to first' : 'Moved to last');
   };
 
   return (
@@ -230,7 +265,19 @@ export default function GalleryAdminPage() {
       </form>
 
       <div>
-        <h2 className="font-semibold text-[#003D82] mb-4">Items ({items.length})</h2>
+        <div className="flex flex-wrap items-end justify-between gap-2 mb-4">
+          <div>
+            <h2 className="font-semibold text-[#003D82]">Items ({items.length})</h2>
+            <p className="text-xs text-gray-500 mt-0.5">
+              Use the arrows to decide which item appears first on the public gallery.
+            </p>
+          </div>
+          {reordering && (
+            <span className="inline-flex items-center gap-1.5 text-xs text-[#003D82]">
+              <Loader2 className="w-3.5 h-3.5 animate-spin" /> Saving order…
+            </span>
+          )}
+        </div>
         {loading ? (
           <div className="flex justify-center py-12 text-[#003D82]">
             <Loader2 className="w-7 h-7 animate-spin" />
@@ -239,8 +286,57 @@ export default function GalleryAdminPage() {
           <p className="text-gray-500 text-sm">No gallery items yet.</p>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {items.map((item) => (
+            {items.map((item, index) => (
               <div key={item.id} className="relative border rounded-xl overflow-hidden bg-white shadow-sm">
+                <div className="absolute top-2 left-2 z-10 rounded-full bg-[#003D82] text-white text-[10px] font-bold px-2 py-0.5 shadow">
+                  #{index + 1}
+                </div>
+                <div className="absolute top-2 right-2 z-10 flex flex-col gap-0.5 rounded-lg border bg-white/95 p-0.5 shadow-sm">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7"
+                    disabled={reordering || index === 0}
+                    onClick={() => moveItemToEdge(index, 'first')}
+                    title="Move to first"
+                  >
+                    <ChevronsUp className="w-4 h-4" />
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7"
+                    disabled={reordering || index === 0}
+                    onClick={() => moveItem(index, -1)}
+                    title="Move earlier"
+                  >
+                    <ChevronUp className="w-4 h-4" />
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7"
+                    disabled={reordering || index === items.length - 1}
+                    onClick={() => moveItem(index, 1)}
+                    title="Move later"
+                  >
+                    <ChevronDown className="w-4 h-4" />
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7"
+                    disabled={reordering || index === items.length - 1}
+                    onClick={() => moveItemToEdge(index, 'last')}
+                    title="Move to last"
+                  >
+                    <ChevronsDown className="w-4 h-4" />
+                  </Button>
+                </div>
                 <div className="h-40 bg-gray-100 flex items-center justify-center overflow-hidden">
                   {item.type === 'image' && item.file_url ? (
                     <img src={item.file_url} alt="" className="w-full h-full object-cover" />
