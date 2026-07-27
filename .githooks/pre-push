@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Auto-bump ERP patch version (ABT_ERP_V.x.y.z) before push.
+# Auto-bump ERP patch version (ABT_ERP_V.x.y.z) before every branch push.
 # Creates a bump commit and pushes it (the original pre-bump SHA is aborted).
 set -euo pipefail
 
@@ -11,6 +11,29 @@ REMOTE_NAME="${1:-origin}"
 if [[ "${SKIP_VERSION_BUMP:-}" == "1" ]]; then
   exit 0
 fi
+
+files_in_push() {
+  local local_sha="$1"
+  local remote_sha="$2"
+  local range=""
+
+  if [[ "$remote_sha" == "0000000000000000000000000000000000000000" ]]; then
+    # URL / first push: prefer tracked origin tip so we don't scan entire history
+    if git rev-parse --verify -q origin/main >/dev/null 2>&1; then
+      range="origin/main..${local_sha}"
+    elif git rev-parse --verify -q "${REMOTE_NAME}/main" >/dev/null 2>&1; then
+      range="${REMOTE_NAME}/main..${local_sha}"
+    else
+      # Only the tip commit being pushed
+      git diff-tree --no-commit-id --name-only -r "$local_sha" 2>/dev/null || true
+      return
+    fi
+  else
+    range="${remote_sha}..${local_sha}"
+  fi
+
+  git diff --name-only "$range" 2>/dev/null || true
+}
 
 bumped=0
 
@@ -26,15 +49,10 @@ while read -r local_ref local_sha remote_ref remote_sha; do
     continue
   fi
 
-  range="${remote_sha}..${local_sha}"
-  if [[ "$remote_sha" == "0000000000000000000000000000000000000000" ]]; then
-    changed_files="$(git log --format= --name-only "$local_sha" 2>/dev/null || true)"
-  else
-    changed_files="$(git diff --name-only $range 2>/dev/null || true)"
-  fi
+  changed_files="$(files_in_push "$local_sha" "$remote_sha")"
 
   # Skip if this push already includes an appVersion change
-  if echo "$changed_files" | grep -q 'appVersion.js'; then
+  if echo "$changed_files" | grep -qE '(^|/)appVersion\.js$'; then
     continue
   fi
 

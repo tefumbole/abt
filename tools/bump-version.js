@@ -34,6 +34,11 @@ function bumpVersionString(version) {
   return `ABT_ERP_V.${major}.${minor}.${patch}`;
 }
 
+function shortLabel(nextVersion) {
+  const m = nextVersion.match(VERSION_RE);
+  return m ? `${m[1]}.${m[2]}.${m[3]}` : nextVersion;
+}
+
 function replaceVersionInFile(filePath, nextVersion) {
   let content = fs.readFileSync(filePath, 'utf8');
   if (!APP_VERSION_REPLACE_RE.test(content)) {
@@ -43,6 +48,16 @@ function replaceVersionInFile(filePath, nextVersion) {
     APP_VERSION_REPLACE_RE,
     `export const APP_VERSION = '${nextVersion}';`
   );
+
+  // Keep restore-point metadata in sync when present (frontend file).
+  const label = shortLabel(nextVersion);
+  const today = new Date().toISOString().slice(0, 10);
+  content = content.replace(
+    /name:\s*'Alpha Bridge ERP v[\d.]+'/,
+    `name: 'Alpha Bridge ERP v${label}'`
+  );
+  content = content.replace(/created:\s*'[\d-]+'/, `created: '${today}'`);
+
   fs.writeFileSync(filePath, content);
 }
 
