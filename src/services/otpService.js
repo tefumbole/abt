@@ -31,7 +31,10 @@ async function mysqlOtpApi(path, body = {}) {
 
   const json = await res.json().catch(() => ({}));
   if (!res.ok) {
-    throw new Error(json.error || json.message || res.statusText || 'OTP request failed');
+    const err = new Error(json.error || json.message || res.statusText || 'OTP request failed');
+    err.retryAfter = json.retryAfter;
+    err.status = res.status;
+    throw err;
   }
   return json;
 }
@@ -94,7 +97,11 @@ export const otpService = {
         };
       } catch (err) {
         console.error('[OTP_SERVICE] sendOTP (API) Error:', err);
-        return { success: false, message: err.message || 'Failed to send OTP' };
+        return {
+          success: false,
+          message: err.message || 'Failed to send OTP',
+          retryAfter: err.retryAfter,
+        };
       }
     }
     

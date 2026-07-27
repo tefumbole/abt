@@ -26,9 +26,10 @@ function isRateLimitMessage(message) {
 function getRetryAfterMs(result) {
   const seconds = Number(result?.data?.retry_after ?? result?.retry_after);
   if (Number.isFinite(seconds) && seconds > 0) {
-    return Math.ceil(seconds * 1000) + 500;
+    // Wasender account protection is typically 5s; add buffer so retries don't bounce again
+    return Math.max(Math.ceil(seconds * 1000) + 750, MIN_INTERVAL_MS);
   }
-  return MIN_INTERVAL_MS;
+  return Math.max(MIN_INTERVAL_MS, 6500);
 }
 
 async function waitForSendSlot(label) {

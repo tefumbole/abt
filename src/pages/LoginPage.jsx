@@ -236,8 +236,8 @@ const LoginPage = () => {
         console.log("[LoginPage] OTP Send Success. OTP dispatched to WhatsApp. Navigating to Verification Screen.");
         
         toast({
-            title: "Verification Code Sent",
-            description: "Please check your WhatsApp for the code.",
+            title: "WhatsApp code sent",
+            description: `Open WhatsApp on ${otpResult.maskedPhone || 'your phone'} (not SMS) for the 6-digit code.`,
             className: "bg-blue-600 text-white"
         });
 

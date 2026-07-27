@@ -42,13 +42,34 @@ app.get('/health', async (_req, res) => {
   try {
     const pool = getPool();
     await pool.query('SELECT 1');
+    const wasenderConfigured = Boolean(
+      process.env.WASENDER_API_KEY && !String(process.env.WASENDER_API_KEY).startsWith('your_')
+    );
+    let wasenderStatus = null;
+    if (wasenderConfigured) {
+      try {
+        const base = String(process.env.WASENDER_BASE_URL || 'https://wasenderapi.com/api').replace(/\/$/, '');
+        const statusRes = await fetch(`${base}/status`, {
+          headers: {
+            Authorization: `Bearer ${process.env.WASENDER_API_KEY}`,
+            Accept: 'application/json',
+          },
+          signal: AbortSignal.timeout(4000),
+        });
+        const statusJson = await statusRes.json().catch(() => ({}));
+        wasenderStatus = statusJson?.status || (statusRes.ok ? 'ok' : 'error');
+      } catch {
+        wasenderStatus = 'unreachable';
+      }
+    }
     res.json({
       ok: true,
       service: 'alphabridge-api',
       version: APP_VERSION,
       database: process.env.DB_NAME,
       backend: 'mysql',
-      wasender: Boolean(process.env.WASENDER_API_KEY && !String(process.env.WASENDER_API_KEY).startsWith('your_')),
+      wasender: wasenderConfigured,
+      wasenderStatus,
     });
   } catch (err) {
     res.status(503).json({ ok: false, error: err.message });
