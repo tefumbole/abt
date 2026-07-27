@@ -37,6 +37,8 @@ export const PERMISSION_CATALOG = [
     crudModule('Announcements', 'announcements.settings', 'Announcement Settings', [a])
   ),
 
+  ...crudModule('Gallery', 'gallery', 'Gallery'),
+
   ...crudModule('Letters & Messaging', 'letters.send', 'Send Letters'),
   ...crudModule('Letters & Messaging', 'letters.templates', 'Letter Templates'),
   ...crudModule('Letters & Messaging', 'letters.history', 'Letters History'),
@@ -117,6 +119,7 @@ export const PERMISSION_CATALOG = [
     'menu.shareholders': 'Menu: Shareholders',
     'menu.courses': 'Menu: Courses',
     'menu.announcements': 'Menu: Announcements',
+    'menu.gallery': 'Menu: Gallery',
     'menu.timesheets': 'Menu: Timesheets',
     'menu.operations': 'Menu: Operations',
     'menu.hr': 'Menu: HR & Payroll',

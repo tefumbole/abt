@@ -1,18 +1,28 @@
 #!/usr/bin/env bash
-# Auto-bump ERP patch version before push (unless this push already updates appVersion.js).
+# Auto-bump ERP patch version (ABT_ERP_V.x.y.z) before push.
+# Creates a bump commit and pushes it (the original pre-bump SHA is aborted).
 set -euo pipefail
 
 ROOT="$(git rev-parse --show-toplevel)"
 cd "$ROOT"
 
+REMOTE_NAME="${1:-origin}"
+
 if [[ "${SKIP_VERSION_BUMP:-}" == "1" ]]; then
   exit 0
 fi
+
+bumped=0
 
 while read -r local_ref local_sha remote_ref remote_sha; do
   [[ -z "${local_ref:-}" ]] && continue
 
   if [[ "$local_sha" == "0000000000000000000000000000000000000000" ]]; then
+    continue
+  fi
+
+  # Only auto-bump branch pushes (e.g. refs/heads/main)
+  if [[ "$local_ref" != refs/heads/* ]]; then
     continue
   fi
 
@@ -23,6 +33,7 @@ while read -r local_ref local_sha remote_ref remote_sha; do
     changed_files="$(git diff --name-only $range 2>/dev/null || true)"
   fi
 
+  # Skip if this push already includes an appVersion change
   if echo "$changed_files" | grep -q 'appVersion.js'; then
     continue
   fi
@@ -30,6 +41,16 @@ while read -r local_ref local_sha remote_ref remote_sha; do
   NEXT="$(node tools/bump-version.js | awk '{print $3}')"
   git add src/constants/appVersion.js apps/api/src/constants/appVersion.js
   git commit -m "chore: bump version to ${NEXT}" --no-verify
+  echo "Auto-bumped version to ${NEXT}; pushing updated HEAD..."
+  git push --no-verify "$REMOTE_NAME" "HEAD:${remote_ref}"
+  bumped=1
 done
+
+# Abort the original push of the pre-bump SHA (already pushed above if bumped).
+# Exit 1 is intentional so git does not try to push the stale pre-bump commit.
+if [[ "$bumped" -eq 1 ]]; then
+  echo "Version bump included in push. (Ignoring stale pre-bump ref — this is expected.)"
+  exit 1
+fi
 
 exit 0

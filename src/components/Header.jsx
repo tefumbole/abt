@@ -107,6 +107,7 @@ function Header() {
               <NavLink to="/register-now">{tl('menu', 'Register Now')}</NavLink>
               <NavLink to="/apply-now" isSpecial={true}>{tl('menu', 'Apply Now')}</NavLink>
 
+              <NavLink to="/gallery">{tl('menu', 'Gallery')}</NavLink>
               <NavLink to="/about">{tl('menu', 'About Us')}</NavLink>
               <NavLink to="/shareholders">{tl('menu', 'Shareholders')}</NavLink>
               <NavLink to="/contact">{tl('menu', 'Contact Us')}</NavLink>
@@ -234,6 +235,7 @@ function Header() {
                   {tl('menu', 'Apply Now')}
                 </Link>
 
+                <Link to="/gallery" onClick={() => setMobileMenuOpen(false)} className="text-white hover:text-[#D4AF37] text-lg font-medium">{tl('menu', 'Gallery')}</Link>
                 <Link to="/about" onClick={() => setMobileMenuOpen(false)} className="text-white hover:text-[#D4AF37] text-lg font-medium">{tl('menu', 'About Us')}</Link>
                 <Link to="/shareholders" onClick={() => setMobileMenuOpen(false)} className="text-[#D4AF37] hover:text-white text-lg font-medium">{tl('menu', 'Shareholders')}</Link>
                 <Link to="/contact" onClick={() => setMobileMenuOpen(false)} className="text-white hover:text-[#D4AF37] text-lg font-medium">{tl('menu', 'Contact Us')}</Link>

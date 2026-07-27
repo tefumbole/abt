@@ -305,7 +305,7 @@ const LoginPage = () => {
                 <p className="text-gray-500 text-sm">Sign in with your Email or Username</p>
                 {import.meta.env.DEV && import.meta.env.VITE_DEV_SKIP_OTP === 'true' && (
                   <p className="mt-3 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs text-blue-900">
-                    Local dev login: <strong>admin@alpha-bridge.net</strong> / <strong>ChangeMe@123456</strong>
+                    Local dev login: <strong>admin</strong> / <strong>system</strong>
                   </p>
                 )}
             </div>

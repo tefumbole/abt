@@ -26,10 +26,18 @@ grep -q '^PORT=' apps/api/.env && sed -i 's/^PORT=.*/PORT=3003/' apps/api/.env |
 grep -q '^COMPANY_NAME=' apps/api/.env && sed -i 's/^COMPANY_NAME=.*/COMPANY_NAME=Alpha Bridge Technologies Ltd/' apps/api/.env || echo 'COMPANY_NAME=Alpha Bridge Technologies Ltd' >> apps/api/.env
 grep -q '^CORS_ORIGIN=' apps/api/.env && sed -i 's|^CORS_ORIGIN=.*|CORS_ORIGIN=https://alpha-bridge.net|' apps/api/.env
 grep -q '^APP_URL=' apps/api/.env && sed -i 's|^APP_URL=.*|APP_URL=https://alpha-bridge.net|' apps/api/.env
+# Keep Alpha Bridge MySQL DB name isolated from Beyondtechworld
+grep -q '^DB_NAME=' apps/api/.env && sed -i 's/^DB_NAME=.*/DB_NAME=u152889834_alphabridge/' apps/api/.env
+grep -q '^SEED_ADMIN_EMAIL=' apps/api/.env && sed -i 's/^SEED_ADMIN_EMAIL=.*/SEED_ADMIN_EMAIL=admin@alpha-bridge.net/' apps/api/.env || echo 'SEED_ADMIN_EMAIL=admin@alpha-bridge.net' >> apps/api/.env
+grep -q '^SEED_ADMIN_USERNAME=' apps/api/.env && sed -i 's/^SEED_ADMIN_USERNAME=.*/SEED_ADMIN_USERNAME=admin/' apps/api/.env || echo 'SEED_ADMIN_USERNAME=admin' >> apps/api/.env
+grep -q '^SEED_ADMIN_PASSWORD=' apps/api/.env && sed -i 's/^SEED_ADMIN_PASSWORD=.*/SEED_ADMIN_PASSWORD=system/' apps/api/.env || echo 'SEED_ADMIN_PASSWORD=system' >> apps/api/.env
+grep -q '^SEED_ADMIN_PHONE=' apps/api/.env && sed -i 's|^SEED_ADMIN_PHONE=.*|SEED_ADMIN_PHONE=+237675321739|' apps/api/.env || echo 'SEED_ADMIN_PHONE=+237675321739' >> apps/api/.env
 
 echo "==> 4. Install & migrate"
 cd apps/api && npm install && cd ../..
 npm run db:migrate
+echo "==> 4b. Seed Alpha Bridge admin (admin / system) — alphabridge DB only"
+(cd apps/api && npm run db:seed-admin)
 
 echo "==> 5. Frontend env + build (Alpha Bridge branding)"
 cp tools/env/alphabridge.production.env .env

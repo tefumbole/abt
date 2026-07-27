@@ -12,7 +12,7 @@ import { getPool } from './pool.js';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 
-const email = process.env.SEED_ADMIN_EMAIL || 'admin@beyondtechworld.com';
+const email = process.env.SEED_ADMIN_EMAIL || 'admin@alpha-bridge.net';
 const username = process.env.SEED_ADMIN_USERNAME || 'admin';
 const password = process.env.SEED_ADMIN_PASSWORD || 'system';
 const phone = process.env.SEED_ADMIN_PHONE || '+237675321739';

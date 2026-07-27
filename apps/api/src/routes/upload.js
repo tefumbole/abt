@@ -59,6 +59,13 @@ router.get('/:bucket/:filename', (req, res) => {
   if (ext === '.pdf') res.type('application/pdf');
   else if (ext === '.png') res.type('image/png');
   else if (ext === '.jpg' || ext === '.jpeg') res.type('image/jpeg');
+  else if (ext === '.webp') res.type('image/webp');
+  else if (ext === '.gif') res.type('image/gif');
+  else if (ext === '.mp4') res.type('video/mp4');
+  else if (ext === '.webm') res.type('video/webm');
+  else if (ext === '.mov') res.type('video/quicktime');
+  else if (ext === '.mp3') res.type('audio/mpeg');
+  else if (ext === '.wav') res.type('audio/wav');
   res.setHeader('Content-Disposition', `inline; filename="${safe}"`);
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Cache-Control', 'public, max-age=3600');

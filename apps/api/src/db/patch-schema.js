@@ -491,6 +491,20 @@ export const CREATE_STATEMENTS = [
     INDEX idx_hr_letters_staff (staff_profile_id),
     INDEX idx_hr_letters_type (letter_type)
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
+
+  `CREATE TABLE IF NOT EXISTS gallery_items (
+    id CHAR(36) NOT NULL PRIMARY KEY,
+    type VARCHAR(32) NOT NULL,
+    title VARCHAR(255) DEFAULT NULL,
+    description TEXT DEFAULT NULL,
+    file_path VARCHAR(512) DEFAULT NULL,
+    media_url VARCHAR(2048) DEFAULT NULL,
+    sort_order INT UNSIGNED NOT NULL DEFAULT 0,
+    is_published TINYINT(1) NOT NULL DEFAULT 1,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_gallery_items_published (is_published, sort_order)
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
 ];
 
 export const DATA_PATCHES = [];

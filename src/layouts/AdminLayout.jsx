@@ -50,7 +50,8 @@ import {
   UserPlus,
   Wallet,
   UserCog,
-  ScrollText
+  ScrollText,
+  Image as ImageIcon,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -135,6 +136,7 @@ const AdminLayout = () => {
             { label: 'Settings', path: '/admin/announcements/settings', icon: Settings },
           ]
         },
+        { label: 'Gallery', path: '/admin/gallery', icon: ImageIcon, permission: MENU_PERMISSIONS.gallery },
       ]
     },
     {

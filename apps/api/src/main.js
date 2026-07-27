@@ -19,6 +19,7 @@ import systemRoutes from './routes/system.js';
 import hrRoutes from './routes/hr.js';
 import hrLettersRoutes from './routes/hr-letters.js';
 import activityLogsRoutes from './routes/activityLogs.js';
+import galleryRoutes from './routes/gallery.js';
 import { APP_VERSION } from './constants/appVersion.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -66,6 +67,7 @@ app.use('/system', systemRoutes);
 app.use('/hr', hrRoutes);
 app.use('/hr/letters', hrLettersRoutes);
 app.use('/activity-logs', activityLogsRoutes);
+app.use('/gallery', galleryRoutes);
 
 app.use((err, _req, res, next) => {
   if (err?.code === 'LIMIT_FILE_SIZE') {
@@ -81,7 +83,7 @@ await checkDatabaseConnection();
 await seedAdminUser();
 
 app.listen(PORT, () => {
-  console.log(`Beyond Enterprise API listening on port ${PORT}`);
+  console.log(`Alpha Bridge API listening on port ${PORT}`);
   console.log(`Uploads: ${uploadDir}`);
   console.log(`Wasender: ${process.env.WASENDER_API_KEY ? 'configured' : 'NOT configured'}`);
 

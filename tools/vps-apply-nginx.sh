@@ -18,21 +18,25 @@ install -m 644 "$NGINX_SRC/000-default-reject.conf" "$AVAILABLE/000-default-reje
 install -m 644 "$NGINX_SRC/alphabridge.conf" "$AVAILABLE/alphabridge"
 install -m 644 "$NGINX_SRC/manukeza.conf" "$AVAILABLE/manukeza"
 install -m 644 "$NGINX_SRC/newvision.conf" "$AVAILABLE/newvision"
-if [[ -f /etc/letsencrypt/live/beyondtechworld.com/fullchain.pem ]]; then
+if [[ -f "$NGINX_SRC/beyondtechworld.conf" ]] && [[ -f /etc/letsencrypt/live/beyondtechworld.com/fullchain.pem ]]; then
   install -m 644 "$NGINX_SRC/beyondtechworld.conf" "$AVAILABLE/beyondtechworld"
-else
-  echo "    beyondtechworld.com SSL cert missing — using HTTP-only config until certbot succeeds"
+elif [[ -f "$NGINX_SRC/beyondtechworld-http.conf" ]]; then
+  echo "    beyondtechworld SSL cert or conf missing — using HTTP-only config if present"
   install -m 644 "$NGINX_SRC/beyondtechworld-http.conf" "$AVAILABLE/beyondtechworld"
+else
+  echo "    WARN: no beyondtechworld nginx conf in repo — leaving existing site untouched"
 fi
-install -m 644 "$NGINX_SRC/okusoma.conf" "$AVAILABLE/okusoma.com"
+if [[ -f "$NGINX_SRC/okusoma.conf" ]]; then
+  install -m 644 "$NGINX_SRC/okusoma.conf" "$AVAILABLE/okusoma.com"
+fi
 
 echo "==> Enable sites (symlinks)"
 ln -sf "$AVAILABLE/000-default-reject" "$ENABLED/000-default-reject"
 ln -sf "$AVAILABLE/alphabridge" "$ENABLED/alphabridge"
-ln -sf "$AVAILABLE/beyondtechworld" "$ENABLED/beyondtechworld"
+[[ -f "$AVAILABLE/beyondtechworld" ]] && ln -sf "$AVAILABLE/beyondtechworld" "$ENABLED/beyondtechworld"
 ln -sf "$AVAILABLE/manukeza" "$ENABLED/manukeza"
 ln -sf "$AVAILABLE/newvision" "$ENABLED/newvision"
-ln -sf "$AVAILABLE/okusoma.com" "$ENABLED/okusoma.com"
+[[ -f "$AVAILABLE/okusoma.com" ]] && ln -sf "$AVAILABLE/okusoma.com" "$ENABLED/okusoma.com"
 
 echo "==> Remove stray backups from sites-enabled"
 find "$ENABLED" -maxdepth 1 -type f -delete 2>/dev/null || true

@@ -332,24 +332,53 @@ router.post('/refresh', requireAuth, async (req, res) => {
 export async function seedAdminUser() {
   const email = process.env.SEED_ADMIN_EMAIL;
   const password = process.env.SEED_ADMIN_PASSWORD;
+  const username = normalizeUsername(process.env.SEED_ADMIN_USERNAME || 'admin');
   const phone = process.env.SEED_ADMIN_PHONE || null;
+  const forcePassword = process.env.SEED_ADMIN_FORCE_PASSWORD === 'true'
+    || process.env.NODE_ENV === 'development';
   if (!email || !password) return;
 
   const pool = getPool();
-  const [existing] = await pool.query('SELECT id FROM users WHERE LOWER(email) = LOWER(?) LIMIT 1', [email]);
+  const [existing] = await pool.query(
+    `SELECT id FROM users
+     WHERE LOWER(email) = LOWER(?) OR LOWER(username) = LOWER(?)
+     LIMIT 1`,
+    [email, username]
+  );
+
   if (existing.length) {
-    if (process.env.NODE_ENV === 'development' && password) {
+    const userId = existing[0].id;
+    const updates = ['username = ?', 'email = ?', "role = 'super_admin'", "status = 'active'"];
+    const params = [username, email];
+
+    if (forcePassword) {
       const hash = await bcrypt.hash(password, 10);
-      await pool.query('UPDATE users SET password_hash = ? WHERE LOWER(email) = LOWER(?)', [hash, email]);
-      console.log('[seed] Admin password synced for development:', email);
+      updates.push('password_hash = ?');
+      params.push(hash);
     }
     if (phone) {
-      await pool.query('UPDATE users SET phone = ? WHERE LOWER(email) = LOWER(?)', [phone, email]);
-      await pool.query(
-        'UPDATE profiles SET phone = ? WHERE LOWER(email) = LOWER(?)',
-        [phone, email]
-      );
+      updates.push('phone = ?');
+      params.push(phone);
     }
+    params.push(userId);
+
+    await pool.query(`UPDATE users SET ${updates.join(', ')} WHERE id = ?`, params);
+    await pool.query(
+      `INSERT INTO profiles (id, email, username, full_name, role, phone)
+       VALUES (?, ?, ?, 'Super Administrator', 'super_admin', ?)
+       ON DUPLICATE KEY UPDATE
+         email = VALUES(email),
+         username = VALUES(username),
+         role = 'super_admin',
+         phone = COALESCE(VALUES(phone), phone)`,
+      [userId, email, username, phone]
+    );
+    console.log(
+      '[seed] Admin synced:',
+      username,
+      `(${email})`,
+      forcePassword ? '[password refreshed]' : '[password unchanged]'
+    );
     return;
   }
 
@@ -357,19 +386,19 @@ export async function seedAdminUser() {
   const hash = await bcrypt.hash(password, 10);
 
   await pool.query(
-    `INSERT INTO users (id, email, password_hash, name, role, status, phone)
-     VALUES (?, ?, ?, ?, 'super_admin', 'active', ?)`,
-    [id, email, hash, 'Super Administrator', phone]
+    `INSERT INTO users (id, email, username, password_hash, name, role, status, phone)
+     VALUES (?, ?, ?, ?, ?, 'super_admin', 'active', ?)`,
+    [id, email, username, hash, 'Super Administrator', phone]
   );
 
   await pool.query(
-    `INSERT INTO profiles (id, email, full_name, role, phone)
-     VALUES (?, ?, ?, 'super_admin', ?)
-     ON DUPLICATE KEY UPDATE email = VALUES(email), role = 'super_admin', phone = COALESCE(VALUES(phone), phone)`,
-    [id, email, 'Super Administrator', phone]
+    `INSERT INTO profiles (id, email, username, full_name, role, phone)
+     VALUES (?, ?, ?, ?, 'super_admin', ?)
+     ON DUPLICATE KEY UPDATE email = VALUES(email), username = VALUES(username), role = 'super_admin', phone = COALESCE(VALUES(phone), phone)`,
+    [id, email, username, 'Super Administrator', phone]
   );
 
-  console.log('[seed] Admin user created:', email);
+  console.log('[seed] Admin user created:', username, `(${email})`);
 }
 
 export default router;
