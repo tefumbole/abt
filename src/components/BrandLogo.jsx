@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { DEFAULT_LOGO_URL, isValidLogoUrl } from '@/constants/branding';
+import { DEFAULT_LOGO_URL, resolveLogoUrl, isValidLogoUrl } from '@/constants/branding';
 import { getSystemSettings } from '@/services/settingsService';
 
 /**
- * Renders the company logo. Default PNG has a transparent background — no blend tricks.
+ * Renders the company logo. Uses a local transparent PNG by default.
  */
 const BrandLogo = ({
   alt = 'Alpha Bridge',
@@ -12,7 +12,7 @@ const BrandLogo = ({
   preferSystemLogo = true,
   src: srcOverride,
 }) => {
-  const [src, setSrc] = useState(srcOverride || DEFAULT_LOGO_URL);
+  const [src, setSrc] = useState(resolveLogoUrl(srcOverride));
 
   const applyFallback = useCallback(() => {
     setSrc(DEFAULT_LOGO_URL);
@@ -20,10 +20,13 @@ const BrandLogo = ({
 
   useEffect(() => {
     if (srcOverride) {
-      setSrc(srcOverride);
+      setSrc(resolveLogoUrl(srcOverride));
       return undefined;
     }
-    if (!preferSystemLogo) return undefined;
+    if (!preferSystemLogo) {
+      setSrc(DEFAULT_LOGO_URL);
+      return undefined;
+    }
 
     let cancelled = false;
 
@@ -32,7 +35,7 @@ const BrandLogo = ({
         const settings = await getSystemSettings();
         const custom = settings?.logo_url || settings?.system_logo;
         if (!cancelled && isValidLogoUrl(custom)) {
-          setSrc(custom);
+          setSrc(custom.trim());
         }
       } catch {
         /* keep default */

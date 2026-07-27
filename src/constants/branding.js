@@ -24,9 +24,21 @@ export const WEBSITE_HOST =
 export const CONTACT_EMAIL =
   import.meta.env.VITE_CONTACT_EMAIL || 'info@alpha-bridge.net';
 
+/** Local transparent PNG — CDN original had an opaque black background */
+export const LOCAL_LOGO_URL = '/branding/alpha-bridge-logo.png';
+
+/** Old Hostinger asset with solid black background (not suitable on blue UI) */
+const LEGACY_OPAQUE_LOGO_URLS = new Set([
+  'https://horizons-cdn.hostinger.com/81ef3422-3855-479e-bfe8-28a4ceb0df39/a742e501955dd22251276e445b31816d.png',
+]);
+
+function isLegacyOpaqueLogoUrl(url) {
+  return typeof url === 'string' && LEGACY_OPAQUE_LOGO_URLS.has(url.trim());
+}
+
+const envLogo = import.meta.env.VITE_LOGO_URL;
 export const DEFAULT_LOGO_URL =
-  import.meta.env.VITE_LOGO_URL ||
-  'https://horizons-cdn.hostinger.com/81ef3422-3855-479e-bfe8-28a4ceb0df39/a742e501955dd22251276e445b31816d.png';
+  envLogo && !isLegacyOpaqueLogoUrl(envLogo) ? envLogo : LOCAL_LOGO_URL;
 
 export const HERO_IMAGE_URL =
   import.meta.env.VITE_HERO_IMAGE_URL ||
@@ -39,5 +51,13 @@ export function whatsAppUrl(message) {
 
 export function isValidLogoUrl(url) {
   if (!url || typeof url !== 'string') return false;
-  return /^https?:\/\/.+/i.test(url.trim()) || url.startsWith('/');
+  const trimmed = url.trim();
+  if (isLegacyOpaqueLogoUrl(trimmed)) return false;
+  return /^https?:\/\/.+/i.test(trimmed) || trimmed.startsWith('/');
+}
+
+/** Prefer transparent local logo when env/settings still point at the opaque CDN file */
+export function resolveLogoUrl(url) {
+  if (!isValidLogoUrl(url)) return DEFAULT_LOGO_URL;
+  return url.trim();
 }
