@@ -1,9 +1,22 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Helmet } from 'react-helmet';
+import { Link, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Globe2, Target, Users, Award, Briefcase } from 'lucide-react';
+import {
+  Globe2,
+  Target,
+  Users,
+  Award,
+  Briefcase,
+  MapPin,
+  Phone,
+  Mail,
+  Clock,
+  ArrowRight,
+} from 'lucide-react';
 import WhatsAppButton from '@/components/WhatsAppButton';
 import MembersSection from '@/components/MembersSection';
+import { Button } from '@/components/ui/button';
 import { useSiteContent } from '@/hooks/useSiteContent';
 
 const DEFAULT_ABOUT_IMAGE =
@@ -11,6 +24,7 @@ const DEFAULT_ABOUT_IMAGE =
 
 function AboutPage() {
   const { field } = useSiteContent();
+  const location = useLocation();
 
   const stats = [
     { label: 'Years Experience', value: field('about', 'stat_years', '15+') },
@@ -20,6 +34,21 @@ function AboutPage() {
   ];
 
   const aboutImage = field('about', 'about_image', '') || DEFAULT_ABOUT_IMAGE;
+  const phone = field('contact', 'phone', '+250 794 006 160');
+  const email = field('contact', 'email', 'info@alpha-bridge.net');
+
+  useEffect(() => {
+    if (location.hash === '#contact') {
+      const el = document.getElementById('contact');
+      if (el) {
+        const t = window.setTimeout(() => {
+          el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 80);
+        return () => window.clearTimeout(t);
+      }
+    }
+    return undefined;
+  }, [location.hash, location.pathname]);
 
   return (
     <>
@@ -55,6 +84,19 @@ function AboutPage() {
               'We are a premier IT consultancy and infrastructure firm dedicated to transforming businesses through cutting-edge technology solutions.'
             )}
           </motion.p>
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.35 }}
+            className="mt-8"
+          >
+            <a
+              href="#contact"
+              className="inline-flex items-center gap-2 text-[#D4AF37] font-semibold hover:text-white transition-colors"
+            >
+              Contact Us <ArrowRight className="w-4 h-4" />
+            </a>
+          </motion.div>
         </div>
       </section>
 
@@ -160,6 +202,70 @@ function AboutPage() {
                 <p className="text-gray-600">{val.desc}</p>
               </div>
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Contact under About Us — replaces top-level Contact Us menu */}
+      <section id="contact" className="py-16 bg-gray-50 scroll-mt-24">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl md:text-4xl font-bold text-[#003D82] mb-4">
+              {field('contact', 'heading', 'Get in Touch')}
+            </h2>
+            <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+              {field(
+                'contact',
+                'intro',
+                "Have a question, need assistance, or want to explore partnership opportunities? We're here to help. Reach out to the Alpha Bridge team today."
+              )}
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-6 mb-10">
+            <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm">
+              <MapPin className="w-6 h-6 text-[#003D82] mb-3" />
+              <h3 className="font-semibold text-[#003D82] mb-2">Office</h3>
+              <p className="text-sm text-gray-600">
+                {field('contact', 'office_name', 'Alpha Bridge.')}
+                <br />
+                {field('contact', 'office_line1', 'Norrsken House Kigali')}
+                <br />
+                {field('contact', 'office_line2', 'Kigali, Rwanda')}
+              </p>
+            </div>
+            <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm">
+              <Phone className="w-6 h-6 text-[#D4AF37] mb-3" />
+              <h3 className="font-semibold text-[#003D82] mb-2">Phone & Email</h3>
+              <p className="text-sm text-gray-600">
+                <a href={`tel:${phone.replace(/\s/g, '')}`} className="hover:text-[#003D82]">
+                  {phone}
+                </a>
+                <br />
+                <a href={`mailto:${email}`} className="hover:text-[#003D82]">
+                  {email}
+                </a>
+              </p>
+            </div>
+            <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm">
+              <Clock className="w-6 h-6 text-[#003D82] mb-3" />
+              <h3 className="font-semibold text-[#003D82] mb-2">Business Hours</h3>
+              <p className="text-sm text-gray-600">
+                Mon–Fri: {field('contact', 'hours_weekday', '9:00 AM - 6:00 PM')}
+                <br />
+                Sat–Sun: {field('contact', 'hours_weekend', 'Closed')}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+            <WhatsAppButton className="bg-[#D4AF37] text-[#003D82] font-bold px-8 py-3 rounded-full" />
+            <Button asChild variant="outline" className="border-[#003D82] text-[#003D82]">
+              <Link to="/contact">
+                <Mail className="w-4 h-4 mr-2" />
+                Open full contact form
+              </Link>
+            </Button>
           </div>
         </div>
       </section>

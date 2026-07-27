@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Menu, X, Phone, Mail, Scan, ChevronDown, User, LogIn, LogOut, LayoutDashboard, ListTodo, Inbox } from 'lucide-react';
+import { Menu, X, Phone, Mail, ChevronDown, User, LogIn, LogOut, LayoutDashboard, ListTodo, Inbox } from 'lucide-react';
 import WhatsAppButton from '@/components/WhatsAppButton';
 import BrandLogo from '@/components/BrandLogo';
 import { useAuth } from '@/context/AuthContext';
@@ -17,6 +17,9 @@ import LanguageSwitcher from '@/components/LanguageSwitcher';
 import { useSiteLabel } from '@/hooks/useSiteLabel';
 import { useSiteContent } from '@/hooks/useSiteContent';
 
+/** Removed from public header — Contact is under About; QR is admin/invite-only. */
+const REMOVED_LANDING_KEYS = new Set(['contact', 'qr']);
+
 const DEFAULT_LANDING_MENU = [
   { key: 'home', label: 'Home', path: '/' },
   { key: 'trainings', label: 'Training', path: '/trainings' },
@@ -24,16 +27,37 @@ const DEFAULT_LANDING_MENU = [
   { key: 'register', label: 'Register Now', path: '/register-now' },
   { key: 'apply', label: 'Apply Now', path: '/apply-now', special: true },
   { key: 'gallery', label: 'Gallery', path: '/gallery' },
-  { key: 'about', label: 'About Us', path: '/about' },
+  {
+    key: 'about',
+    label: 'About Us',
+    path: '/about',
+    children: [{ key: 'contact', label: 'Contact Us', path: '/about#contact' }],
+  },
   { key: 'shareholders', label: 'Shareholders', path: '/shareholders' },
-  { key: 'contact', label: 'Contact Us', path: '/contact' },
-  { key: 'qr', label: 'QR Scanner', path: '/qr-scanner', icon: 'scan' },
 ];
+
+function normalizeLandingMenu(items) {
+  const source = Array.isArray(items) && items.length ? items : DEFAULT_LANDING_MENU;
+  return source
+    .filter((item) => item?.key && !REMOVED_LANDING_KEYS.has(item.key) && item.icon !== 'scan')
+    .map((item) => {
+      if (item.key === 'about') {
+        return {
+          ...item,
+          path: item.path || '/about',
+          children: item.children?.length
+            ? item.children
+            : [{ key: 'contact', label: 'Contact Us', path: '/about#contact' }],
+        };
+      }
+      return item;
+    });
+}
 
 function Header() {
   const tl = useSiteLabel();
   const { landingMenu } = useSiteContent();
-  const navItems = landingMenu?.length ? landingMenu : DEFAULT_LANDING_MENU;
+  const navItems = normalizeLandingMenu(landingMenu);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [checkingAdmin, setCheckingAdmin] = useState(true);
@@ -117,17 +141,39 @@ function Header() {
             {/* Desktop Navigation */}
             <nav className="hidden lg:flex items-center space-x-4 xl:space-x-6">
               {navItems.map((item) => {
-                if (item.key === 'qr' || item.icon === 'scan') {
+                if (item.children?.length) {
+                  const aboutActive =
+                    isActive('/about') || isActive('/contact') || location.hash === '#contact';
                   return (
-                    <Link
-                      key={item.key}
-                      to={item.path}
-                      className={`text-white hover:text-[#D4AF37] transition-colors flex items-center gap-1 text-sm border border-white/20 px-2 py-1 rounded-md hover:border-[#D4AF37] ${isActive(item.path) ? 'border-[#D4AF37] text-[#D4AF37]' : ''}`}
-                      title={tl('menu', item.label || 'QR Code Scanner')}
-                    >
-                      <Scan className="w-4 h-4" />
-                      <span className="hidden xl:inline">{tl('menu', 'Scan QR')}</span>
-                    </Link>
+                    <DropdownMenu key={item.key}>
+                      <DropdownMenuTrigger asChild>
+                        <button
+                          type="button"
+                          className={`text-sm xl:text-base font-medium transition-colors duration-300 inline-flex items-center gap-1 outline-none ${
+                            aboutActive
+                              ? 'text-[#D4AF37] border-b-2 border-[#D4AF37] pb-1'
+                              : 'text-white hover:text-[#D4AF37]'
+                          }`}
+                        >
+                          {tl('menu', item.label)}
+                          <ChevronDown className="w-3.5 h-3.5 opacity-70" />
+                        </button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="start" className="bg-white min-w-[10rem]">
+                        <DropdownMenuItem asChild>
+                          <Link to={item.path} className="cursor-pointer">
+                            {tl('menu', item.label)}
+                          </Link>
+                        </DropdownMenuItem>
+                        {item.children.map((child) => (
+                          <DropdownMenuItem key={child.key} asChild>
+                            <Link to={child.path} className="cursor-pointer">
+                              {tl('menu', child.label)}
+                            </Link>
+                          </DropdownMenuItem>
+                        ))}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   );
                 }
                 return (
@@ -242,19 +288,32 @@ function Header() {
                   <LanguageSwitcher variant="header" />
                 </div>
                 {navItems.map((item) => {
-                  if (item.key === 'qr' || item.icon === 'scan') {
+                  const special = Boolean(item.special);
+                  if (item.children?.length) {
                     return (
-                      <Link
-                        key={item.key}
-                        to={item.path}
-                        onClick={() => setMobileMenuOpen(false)}
-                        className="flex items-center gap-2 text-lg font-medium text-white hover:text-[#D4AF37] pt-2 border-t border-gray-700"
-                      >
-                        <Scan className="w-5 h-5" /> {tl('menu', item.label || 'Scan QR Code')}
-                      </Link>
+                      <div key={item.key} className="space-y-2">
+                        <Link
+                          to={item.path}
+                          onClick={() => setMobileMenuOpen(false)}
+                          className="text-white hover:text-[#D4AF37] text-lg font-medium block"
+                        >
+                          {tl('menu', item.label)}
+                        </Link>
+                        <div className="pl-4 space-y-2 border-l border-white/20">
+                          {item.children.map((child) => (
+                            <Link
+                              key={child.key}
+                              to={child.path}
+                              onClick={() => setMobileMenuOpen(false)}
+                              className="text-white/85 hover:text-[#D4AF37] text-base font-medium block"
+                            >
+                              {tl('menu', child.label)}
+                            </Link>
+                          ))}
+                        </div>
+                      </div>
                     );
                   }
-                  const special = Boolean(item.special);
                   return (
                     <Link
                       key={item.key}

@@ -3,6 +3,7 @@
  * Values live in site_settings; schema defaults keep the site unchanged until edited.
  */
 
+/** Public header items. Contact lives under About Us (dropdown); QR is not in the menu. */
 export const LANDING_MENU_ITEMS = {
   home: { label: 'Home', path: '/' },
   trainings: { label: 'Training', path: '/trainings' },
@@ -10,10 +11,12 @@ export const LANDING_MENU_ITEMS = {
   register: { label: 'Register Now', path: '/register-now' },
   apply: { label: 'Apply Now', path: '/apply-now', special: true },
   gallery: { label: 'Gallery', path: '/gallery' },
-  about: { label: 'About Us', path: '/about' },
+    about: {
+      label: 'About Us',
+      path: '/about',
+      children: [{ key: 'contact', label: 'Contact Us', path: '/about#contact' }],
+    },
   shareholders: { label: 'Shareholders', path: '/shareholders' },
-  contact: { label: 'Contact Us', path: '/contact' },
-  qr: { label: 'QR Scanner', path: '/qr-scanner', icon: 'scan' },
 };
 
 export const SIDE_MENU_ITEMS = {

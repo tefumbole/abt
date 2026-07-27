@@ -320,6 +320,11 @@ export default function SiteContentPage() {
                     : ' Site Content page tabs'}{' '}
               (or use arrows). Click Save when done.
             </p>
+            {activeTab === 'landing' ? (
+              <p className="text-xs text-slate-500 mt-2 rounded-lg bg-slate-50 border border-slate-100 px-3 py-2">
+                Contact Us appears under <strong>About Us</strong> (submenu). QR Scanner is not shown in the public menu.
+              </p>
+            ) : null}
           </div>
           <ReorderList
             order={draftOrders[activeTab] || []}

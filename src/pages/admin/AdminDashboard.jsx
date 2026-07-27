@@ -15,6 +15,10 @@ import {
   AlertCircle,
   FileText,
   ShieldCheck,
+  ArrowUpRight,
+  GraduationCap,
+  Globe,
+  Image as ImageIcon,
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -47,7 +51,7 @@ const currency = (n) =>
 
 const numberFmt = (n) => new Intl.NumberFormat('en-US').format(Number(n) || 0);
 
-function KpiCard({ title, value, subtitle, icon: Icon, tone = 'blue', delay = 0 }) {
+function KpiCard({ title, value, subtitle, icon: Icon, tone = 'blue', delay = 0, to }) {
   const tones = {
     blue: 'bg-blue-50 text-[#003D82]',
     green: 'bg-emerald-50 text-emerald-700',
@@ -55,23 +59,63 @@ function KpiCard({ title, value, subtitle, icon: Icon, tone = 'blue', delay = 0 
     purple: 'bg-violet-50 text-violet-700',
     slate: 'bg-slate-100 text-slate-700',
   };
+  const TitleValue = to
+    ? ({ children }) => (
+        <Link
+          to={to}
+          className="block min-w-0 rounded-md focus:outline-none focus-visible:ring-2 focus-visible:ring-[#003D82]"
+        >
+          {children}
+        </Link>
+      )
+    : ({ children }) => <div className="min-w-0">{children}</div>;
+
   return (
     <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay }}>
-      <Card className="border-slate-200 shadow-sm hover:shadow-md transition-shadow h-full">
+      <Card className="border-slate-200 shadow-sm hover:shadow-md hover:border-[#003D82]/40 transition-all h-full group">
         <CardContent className="p-5">
           <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0">
-              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{title}</p>
-              <p className="mt-1 text-2xl font-bold text-slate-900 truncate">{value}</p>
-              {subtitle ? <p className="mt-1 text-xs text-slate-500">{subtitle}</p> : null}
+            <div className="min-w-0 flex-1">
+              <TitleValue>
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 flex items-center gap-1 group-hover:text-[#003D82]">
+                  {title}
+                  {to ? (
+                    <ArrowUpRight className="h-3 w-3 opacity-50 group-hover:opacity-100 transition-opacity text-[#003D82]" />
+                  ) : null}
+                </p>
+                <p className="mt-1 text-2xl font-bold text-slate-900 truncate group-hover:text-[#003D82]">{value}</p>
+              </TitleValue>
+              {subtitle ? <div className="mt-1 text-xs text-slate-500">{subtitle}</div> : null}
             </div>
-            <div className={`rounded-xl p-2.5 shrink-0 ${tones[tone]}`}>
-              <Icon className="h-5 w-5" />
-            </div>
+            {to ? (
+              <Link
+                to={to}
+                className={`rounded-xl p-2.5 shrink-0 ${tones[tone]} hover:scale-105 transition-transform`}
+                aria-label={`Open ${title}`}
+              >
+                <Icon className="h-5 w-5" />
+              </Link>
+            ) : (
+              <div className={`rounded-xl p-2.5 shrink-0 ${tones[tone]}`}>
+                <Icon className="h-5 w-5" />
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
     </motion.div>
+  );
+}
+
+function SectionLink({ to, children }) {
+  return (
+    <Link
+      to={to}
+      className="inline-flex items-center gap-1.5 hover:text-[#D4AF37] transition-colors group"
+    >
+      {children}
+      <ArrowUpRight className="h-3.5 w-3.5 opacity-60 group-hover:opacity-100" />
+    </Link>
   );
 }
 
@@ -123,11 +167,41 @@ const AdminDashboard = () => {
       : 0;
 
   const quickLinks = [
-    { to: '/admin/users', title: 'Manage Users', desc: 'Staff & Admins', icon: Users },
-    { to: '/admin/jobs', title: 'Recruitment', desc: 'Jobs & Applications', icon: Briefcase },
-    { to: '/admin/shareholders', title: 'Shareholders', desc: 'Equity Management', icon: TrendingUp },
+    { to: '/admin/applications', title: 'Applications', desc: 'All job applications', icon: FileText },
+    { to: '/admin/jobs', title: 'Recruitment', desc: 'Jobs & openings', icon: Briefcase },
+    { to: '/admin/shareholders/dashboard', title: 'Shareholders', desc: 'Equity management', icon: TrendingUp },
     { to: '/admin/members', title: 'Members', desc: 'Team directory', icon: UserCheck },
-    { to: '/admin/settings', title: 'General Settings', desc: 'System Config', icon: Settings },
+    { to: '/admin/students', title: 'Students', desc: 'Student registry', icon: GraduationCap },
+    { to: '/admin/users', title: 'Manage Users', desc: 'Staff & admins', icon: Users },
+    { to: '/admin/site-content', title: 'Site Content', desc: 'Edit public pages', icon: Globe },
+    { to: '/admin/gallery', title: 'Gallery', desc: 'Photos & embeds', icon: ImageIcon },
+    { to: '/admin/general-settings', title: 'General Settings', desc: 'System config', icon: Settings },
+  ];
+
+  const equityRows = [
+    { label: 'Shareholders', value: numberFmt(kpis?.shareholders), to: '/admin/shareholders/list' },
+    { label: 'Approved', value: numberFmt(kpis?.shareholdersApproved), to: '/admin/shareholders/list' },
+    {
+      label: 'Pending review',
+      value: numberFmt(kpis?.shareholdersPending),
+      to: '/admin/shareholders/pending-approvals',
+    },
+    {
+      label: 'Completed payments',
+      value: numberFmt(kpis?.completedPayments),
+      to: '/admin/shareholders/dashboard',
+    },
+    {
+      label: 'Pending payments',
+      value: numberFmt(kpis?.pendingPayments),
+      to: '/admin/shareholders/pending-payments',
+    },
+    { label: 'Price / share', value: currency(kpis?.pricePerShare), to: '/admin/shareholders/settings' },
+    {
+      label: 'Remaining value',
+      value: currency(kpis?.remainingWorth),
+      to: '/admin/shareholders/dashboard',
+    },
   ];
 
   return (
@@ -180,18 +254,40 @@ const AdminDashboard = () => {
             <KpiCard
               title="Applications"
               value={numberFmt(kpis?.applicationsTotal)}
-              subtitle={`${numberFmt(kpis?.applicationsPending)} pending · ${numberFmt(kpis?.applicationsShortlisted)} shortlisted`}
+              subtitle={
+                <span className="flex flex-wrap gap-x-2 gap-y-0.5">
+                  <Link to="/admin/applications" className="hover:text-[#003D82] hover:underline">
+                    {numberFmt(kpis?.applicationsPending)} pending
+                  </Link>
+                  <span>·</span>
+                  <Link to="/admin/applications/shortlisted" className="hover:text-[#003D82] hover:underline">
+                    {numberFmt(kpis?.applicationsShortlisted)} shortlisted
+                  </Link>
+                </span>
+              }
               icon={FileText}
               tone="blue"
               delay={0.05}
+              to="/admin/applications"
             />
             <KpiCard
               title="Members"
               value={numberFmt(kpis?.members)}
-              subtitle={`${numberFmt(kpis?.students)} students · ${numberFmt(kpis?.jobs)} jobs`}
+              subtitle={
+                <span className="flex flex-wrap gap-x-2 gap-y-0.5">
+                  <Link to="/admin/students" className="hover:text-[#003D82] hover:underline">
+                    {numberFmt(kpis?.students)} students
+                  </Link>
+                  <span>·</span>
+                  <Link to="/admin/jobs" className="hover:text-[#003D82] hover:underline">
+                    {numberFmt(kpis?.jobs)} jobs
+                  </Link>
+                </span>
+              }
               icon={Users}
               tone="green"
               delay={0.1}
+              to="/admin/members"
             />
             <KpiCard
               title="Shares Sold"
@@ -200,6 +296,7 @@ const AdminDashboard = () => {
               icon={Layers}
               tone="purple"
               delay={0.15}
+              to="/admin/shareholders/dashboard"
             />
             <KpiCard
               title="Portfolio Worth"
@@ -208,15 +305,16 @@ const AdminDashboard = () => {
               icon={DollarSign}
               tone="gold"
               delay={0.2}
+              to="/admin/shareholders/dashboard"
             />
           </div>
 
           <div className="grid gap-4 lg:grid-cols-3">
-            <Card className="lg:col-span-1 border-slate-200 shadow-sm">
+            <Card className="lg:col-span-1 border-slate-200 shadow-sm hover:border-[#003D82]/30 transition-colors">
               <CardHeader className="pb-2">
                 <CardTitle className="text-base flex items-center gap-2 text-[#003D82]">
                   <PieChartIcon className="h-4 w-4" />
-                  Share Allocation
+                  <SectionLink to="/admin/shareholders/dashboard">Share Allocation</SectionLink>
                 </CardTitle>
                 <CardDescription>Sold vs remaining company shares</CardDescription>
               </CardHeader>
@@ -254,24 +352,30 @@ const AdminDashboard = () => {
                   </div>
                   <Progress value={soldPct} className="h-2" />
                   <div className="grid grid-cols-2 gap-2 pt-1">
-                    <div className="rounded-lg bg-slate-50 p-2.5">
+                    <Link
+                      to="/admin/shareholders/settings"
+                      className="rounded-lg bg-slate-50 p-2.5 hover:bg-slate-100 transition-colors"
+                    >
                       <p className="text-[10px] uppercase text-slate-500">Company worth</p>
                       <p className="text-sm font-semibold text-slate-900">{currency(kpis?.totalCompanyWorth)}</p>
-                    </div>
-                    <div className="rounded-lg bg-amber-50 p-2.5">
+                    </Link>
+                    <Link
+                      to="/admin/shareholders/dashboard"
+                      className="rounded-lg bg-amber-50 p-2.5 hover:bg-amber-100/80 transition-colors"
+                    >
                       <p className="text-[10px] uppercase text-amber-700/80">Invested</p>
                       <p className="text-sm font-semibold text-amber-900">{currency(kpis?.portfolioWorth)}</p>
-                    </div>
+                    </Link>
                   </div>
                 </div>
               </CardContent>
             </Card>
 
-            <Card className="lg:col-span-2 border-slate-200 shadow-sm">
+            <Card className="lg:col-span-2 border-slate-200 shadow-sm hover:border-[#003D82]/30 transition-colors">
               <CardHeader className="pb-2">
                 <CardTitle className="text-base flex items-center gap-2 text-[#003D82]">
                   <TrendingUp className="h-4 w-4" />
-                  Applications Trend
+                  <SectionLink to="/admin/applications">Applications Trend</SectionLink>
                 </CardTitle>
                 <CardDescription>Applications received over the last 6 months</CardDescription>
               </CardHeader>
@@ -305,16 +409,34 @@ const AdminDashboard = () => {
           </div>
 
           <div className="grid gap-4 lg:grid-cols-3">
-            <Card className="border-slate-200 shadow-sm">
+            <Card className="border-slate-200 shadow-sm hover:border-[#003D82]/30 transition-colors">
               <CardHeader className="pb-2">
-                <CardTitle className="text-base text-[#003D82]">Application Pipeline</CardTitle>
-                <CardDescription>Status breakdown</CardDescription>
+                <CardTitle className="text-base text-[#003D82]">
+                  <SectionLink to="/admin/applications">Application Pipeline</SectionLink>
+                </CardTitle>
+                <CardDescription>
+                  Status breakdown ·{' '}
+                  <Link to="/admin/applications/shortlisted" className="text-[#003D82] hover:underline">
+                    shortlisted
+                  </Link>
+                  {' · '}
+                  <Link to="/admin/applications/rejected" className="text-[#003D82] hover:underline">
+                    rejected
+                  </Link>
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 {(() => {
                   const pipeline = (data?.applicationsByStatus || []).filter((d) => d.value > 0);
                   if (pipeline.length === 0) {
-                    return <p className="text-sm text-slate-500 py-16 text-center">No applications yet</p>;
+                    return (
+                      <p className="text-sm text-slate-500 py-16 text-center">
+                        No applications yet.{' '}
+                        <Link to="/admin/jobs" className="text-[#003D82] font-medium hover:underline">
+                          Manage jobs
+                        </Link>
+                      </p>
+                    );
                   }
                   return (
                     <div className="h-[240px]">
@@ -343,14 +465,21 @@ const AdminDashboard = () => {
               </CardContent>
             </Card>
 
-            <Card className="border-slate-200 shadow-sm">
+            <Card className="border-slate-200 shadow-sm hover:border-[#003D82]/30 transition-colors">
               <CardHeader className="pb-2">
-                <CardTitle className="text-base text-[#003D82]">Top Job Openings</CardTitle>
+                <CardTitle className="text-base text-[#003D82]">
+                  <SectionLink to="/admin/jobs">Top Job Openings</SectionLink>
+                </CardTitle>
                 <CardDescription>Applications by job</CardDescription>
               </CardHeader>
               <CardContent>
                 {(data?.topJobs?.length || 0) === 0 ? (
-                  <p className="text-sm text-slate-500 py-16 text-center">No job applications yet</p>
+                  <p className="text-sm text-slate-500 py-16 text-center">
+                    No job applications yet.{' '}
+                    <Link to="/admin/jobs" className="text-[#003D82] font-medium hover:underline">
+                      Open jobs
+                    </Link>
+                  </p>
                 ) : (
                   <div className="h-[240px]">
                     <ResponsiveContainer width="100%" height="100%">
@@ -377,34 +506,30 @@ const AdminDashboard = () => {
               </CardContent>
             </Card>
 
-            <Card className="border-slate-200 shadow-sm">
+            <Card className="border-slate-200 shadow-sm hover:border-[#003D82]/30 transition-colors">
               <CardHeader className="pb-2">
                 <CardTitle className="text-base flex items-center gap-2 text-[#003D82]">
                   <ShieldCheck className="h-4 w-4" />
-                  Equity Snapshot
+                  <SectionLink to="/admin/shareholders/dashboard">Equity Snapshot</SectionLink>
                 </CardTitle>
                 <CardDescription>Shareholders & payments</CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
-                {[
-                  { label: 'Shareholders', value: numberFmt(kpis?.shareholders) },
-                  { label: 'Approved', value: numberFmt(kpis?.shareholdersApproved) },
-                  { label: 'Pending review', value: numberFmt(kpis?.shareholdersPending) },
-                  { label: 'Completed payments', value: numberFmt(kpis?.completedPayments) },
-                  { label: 'Pending payments', value: numberFmt(kpis?.pendingPayments) },
-                  { label: 'Price / share', value: currency(kpis?.pricePerShare) },
-                  { label: 'Remaining value', value: currency(kpis?.remainingWorth) },
-                ].map((row) => (
-                  <div
+                {equityRows.map((row) => (
+                  <Link
                     key={row.label}
-                    className="flex items-center justify-between rounded-lg border border-slate-100 bg-slate-50/80 px-3 py-2"
+                    to={row.to}
+                    className="flex items-center justify-between rounded-lg border border-slate-100 bg-slate-50/80 px-3 py-2 hover:bg-blue-50 hover:border-[#003D82]/20 transition-colors group"
                   >
-                    <span className="text-xs text-slate-600">{row.label}</span>
-                    <span className="text-sm font-semibold text-slate-900">{row.value}</span>
-                  </div>
+                    <span className="text-xs text-slate-600 group-hover:text-[#003D82]">{row.label}</span>
+                    <span className="text-sm font-semibold text-slate-900 inline-flex items-center gap-1">
+                      {row.value}
+                      <ArrowUpRight className="h-3 w-3 opacity-0 group-hover:opacity-70 text-[#003D82]" />
+                    </span>
+                  </Link>
                 ))}
                 <Button asChild className="w-full mt-1 bg-[#003D82] hover:bg-[#002a5c]">
-                  <Link to="/admin/shareholders">Open Shareholders</Link>
+                  <Link to="/admin/shareholders/dashboard">Open Shareholders</Link>
                 </Button>
               </CardContent>
             </Card>
@@ -416,7 +541,7 @@ const AdminDashboard = () => {
               <CardDescription>Jump to frequently used management tools</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
                 {quickLinks.map(({ to, title, desc, icon: Icon }) => (
                   <Button
                     key={to}
