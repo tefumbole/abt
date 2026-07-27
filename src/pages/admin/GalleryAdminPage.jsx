@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   ChevronDown, ChevronUp, ChevronsDown, ChevronsUp, GripVertical,
-  ExternalLink, Image as ImageIcon, Loader2, Plus, Trash2, Upload,
+  ExternalLink, Image as ImageIcon, Loader2, Pencil, Plus, Trash2, Upload, X,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -45,7 +45,9 @@ export default function GalleryAdminPage() {
   const [dragIndex, setDragIndex] = useState(null);
   const [overIndex, setOverIndex] = useState(null);
   const dragFromRef = useRef(null);
+  const formRef = useRef(null);
   const [form, setForm] = useState(EMPTY_FORM);
+  const [editingItem, setEditingItem] = useState(null);
 
   const load = async () => {
     setLoading(true);
@@ -64,40 +66,78 @@ export default function GalleryAdminPage() {
 
   const isFileType = GALLERY_FILE_TYPES.includes(form.type);
   const isUrlType = GALLERY_URL_TYPES.includes(form.type);
+  const isEditing = Boolean(editingItem);
+
+  const resetForm = () => {
+    setForm(EMPTY_FORM);
+    setEditingItem(null);
+  };
+
+  const startEdit = (item) => {
+    setEditingItem(item);
+    setForm({
+      type: item.type || 'image',
+      title: item.title || '',
+      description: item.description || '',
+      media_url: item.media_url || '',
+      file: null,
+    });
+    requestAnimationFrame(() => {
+      formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSaving(true);
     try {
-      let file_path = null;
       let media_url = form.media_url.trim() || null;
       let type = form.type;
+      let file_path = editingItem?.file_path || null;
 
       if (isUrlType) {
         if (!media_url) throw new Error('Paste a social media / video URL');
         const detected = detectGalleryTypeFromUrl(media_url);
         if (detected) type = detected;
+        file_path = null;
       }
 
       if (isFileType) {
-        if (!form.file) throw new Error('Choose a file to upload');
-        file_path = await uploadGalleryFile(form.file, type);
+        if (form.file) {
+          file_path = await uploadGalleryFile(form.file, type);
+        } else if (!isEditing || !file_path) {
+          throw new Error(isEditing ? 'Upload a new file or keep the existing one' : 'Choose a file to upload');
+        }
+        media_url = null;
       }
 
-      await createGalleryItem({
+      const payload = {
         type,
         title: form.title.trim() || null,
         description: form.description.trim() || null,
         file_path,
         media_url: isUrlType ? media_url : null,
-        is_published: true,
-      });
+      };
 
-      toast.success('Gallery item added');
-      setForm(EMPTY_FORM);
-      await load();
+      if (isEditing) {
+        const updated = await updateGalleryItem(editingItem.id, {
+          ...payload,
+          is_published: editingItem.is_published,
+        });
+        setItems((prev) => prev.map((i) => (i.id === updated.id ? updated : i)));
+        toast.success('Gallery item updated');
+      } else {
+        await createGalleryItem({
+          ...payload,
+          is_published: true,
+        });
+        toast.success('Gallery item added');
+        await load();
+      }
+
+      resetForm();
     } catch (err) {
-      toast.error(err.message || 'Failed to add item');
+      toast.error(err.message || (isEditing ? 'Failed to update item' : 'Failed to add item'));
     } finally {
       setSaving(false);
     }
@@ -109,6 +149,7 @@ export default function GalleryAdminPage() {
       await deleteGalleryItem(id);
       toast.success('Deleted');
       setItems((prev) => prev.filter((i) => i.id !== id));
+      if (editingItem?.id === id) resetForm();
     } catch (err) {
       toast.error(err.message || 'Delete failed');
     }
@@ -118,6 +159,9 @@ export default function GalleryAdminPage() {
     try {
       const updated = await updateGalleryItem(item.id, { is_published: !item.is_published });
       setItems((prev) => prev.map((i) => (i.id === item.id ? updated : i)));
+      if (editingItem?.id === item.id) {
+        setEditingItem(updated);
+      }
       toast.success(updated.is_published ? 'Published' : 'Unpublished');
     } catch (err) {
       toast.error(err.message || 'Update failed');
@@ -183,7 +227,6 @@ export default function GalleryAdminPage() {
     setDragIndex(index);
     e.dataTransfer.effectAllowed = 'move';
     e.dataTransfer.setData('text/plain', String(index));
-    // Improve drag ghost visibility in some browsers
     if (e.currentTarget instanceof HTMLElement) {
       e.dataTransfer.setDragImage(e.currentTarget, 40, 24);
     }
@@ -229,10 +272,44 @@ export default function GalleryAdminPage() {
         </Button>
       </div>
 
-      <form onSubmit={handleSubmit} className="rounded-xl border border-dashed border-[#c5d3ea] bg-[#f8fbff] p-6 space-y-4">
-        <h2 className="font-semibold text-[#003D82] flex items-center gap-2">
-          <Plus className="w-4 h-4" /> Add gallery item
-        </h2>
+      <form
+        ref={formRef}
+        onSubmit={handleSubmit}
+        className={cn(
+          'rounded-xl border border-dashed p-6 space-y-4',
+          isEditing
+            ? 'border-[#D4AF37] bg-[#fffbeb]'
+            : 'border-[#c5d3ea] bg-[#f8fbff]'
+        )}
+      >
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h2 className="font-semibold text-[#003D82] flex items-center gap-2">
+            {isEditing ? (
+              <>
+                <Pencil className="w-4 h-4 text-[#D4AF37]" />
+                Edit gallery item
+                {editingItem?.is_published ? (
+                  <span className="text-[10px] font-bold uppercase tracking-wide bg-green-100 text-green-700 px-2 py-0.5 rounded-full">
+                    Published
+                  </span>
+                ) : (
+                  <span className="text-[10px] font-bold uppercase tracking-wide bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">
+                    Unpublished
+                  </span>
+                )}
+              </>
+            ) : (
+              <>
+                <Plus className="w-4 h-4" /> Add gallery item
+              </>
+            )}
+          </h2>
+          {isEditing && (
+            <Button type="button" variant="ghost" size="sm" onClick={resetForm}>
+              <X className="w-4 h-4 mr-1" /> Cancel edit
+            </Button>
+          )}
+        </div>
 
         <div className="grid md:grid-cols-2 gap-4">
           <div className="space-y-2">
@@ -274,7 +351,22 @@ export default function GalleryAdminPage() {
 
         {isFileType ? (
           <div className="space-y-2">
-            <Label>Upload file</Label>
+            <Label>{isEditing ? 'Replace file (optional)' : 'Upload file'}</Label>
+            {isEditing && editingItem?.file_url && !form.file && (
+              <p className="text-xs text-gray-600">
+                Current file kept unless you upload a replacement.
+                {editingItem.type === 'image' && (
+                  <a
+                    href={editingItem.file_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="ml-1 text-[#003D82] underline"
+                  >
+                    View current
+                  </a>
+                )}
+              </p>
+            )}
             {form.type === 'image' ? (
               form.file ? (
                 <div className="flex items-center justify-between gap-3 rounded-xl border bg-white px-4 py-3">
@@ -292,7 +384,7 @@ export default function GalleryAdminPage() {
                 <ImageUploadZone
                   accept="image/*"
                   onFile={(file) => setForm((f) => ({ ...f, file }))}
-                  title="Click, drop, or paste a gallery image"
+                  title={isEditing ? 'Click, drop, or paste a replacement image' : 'Click, drop, or paste a gallery image'}
                   hint="Max 50MB — Ctrl/Cmd+V supported"
                 />
               )
@@ -313,13 +405,29 @@ export default function GalleryAdminPage() {
               onChange={(e) => setForm((f) => ({ ...f, media_url: e.target.value }))}
               placeholder="https://www.youtube.com/watch?v=… or TikTok / Instagram / Facebook link"
             />
+            <p className="text-xs text-gray-500">
+              You can edit the link anytime — including while the item is published.
+            </p>
           </div>
         )}
 
-        <Button type="submit" disabled={saving} className="bg-[#003D82] hover:bg-[#002a5c]">
-          {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Upload className="w-4 h-4 mr-2" />}
-          Add to gallery
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button type="submit" disabled={saving} className="bg-[#003D82] hover:bg-[#002a5c]">
+            {saving ? (
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+            ) : isEditing ? (
+              <Pencil className="w-4 h-4 mr-2" />
+            ) : (
+              <Upload className="w-4 h-4 mr-2" />
+            )}
+            {isEditing ? 'Save changes' : 'Add to gallery'}
+          </Button>
+          {isEditing && (
+            <Button type="button" variant="outline" onClick={resetForm} disabled={saving}>
+              Cancel
+            </Button>
+          )}
+        </div>
       </form>
 
       <div>
@@ -327,7 +435,7 @@ export default function GalleryAdminPage() {
           <div>
             <h2 className="font-semibold text-[#003D82]">Items ({items.length})</h2>
             <p className="text-xs text-gray-500 mt-0.5">
-              Drag a card to a new spot (or use the arrows). Order controls the public gallery.
+              Drag to reorder, or use Edit to change a published link/title anytime.
             </p>
           </div>
           {reordering && (
@@ -357,6 +465,7 @@ export default function GalleryAdminPage() {
                   !reordering && 'cursor-grab active:cursor-grabbing',
                   dragIndex === index && 'opacity-40 scale-[0.98]',
                   overIndex === index && dragIndex !== index && 'ring-2 ring-[#003D82] ring-offset-2',
+                  editingItem?.id === item.id && 'ring-2 ring-[#D4AF37] ring-offset-2',
                 )}
               >
                 <div className="absolute top-2 left-2 z-10 flex items-center gap-1">
@@ -438,6 +547,16 @@ export default function GalleryAdminPage() {
                     onMouseDown={(e) => e.stopPropagation()}
                     onDragStart={(e) => e.preventDefault()}
                   >
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className="flex-1 text-xs"
+                      onClick={() => startEdit(item)}
+                    >
+                      <Pencil className="w-3.5 h-3.5 mr-1" />
+                      Edit
+                    </Button>
                     <Button
                       type="button"
                       size="sm"
