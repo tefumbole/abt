@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -12,7 +12,7 @@ import { Progress } from '@/components/ui/progress';
 import { useAuth } from '@/context/AuthContext';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { COUNTRY_FLAGS, getFlagByCountry } from '@/utils/countryFlags';
-import ImageUploadZone from '@/components/ui/ImageUploadZone';
+import ImageUploadZone, { firstImageFile } from '@/components/ui/ImageUploadZone';
 
 const AddMemberForm = ({ initialData, onSuccess, onCancel }) => {
   const [formData, setFormData] = useState({
@@ -48,8 +48,8 @@ const AddMemberForm = ({ initialData, onSuccess, onCancel }) => {
     if (errors.submit) setErrors(prev => ({ ...prev, submit: null }));
   };
 
-  const selectPhotoFile = (file) => {
-    if (!file) return;
+  const selectPhotoFile = useCallback((file) => {
+    if (!file || loading) return;
 
     setUploadProgress(0);
     setFileStats(null);
@@ -76,11 +76,25 @@ const AddMemberForm = ({ initialData, onSuccess, onCancel }) => {
         compressed: "Pending upload..."
       });
       
-      toast({ title: "Photo Selected", description: "Image will be uploaded when you click Save. Tip: you can also paste images (Ctrl/Cmd+V)." });
+      toast({ title: "Photo Selected", description: "Image will be uploaded when you click Save." });
     } catch (error) {
       toast({ title: "File Error", description: "Could not process selected file.", variant: "destructive" });
     }
-  };
+  }, [loading, toast]);
+
+  // While this modal form is open, Ctrl/Cmd+V with an image sets the profile photo
+  // (works for both New Team Member and Edit Profile, even with a photo already selected).
+  useEffect(() => {
+    const onPaste = (e) => {
+      const file = firstImageFile(e.clipboardData?.items);
+      if (!file) return;
+      e.preventDefault();
+      e.stopPropagation();
+      selectPhotoFile(file);
+    };
+    document.addEventListener('paste', onPaste, true);
+    return () => document.removeEventListener('paste', onPaste, true);
+  }, [selectPhotoFile]);
 
   const removeImage = () => {
     setPreview(null);
@@ -218,19 +232,18 @@ const AddMemberForm = ({ initialData, onSuccess, onCancel }) => {
            </div>
         )}
 
-        {!preview ? (
-          <ImageUploadZone
-            disabled={loading}
-            accept="image/jpeg,image/png,image/webp,image/gif"
-            onFile={selectPhotoFile}
-            title="Click, drop, or paste a profile photo"
-            hint="JPG, PNG, WebP (Max 5MB) — Ctrl/Cmd+V supported"
-          />
-        ) : (
+        {preview ? (
           <div className="space-y-3">
              <div className="flex items-center gap-4 bg-gray-50 p-3 rounded-lg border border-gray-100">
-                <div className="relative w-20 h-20 rounded-full overflow-hidden border-2 border-white shadow-sm shrink-0">
-                    <img src={preview} alt="Preview" className="w-full h-full object-cover" />
+                <div className="relative w-20 h-20 rounded-full overflow-hidden border-2 border-white shadow-sm shrink-0 bg-white">
+                    <img
+                      src={preview}
+                      alt="Preview"
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        e.currentTarget.style.display = 'none';
+                      }}
+                    />
                 </div>
                 <div className="flex flex-col gap-2 flex-1">
                     <div className="flex items-center justify-between">
@@ -241,6 +254,7 @@ const AddMemberForm = ({ initialData, onSuccess, onCancel }) => {
                             </span>
                         )}
                     </div>
+                    <p className="text-xs text-gray-500">Paste a new image (Ctrl/Cmd+V) or use Replace below.</p>
                     
                     <div className="flex gap-2">
                         <Button 
@@ -268,6 +282,15 @@ const AddMemberForm = ({ initialData, onSuccess, onCancel }) => {
                     </div>
                 </div>
             </div>
+
+            <ImageUploadZone
+              disabled={loading}
+              accept="image/jpeg,image/png,image/webp,image/gif"
+              onFile={selectPhotoFile}
+              title="Replace photo — click, drop, or paste"
+              hint="JPG, PNG, WebP (Max 5MB) — Ctrl/Cmd+V works anywhere in this form"
+              className="py-4"
+            />
             
             {loading && uploadProgress > 0 && uploadProgress < 100 && (
                <div className="space-y-1 animate-in fade-in slide-in-from-top-1 duration-300">
@@ -279,6 +302,14 @@ const AddMemberForm = ({ initialData, onSuccess, onCancel }) => {
                </div>
             )}
           </div>
+        ) : (
+          <ImageUploadZone
+            disabled={loading}
+            accept="image/jpeg,image/png,image/webp,image/gif"
+            onFile={selectPhotoFile}
+            title="Click, drop, or paste a profile photo"
+            hint="JPG, PNG, WebP (Max 5MB) — Ctrl/Cmd+V works anywhere in this form"
+          />
         )}
       </div>
 
