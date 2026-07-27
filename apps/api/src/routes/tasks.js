@@ -3,33 +3,29 @@ import { randomUUID } from 'node:crypto';
 import { getPool } from '../db/pool.js';
 import { optionalAuth, requireAuth } from '../middleware/auth.js';
 import { sendTextMessage, sendDocumentMessage, formatPhoneNumber } from '../services/wasenderWhatsAppService.js';
-import { COMPANY_NAME } from '../constants/branding.js';
+import { footer as brandFooter, statusBlock } from '../utils/whatsappMessageFormat.js';
 
 const router = Router();
 
-const APP_BASE = process.env.APP_BASE_URL || 'https://beyondtechworld.com';
+const APP_BASE = process.env.APP_BASE_URL || process.env.APP_URL || 'https://alpha-bridge.net';
 
-const BRAND_FOOTER = `_${COMPANY_NAME}_`;
-const DIVIDER = '━━━━━━━━━━━━━━━';
+const BRAND_FOOTER = brandFooter().trimStart();
+const DIVIDER = '━━━━━━━━━━━━━━━━';
 
-const DEFAULT_TEMPLATE = `📋 *NEW TASK ASSIGNMENT*
-${DIVIDER}
-
-Hello *{name}*,
+const DEFAULT_TEMPLATE = `${statusBlock('📋', 'New Task Assignment')}Hello *{name}*,
 
 You have been assigned a new task:
 
-▪️ *Task:* {subject}
-▪️ *Priority:* {priority}
-▪️ *Start:* {start_date}{start_time}
-▪️ *Deadline:* {deadline}{deadline_time}
+◾ *Task:* {subject}
+◾ *Priority:* {priority}
+◾ *Start:* {start_date}{start_time}
+◾ *Deadline:* {deadline}{deadline_time}
 
 {description}
 {login_credentials}
 👉 Open this link to *Accept* or *Reject* your task:
 {login_link}
-
-${BRAND_FOOTER}`;
+${brandFooter()}`;
 
 function personalize(template, vars) {
   let result = template || '';
@@ -48,8 +44,8 @@ function buildCredentialsBlock(row) {
   if (!row?.assignee_must_change) return '';
   const username = row.assignee_username || (row.assignee_phone || '').replace(/\D/g, '');
   return `\n🔐 *A temporary login has been created for you:*
-▪️ *Username:* ${username}
-▪️ *Password:* system
+◾ *Username:* ${username}
+◾ *Password:* system
 
 _Please log in and set your own username, password, email and address._\n`;
 }
@@ -511,12 +507,12 @@ router.post('/notify-accepted', requireAuth, requireTaskManager, async (req, res
     const results = { admin: null, assignee: null };
 
     if (adminPhone) {
-      const adminText = `📊 *TASK ACCEPTED*\n${DIVIDER}\n\n*${assigneeName}* has accepted the task:\n\n▪️ *Task:* ${taskTitle}\n\n${BRAND_FOOTER}`;
+      const adminText = `${statusBlock('📊', 'Task Accepted')}*${assigneeName}* has accepted the task:\n\n◾ *Task:* ${taskTitle}\n\n${BRAND_FOOTER}`;
       results.admin = await sendTextMessage(adminPhone, adminText);
     }
 
     if (assigneePhone) {
-      const assigneeText = `✅ *TASK ACCEPTED*\n${DIVIDER}\n\nHello *${assigneeName}*,\n\nYou have accepted the task:\n\n▪️ *Task:* ${taskTitle}\n▪️ *Realization:* 0%\n\n👉 Update your progress here:\n${loginLink}\n\n${BRAND_FOOTER}`;
+      const assigneeText = `${statusBlock('✅', 'Task Accepted')}Hello *${assigneeName}*,\n\nYou have accepted the task:\n\n◾ *Task:* ${taskTitle}\n◾ *Realization:* 0%\n\n👉 Update your progress here:\n${loginLink}\n\n${BRAND_FOOTER}`;
       results.assignee = await sendTextMessage(assigneePhone, assigneeText);
     }
 
@@ -550,7 +546,7 @@ router.post('/notify-completed', requireAuth, requireTaskManager, async (req, re
     }
 
     const assigneeName = row.assignee_name || row.assignee_email || 'Assignee';
-    const text = `✅ *TASK COMPLETED*\n${DIVIDER}\n\n*${assigneeName}* has completed their assignment:\n\n▪️ *Task:* ${row.title}\n\n👉 Review it on your dashboard:\n${APP_BASE}/admin/tasks/dashboard\n\n${BRAND_FOOTER}`;
+    const text = `${statusBlock('✅', 'Task Completed')}*${assigneeName}* has completed their assignment:\n\n◾ *Task:* ${row.title}\n\n👉 Review it on your dashboard:\n${APP_BASE}/admin/tasks/dashboard\n\n${BRAND_FOOTER}`;
     const result = await sendTextMessage(adminPhone, text);
     res.json({ success: result.success, error: result.error || null });
   } catch (err) {
@@ -581,9 +577,9 @@ router.post('/notify-review', requireAuth, requireAdmin, async (req, res) => {
     const reviewer = adminName || row.creator_name || 'Admin';
     const progressVal = progress ?? row.progress ?? 0;
     const statusLabel = progressVal >= 100 ? 'Completed' : 'Needs revision';
-    const commentBlock = comment?.trim() ? `\n▪️ *Comment:* ${comment.trim()}` : '';
+    const commentBlock = comment?.trim() ? `\n◾ *Comment:* ${comment.trim()}` : '';
 
-    const text = `📝 *TASK REVIEW*\n${DIVIDER}\n\nHello *${assigneeName}*,\n\nYour task has been reviewed by *${reviewer}*:\n\n▪️ *Task:* ${row.title}\n▪️ *Status:* ${statusLabel}\n▪️ *Realization:* ${progressVal}%${commentBlock}\n\n👉 Please address the feedback:\n${APP_BASE}/my-tasks\n\n${BRAND_FOOTER}`;
+    const text = `${statusBlock('📝', 'Task Review')}Hello *${assigneeName}*,\n\nYour task has been reviewed by *${reviewer}*:\n\n◾ *Task:* ${row.title}\n◾ *Status:* ${statusLabel}\n◾ *Realization:* ${progressVal}%${commentBlock}\n\n👉 Please address the feedback:\n${APP_BASE}/my-tasks\n\n${BRAND_FOOTER}`;
 
     const result = await sendTextMessage(phone, text);
     res.json({ success: result.success, error: result.error || null });
@@ -668,24 +664,20 @@ async function notifyCcRecipientsForTask(pool, taskId) {
     const phone = formatPhoneNumber(cc.phone);
     if (!phone) continue;
 
-    const text = `📋 *TASK CC NOTIFICATION*
-${DIVIDER}
-
-Hello *${cc.name || 'Team Member'}*,
+    const text = `${statusBlock('📋', 'Task Cc Notification')}Hello *${cc.name || 'Team Member'}*,
 
 You have been CC'd on a task assigned to *${assigneeNames}*:
 
-▪️ *Task:* ${task.title}
-▪️ *Priority:* ${task.priority || 'Medium'}
-▪️ *Start:* ${scheduleVars.start_date}${scheduleVars.start_time}
-▪️ *Deadline:* ${scheduleVars.deadline}${scheduleVars.deadline_time}
+◾ *Task:* ${task.title}
+◾ *Priority:* ${task.priority || 'Medium'}
+◾ *Start:* ${scheduleVars.start_date}${scheduleVars.start_time}
+◾ *Deadline:* ${scheduleVars.deadline}${scheduleVars.deadline_time}
 ${descriptionText ? `\n${descriptionText}\n` : ''}
 You will receive progress updates on this task.
 
 👉 View tasks:
 ${APP_BASE}/my-tasks
-
-${BRAND_FOOTER}`;
+${brandFooter()}`;
 
     const result = await sendTextMessage(phone, text);
     if (!result.success) continue;
@@ -739,7 +731,7 @@ router.post('/remove-my-assignments', requireAuth, async (req, res) => {
       if (row.created_by && row.created_by !== userId && row.creator_phone) {
         const phone = formatPhoneNumber(row.creator_phone);
         if (!phone) continue;
-        const text = `🗑️ *TASK REMOVED BY ASSIGNEE*\n${DIVIDER}\n\n*${row.assignee_name || 'An assignee'}* removed the task from their list:\n\n▪️ *Task:* ${row.title}\n\nThey are no longer tracking this assignment.\n\n${BRAND_FOOTER}`;
+        const text = `${statusBlock('🗑️', 'Task Removed By Assignee')}*${row.assignee_name || 'An assignee'}* removed the task from their list:\n\n◾ *Task:* ${row.title}\n\nThey are no longer tracking this assignment.\n\n${BRAND_FOOTER}`;
         await sendTextMessage(phone, text);
       }
     }
@@ -810,10 +802,10 @@ async function notifyAssignmentAccepted(pool, assignmentId) {
   const assigneePhone = formatPhoneNumber(row.assignee_phone);
   const assigneeName = row.assignee_name || 'Team Member';
   if (adminPhone) {
-    await sendTextMessage(adminPhone, `📊 *TASK ACCEPTED*\n${DIVIDER}\n\n*${assigneeName}* accepted:\n▪️ *Task:* ${row.title}\n\n${BRAND_FOOTER}`);
+    await sendTextMessage(adminPhone, `${statusBlock('📊', 'Task Accepted')}*${assigneeName}* accepted:\n◾ *Task:* ${row.title}\n\n${BRAND_FOOTER}`);
   }
   if (assigneePhone) {
-    await sendTextMessage(assigneePhone, `✅ *TASK ACCEPTED*\n${DIVIDER}\n\nHello *${assigneeName}*,\n\nYou accepted:\n▪️ *Task:* ${row.title}\n\n👉 Update progress:\n${APP_BASE}/my-tasks\n\n${BRAND_FOOTER}`);
+    await sendTextMessage(assigneePhone, `${statusBlock('✅', 'Task Accepted')}Hello *${assigneeName}*,\n\nYou accepted:\n◾ *Task:* ${row.title}\n\n👉 Update progress:\n${APP_BASE}/my-tasks\n\n${BRAND_FOOTER}`);
   }
 }
 
@@ -833,10 +825,10 @@ router.post('/notify-progress', requireAuth, async (req, res) => {
     const assigneeName = row.assignee_name || 'Assignee';
     const progressVal = progress ?? row.progress ?? 0;
     const statusLabel = status || row.status || 'In Progress';
-    const commentBlock = comment?.trim() ? `\n▪️ *Comment:* ${comment.trim()}` : '';
+    const commentBlock = comment?.trim() ? `\n◾ *Comment:* ${comment.trim()}` : '';
     const isCompletionRequest = progressVal >= 100 || statusLabel === 'Completed';
 
-    const progressText = `📈 *PROGRESS REPORT*\n${DIVIDER}\n\n*${assigneeName}* updated task progress:\n\n▪️ *Task:* ${row.title}\n▪️ *Realization:* ${progressVal}%\n▪️ *Status:* ${statusLabel}${commentBlock}\n\n${BRAND_FOOTER}`;
+    const progressText = `${statusBlock('📈', 'Progress Report')}*${assigneeName}* updated task progress:\n\n◾ *Task:* ${row.title}\n◾ *Realization:* ${progressVal}%\n◾ *Status:* ${statusLabel}${commentBlock}\n\n${BRAND_FOOTER}`;
 
     const creatorPhone = formatPhoneNumber(row.creator_phone);
     if (creatorPhone) {
@@ -847,7 +839,7 @@ router.post('/notify-progress', requireAuth, async (req, res) => {
     for (const cc of ccList) {
       const ccPhone = formatPhoneNumber(cc.phone);
       if (!ccPhone) continue;
-      const ccText = `📋 *TASK CC — PROGRESS UPDATE*\n${DIVIDER}\n\nHello *${cc.name || 'CC'}*,\n\nYou are CC on a task assigned to *${assigneeName}*:\n\n▪️ *Task:* ${row.title}\n▪️ *Realization:* ${progressVal}%\n▪️ *Status:* ${statusLabel}${commentBlock}\n\n${BRAND_FOOTER}`;
+      const ccText = `${statusBlock('📋', 'Task Cc — Progress Update')}Hello *${cc.name || 'CC'}*,\n\nYou are CC on a task assigned to *${assigneeName}*:\n\n◾ *Task:* ${row.title}\n◾ *Realization:* ${progressVal}%\n◾ *Status:* ${statusLabel}${commentBlock}\n\n${BRAND_FOOTER}`;
       await sendTextMessage(ccPhone, ccText);
     }
 
@@ -855,7 +847,7 @@ router.post('/notify-progress', requireAuth, async (req, res) => {
     if (isCompletionRequest && assigneePhone) {
       await sendTextMessage(
         assigneePhone,
-        `✅ *COMPLETION SUBMITTED*\n${DIVIDER}\n\nHello *${assigneeName}*,\n\nYour completion request for *${row.title}* has been submitted.\n\nThe assigner will review and affirm completion of the task.\n\n${BRAND_FOOTER}`
+        `${statusBlock('✅', 'Completion Submitted')}Hello *${assigneeName}*,\n\nYour completion request for *${row.title}* has been submitted.\n\nThe assigner will review and affirm completion of the task.\n\n${BRAND_FOOTER}`
       );
     }
 
@@ -952,7 +944,7 @@ router.post('/admin-update', requireAuth, requireAdmin, async (req, res) => {
         if (!ctx) continue;
         const phone = formatPhoneNumber(ctx.assignee_phone);
         if (!phone) continue;
-        const text = `💬 *TASK UPDATE*\n${DIVIDER}\n\nHello *${ctx.assignee_name || 'Team Member'}*,\n\nUpdate on *${title}*:\n\n${adminComment.trim()}\n\n👉 View task:\n${APP_BASE}/my-tasks\n\n${BRAND_FOOTER}`;
+        const text = `${statusBlock('💬', 'Task Update')}Hello *${ctx.assignee_name || 'Team Member'}*,\n\nUpdate on *${title}*:\n\n${adminComment.trim()}\n\n👉 View task:\n${APP_BASE}/my-tasks\n\n${BRAND_FOOTER}`;
         await sendTextMessage(phone, text);
       }
     }
@@ -1162,7 +1154,7 @@ export async function runProcessReminders() {
       if (!ctx) continue;
       const phone = formatPhoneNumber(ctx.assignee_phone);
       if (!phone) continue;
-      const text = `⏰ *REMINDER*\n${DIVIDER}\n\nHello *${ctx.assignee_name || 'Team Member'}*,\n\nReminder for your assigned task:\n\n▪️ *Task:* ${reminder.title}\n▪️ *Deadline:* ${deadlineStr}${deadlineTime}\n▪️ *Time remaining:* ${remaining}\n\n👉 Open task:\n${APP_BASE}/my-tasks\n\n${BRAND_FOOTER}`;
+      const text = `${statusBlock('⏰', 'Reminder')}Hello *${ctx.assignee_name || 'Team Member'}*,\n\nReminder for your assigned task:\n\n◾ *Task:* ${reminder.title}\n◾ *Deadline:* ${deadlineStr}${deadlineTime}\n◾ *Time remaining:* ${remaining}\n\n👉 Open task:\n${APP_BASE}/my-tasks\n\n${BRAND_FOOTER}`;
       const result = await sendTextMessage(phone, text);
       if (result.success) sent += 1;
     }

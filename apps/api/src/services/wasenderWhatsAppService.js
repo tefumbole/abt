@@ -10,6 +10,7 @@ import {
   runQueuedWhatsAppSend,
   getTextToDocumentDelayMs,
 } from './whatsappSendQueue.js';
+import { otpMessage } from '../utils/whatsappMessageFormat.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const uploadRoot = path.resolve(process.env.UPLOAD_DIR || path.join(__dirname, '../../uploads'));
@@ -155,11 +156,8 @@ export async function sendTextMessage(toPhone, text, messageType = 'text') {
   });
 }
 
-export async function sendOtp(toPhone, otp, context = null) {
-  const company = String(process.env.COMPANY_NAME || 'Alpha Bridge').trim() || 'Alpha Bridge';
-  let message = `*${company}* verification code: *${otp}*`;
-  if (context) message += `\n\n${context}`;
-  message += '\n\nThis code expires in 10 minutes. Do not share it with anyone.';
+export async function sendOtp(toPhone, otp, purpose = 'login') {
+  const message = otpMessage(otp, purpose || 'login', 10);
   return sendTextMessage(toPhone, message, 'otp');
 }
 

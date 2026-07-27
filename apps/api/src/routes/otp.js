@@ -88,7 +88,7 @@ router.post('/send', requireAuth, async (req, res) => {
       [randomUUID(), phone, otpCode, expiresAt]
     );
 
-    const sendResult = await sendOtp(phone, otpCode, 'Alpha Bridge login verification');
+    const sendResult = await sendOtp(phone, otpCode, 'login');
     if (!sendResult.success) {
       console.error('[otp/send]', sendResult.error);
       await logWhatsAppAttempt(pool, {

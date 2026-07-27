@@ -1,7 +1,7 @@
 /** Canonical brand assets and contact details — single source of truth */
 
 export const COMPANY_NAME =
-  import.meta.env.VITE_COMPANY_NAME || 'Alpha Bridge';
+  import.meta.env.VITE_COMPANY_NAME || 'Alpha Bridge Technologies';
 
 export const COMPANY_NAME_SHORT =
   import.meta.env.VITE_COMPANY_NAME_SHORT || 'Alpha Bridge';

@@ -4,6 +4,7 @@ import {
   buildTaskInviteUrl,
   DEFAULT_TASK_NOTIFICATION_TEMPLATE,
 } from '@/utils/taskPersonalization';
+import { buildStatusMessage } from '@/utils/whatsappMessageFormat';
 
 const useMysql = import.meta.env.VITE_DATA_BACKEND === 'mysql';
 const API_BASE = import.meta.env.VITE_API_URL || '/api';
@@ -93,7 +94,17 @@ export async function sendTaskAssignmentNotification({
 export const sendTaskReminderNotification = async (assigneePhone, assigneeName, taskTitle, deadline) => {
   if (!assigneePhone) return { success: false, error: 'No phone number provided' };
 
-  const message = `*Reminder* ⏰\n\nHello ${assigneeName},\nThis is a reminder for your pending task:\n*${taskTitle}*\n\nDeadline: ${new Date(deadline).toLocaleDateString()}\n\nPlease update your progress on the dashboard.`;
+  const message = buildStatusMessage({
+    emoji: '⏰',
+    title: 'Reminder',
+    name: assigneeName,
+    body: 'This is a reminder for your pending task:\n',
+    bullets: [
+      ['Task', taskTitle],
+      ['Deadline', new Date(deadline).toLocaleDateString()],
+    ],
+    extra: 'Please update your progress on the dashboard.',
+  });
 
   return sendWhatsAppMessage(assigneePhone, message);
 };
@@ -101,7 +112,12 @@ export const sendTaskReminderNotification = async (assigneePhone, assigneeName, 
 export const sendAdminTaskAcceptedNotification = async (adminPhone, assigneeName, taskTitle) => {
   if (!adminPhone) return { success: false, error: 'No phone number provided' };
 
-  const message = `Task Update 📊\n\n${assigneeName} has *accepted* the task:\n*${taskTitle}*`;
+  const message = buildStatusMessage({
+    emoji: '📊',
+    title: 'Task Accepted',
+    body: `*${assigneeName}* has *accepted* the task:\n`,
+    bullets: [['Task', taskTitle]],
+  });
 
   return sendWhatsAppMessage(adminPhone, message);
 };
@@ -109,7 +125,12 @@ export const sendAdminTaskAcceptedNotification = async (adminPhone, assigneeName
 export const sendAdminTaskCompletedNotification = async (adminPhone, assigneeName, taskTitle) => {
   if (!adminPhone) return { success: false, error: 'No phone number provided' };
 
-  const message = `Task Completed ✅\n\n${assigneeName} has completed their assignment for:\n*${taskTitle}*`;
+  const message = buildStatusMessage({
+    emoji: '✅',
+    title: 'Task Completed',
+    body: `*${assigneeName}* has completed their assignment for:\n`,
+    bullets: [['Task', taskTitle]],
+  });
 
   return sendWhatsAppMessage(adminPhone, message);
 };

@@ -4,6 +4,7 @@ import { getPool } from '../db/pool.js';
 import { requireAuth } from '../middleware/auth.js';
 import { sendTextMessage, formatPhoneNumber } from '../services/wasenderWhatsAppService.js';
 import { COMPANY_NAME as BRAND } from '../constants/branding.js';
+import { buildStatusMessage } from '../utils/whatsappMessageFormat.js';
 
 const router = Router();
 
@@ -151,7 +152,14 @@ router.post('/send', requireHrAccess, async (req, res) => {
   if (b.send_whatsapp !== false && staff.phone) {
     const phone = formatPhoneNumber(staff.phone);
     if (phone) {
-      const msg = `📄 *${BRAND} — HR Letter*\n\nHello *${staff.first_name}*,\n\n${subject}\n\nRef: ${ref}\n\n_${body.slice(0, 500)}${body.length > 500 ? '…' : ''}_\n\n_${BRAND}_`;
+      const msg = buildStatusMessage({
+        emoji: '📄',
+        title: 'HR Letter',
+        name: staff.first_name,
+        body: `${subject}\n`,
+        bullets: [['Reference', ref]],
+        extra: `_${body.slice(0, 500)}${body.length > 500 ? '…' : ''}_`,
+      });
       try {
         await sendTextMessage(phone, msg);
         whatsappSent = true;

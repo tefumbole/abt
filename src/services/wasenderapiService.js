@@ -1,4 +1,5 @@
 import { format } from 'date-fns';
+import { otpMessage } from '@/utils/whatsappMessageFormat';
 
 /**
  * WasenderAPI client — aligned with New Vision Travel / Manukeza contract.
@@ -235,10 +236,8 @@ export async function sendTextMessage(toPhone, text, messageType = 'text') {
   return buildResult(false, to, body, typeof error === 'string' ? error : 'Send failed');
 }
 
-export async function sendOtp(toPhone, otp, context = null) {
-  let message = `Your Alpha Bridge verification code is: *${otp}*`;
-  if (context) message += `\n\n${context}`;
-  message += '\n\nThis code expires in 10 minutes. Do not share it with anyone.';
+export async function sendOtp(toPhone, otp, purpose = 'login') {
+  const message = otpMessage(otp, purpose || 'login', 10);
   return sendTextMessage(toPhone, message, 'otp');
 }
 

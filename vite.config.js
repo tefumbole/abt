@@ -211,7 +211,7 @@ if (window.navigation && window.self !== window.top) {
 const addTransformIndexHtml = {
 	name: 'add-transform-index-html',
 	transformIndexHtml(html) {
-		const company = process.env.VITE_COMPANY_NAME || 'Beyond Enterprise';
+		const company = process.env.VITE_COMPANY_NAME || 'Alpha Bridge Technologies';
 		const siteUrl = process.env.VITE_SITE_URL || 'https://beyondtechworld.com';
 		const logoUrl = process.env.VITE_LOGO_URL || '/branding/beyond-logo.png';
 		html = html

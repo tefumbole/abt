@@ -228,11 +228,7 @@ router.post('/password-reset/request', async (req, res) => {
       [randomUUID(), formatted, otpCode, expiresAt]
     );
 
-    const sendResult = await sendOtp(
-      formatted,
-      otpCode,
-      `Password reset for ${String(process.env.COMPANY_NAME || 'Alpha Bridge').trim()}`
-    );
+    const sendResult = await sendOtp(formatted, otpCode, 'password_reset');
     if (!sendResult.success) {
       return res.status(502).json({
         success: false,
