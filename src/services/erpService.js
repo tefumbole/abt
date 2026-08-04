@@ -74,8 +74,28 @@ export const listPurchases = (q = '') => erpApi.get(`/purchases${q}`);
 export const createPurchase = (body) => erpApi.post('/purchases', body).then((r) => r.data);
 export const listSales = (q = '') => erpApi.get(`/sales${q}`);
 export const createSale = (body) => erpApi.post('/sales', body).then((r) => r.data);
-export const listQuotations = (q = '') => erpApi.get(`/quotations${q}`);
+export const listQuotations = async (q = '') => {
+  const API_BASE = import.meta.env.VITE_API_URL || '/api';
+  const res = await fetch(`${API_BASE}/erp/quotations${q}`, {
+    headers: { 'Content-Type': 'application/json', ...authHeaders() },
+  });
+  const json = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(json.error || json.message || `Request failed (${res.status})`);
+  return { data: json.data || [], statusCounts: json.statusCounts || {} };
+};
+export const getQuotation = (id) => erpApi.get(`/quotations/${id}`);
 export const createQuotation = (body) => erpApi.post('/quotations', body).then((r) => r.data);
+export const deleteQuotation = (id) => erpApi.del(`/quotations/${id}`);
+export const setQuotationStatus = (id, status) =>
+  fetch(`${import.meta.env.VITE_API_URL || '/api'}/erp/quotations/${id}/status`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...authHeaders() },
+    body: JSON.stringify({ status }),
+  }).then(async (res) => {
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(json.error || json.message || `Request failed (${res.status})`);
+    return json;
+  });
 export const sendQuotationWhatsApp = (id, body = {}) => erpApi.post(`/quotations/${id}/send-whatsapp`, body);
 export const convertQuotation = (id) => erpApi.post(`/quotations/${id}/convert-sale`, {});
 export const listDeliveries = (q = '') => erpApi.get(`/deliveries${q}`);

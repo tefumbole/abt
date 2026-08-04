@@ -16,13 +16,22 @@ function publicBaseUrl(req) {
   return `${proto}://${host}`;
 }
 
+function quotationReference() {
+  const d = new Date();
+  const pad = (n) => String(n).padStart(2, '0');
+  return `qr-${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`;
+}
+
 async function loadQuotation(id) {
   const pool = getPool();
   const [rows] = await pool.query(
-    `SELECT q.*, c.name AS customer_name, c.phone AS customer_phone, w.name AS warehouse_name
+    `SELECT q.*, c.name AS customer_name, c.phone AS customer_phone, w.name AS warehouse_name,
+            b.name AS biller_name, s.name AS supplier_name
      FROM quotations q
      LEFT JOIN erp_customers c ON c.id = q.customer_id
      LEFT JOIN warehouses w ON w.id = q.warehouse_id
+     LEFT JOIN erp_billers b ON b.id = q.biller_id
+     LEFT JOIN erp_suppliers s ON s.id = q.supplier_id
      WHERE q.id = ?`,
     [id]
   );
@@ -37,22 +46,46 @@ async function loadQuotation(id) {
 
 router.get('/', requireAuth, requireErpAdmin, async (req, res) => {
   try {
+    const pool = getPool();
     const params = [];
     let where = '1=1';
     if (req.query.status) {
       where += ' AND q.status = ?';
       params.push(req.query.status);
     }
-    const [rows] = await getPool().query(
-      `SELECT q.*, c.name AS customer_name, w.name AS warehouse_name
+    if (req.query.q) {
+      where += ' AND (q.reference LIKE ? OR c.name LIKE ? OR b.name LIKE ? OR s.name LIKE ?)';
+      const like = `%${req.query.q}%`;
+      params.push(like, like, like, like);
+    }
+    const [rows] = await pool.query(
+      `SELECT q.*, c.name AS customer_name, w.name AS warehouse_name,
+              b.name AS biller_name, s.name AS supplier_name
        FROM quotations q
        LEFT JOIN erp_customers c ON c.id = q.customer_id
        LEFT JOIN warehouses w ON w.id = q.warehouse_id
+       LEFT JOIN erp_billers b ON b.id = q.biller_id
+       LEFT JOIN erp_suppliers s ON s.id = q.supplier_id
        WHERE ${where}
        ORDER BY q.created_at DESC`,
       params
     );
-    res.json({ data: rows });
+    const [counts] = await pool.query(
+      `SELECT status, COUNT(*) AS count FROM quotations GROUP BY status`
+    );
+    const statusCounts = {
+      awaiting_approval: 0,
+      approved: 0,
+      rejected: 0,
+      draft: 0,
+      all: 0,
+    };
+    for (const row of counts) {
+      const key = String(row.status || '');
+      statusCounts[key] = Number(row.count) || 0;
+      statusCounts.all += Number(row.count) || 0;
+    }
+    res.json({ data: rows, statusCounts });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -79,7 +112,9 @@ router.post('/', requireAuth, requireErpAdmin, async (req, res) => {
 
     await conn.beginTransaction();
     const id = randomUUID();
-    const reference = await nextErpReference('qr-', 'quotations');
+    let reference = quotationReference();
+    const [dup] = await conn.query(`SELECT id FROM quotations WHERE reference = ? LIMIT 1`, [reference]);
+    if (dup.length) reference = await nextErpReference('qr-', 'quotations');
     let subtotal = 0;
     for (const item of items) {
       subtotal += num(item.qty) * num(item.net_unit_price) - num(item.discount) + num(item.tax);
@@ -113,6 +148,34 @@ router.post('/', requireAuth, requireErpAdmin, async (req, res) => {
     res.status(500).json({ error: err.message });
   } finally {
     conn.release();
+  }
+});
+
+router.delete('/:id', requireAuth, requireErpAdmin, async (req, res) => {
+  try {
+    const pool = getPool();
+    const [ex] = await pool.query(`SELECT id FROM quotations WHERE id = ?`, [req.params.id]);
+    if (!ex.length) return res.status(404).json({ error: 'Not found' });
+    await pool.query(`DELETE FROM product_quotations WHERE quotation_id = ?`, [req.params.id]);
+    await pool.query(`DELETE FROM quotations WHERE id = ?`, [req.params.id]);
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.patch('/:id/status', requireAuth, requireErpAdmin, async (req, res) => {
+  try {
+    const status = String(req.body?.status || '').trim();
+    const allowed = ['draft', 'awaiting_approval', 'approved', 'rejected'];
+    if (!allowed.includes(status)) return res.status(400).json({ error: 'Invalid status' });
+    const pool = getPool();
+    const [ex] = await pool.query(`SELECT id FROM quotations WHERE id = ?`, [req.params.id]);
+    if (!ex.length) return res.status(404).json({ error: 'Not found' });
+    await pool.query(`UPDATE quotations SET status = ? WHERE id = ?`, [status, req.params.id]);
+    res.json({ ok: true, status });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
 });
 

@@ -531,13 +531,24 @@ const AdminLayout = () => {
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col md:flex-row">
       <div className="md:hidden bg-[#003D82] text-white p-4 flex justify-between items-center z-20 sticky top-0 shadow-md">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 min-w-0">
           <span className="font-bold text-lg text-[#D4AF37]">Alpha Admin</span>
-          <LanguageSwitcher variant="admin" className="ml-auto md:hidden" />
         </div>
-        <button onClick={() => setSidebarOpen(!sidebarOpen)} className="p-2">
-          {sidebarOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-        </button>
+        <div className="flex items-center gap-2">
+          {itemVisible(hasPermission, MENU_PERMISSIONS.erpCommerce) && (
+            <Link
+              to="/admin/erp/pos"
+              onClick={() => setSidebarOpen(false)}
+              className="rounded-full bg-[#D4AF37] px-3.5 py-1.5 text-xs font-bold uppercase tracking-wide text-[#0A2540] shadow-sm hover:bg-[#c9a227] transition-colors"
+            >
+              POS
+            </Link>
+          )}
+          <LanguageSwitcher variant="admin" className="md:hidden" />
+          <button onClick={() => setSidebarOpen(!sidebarOpen)} className="p-2">
+            {sidebarOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+          </button>
+        </div>
       </div>
 
       <aside className={cn(
@@ -598,7 +609,15 @@ const AdminLayout = () => {
       )}
 
       <main className="flex-1 p-4 md:p-8 overflow-y-auto bg-gray-50 h-[calc(100vh-64px)] md:h-screen">
-        <div className="hidden md:flex justify-end mb-4">
+        <div className="hidden md:flex justify-end items-center gap-3 mb-4">
+          {itemVisible(hasPermission, MENU_PERMISSIONS.erpCommerce) && (
+            <Link
+              to="/admin/erp/pos"
+              className="rounded-full bg-[#D4AF37] px-5 py-2 text-sm font-bold uppercase tracking-wide text-[#0A2540] shadow-sm hover:bg-[#c9a227] transition-colors"
+            >
+              POS
+            </Link>
+          )}
           <LanguageSwitcher variant="admin" />
         </div>
         {activeSection && (
