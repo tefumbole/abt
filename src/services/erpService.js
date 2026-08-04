@@ -56,6 +56,8 @@ export const updateProduct = (id, body) => erpApi.put(`/products/${id}`, body).t
 export const deleteProduct = (id) => erpApi.del(`/products/${id}`);
 export const listCategories = () => erpApi.get('/products/categories');
 export const createCategory = (body) => erpApi.post('/products/categories', body).then((r) => r.data);
+export const updateCategory = (id, body) => erpApi.put(`/products/categories/${id}`, body).then((r) => r.data);
+export const deleteCategory = (id) => erpApi.del(`/products/categories/${id}`);
 export const listBrands = () => erpApi.get('/products/brands');
 export const createBrand = (body) => erpApi.post('/products/brands', body).then((r) => r.data);
 export const listUnits = () => erpApi.get('/products/units');

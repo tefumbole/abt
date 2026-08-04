@@ -17,7 +17,39 @@ async function crudList(table, order = 'name ASC') {
 // --- Categories ---
 router.get('/categories', requireAuth, requireErpAdmin, async (_req, res) => {
   try {
-    res.json({ data: await crudList('erp_categories') });
+    const pool = getPool();
+    const [rows] = await pool.query(
+      `SELECT c.*,
+        p.name AS parent_name,
+        COALESCE(stats.product_count, 0) AS product_count,
+        COALESCE(stats.stock_qty, 0) AS stock_qty,
+        COALESCE(stats.stock_price, 0) AS stock_price,
+        COALESCE(stats.stock_cost, 0) AS stock_cost
+       FROM erp_categories c
+       LEFT JOIN erp_categories p ON p.id = c.parent_id
+       LEFT JOIN (
+         SELECT pr.category_id,
+           COUNT(DISTINCT pr.id) AS product_count,
+           COALESCE(SUM(pw.qty), 0) AS stock_qty,
+           COALESCE(SUM(pw.qty * COALESCE(pw.price, pr.price, 0)), 0) AS stock_price,
+           COALESCE(SUM(pw.qty * COALESCE(pw.cost, pr.cost, 0)), 0) AS stock_cost
+         FROM products pr
+         LEFT JOIN product_warehouse pw ON pw.product_id = pr.id
+         WHERE pr.is_active = 1
+         GROUP BY pr.category_id
+       ) stats ON stats.category_id = c.id
+       ORDER BY c.name ASC`
+    );
+    res.json({
+      data: rows.map((r) => ({
+        ...r,
+        is_active: Boolean(r.is_active),
+        product_count: num(r.product_count),
+        stock_qty: num(r.stock_qty),
+        stock_price: num(r.stock_price),
+        stock_cost: num(r.stock_cost),
+      })),
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
