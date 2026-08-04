@@ -57,6 +57,11 @@ export const createUnit = (body) => erpApi.post('/products/units', body).then((r
 export const listAdjustments = () => erpApi.get('/products/adjustments/list');
 export const createAdjustment = (body) => erpApi.post('/products/adjustments', body).then((r) => r.data);
 
+export const listCustomerGroups = () => erpApi.get('/people/customer-groups');
+export const createCustomerGroup = (body) => erpApi.post('/people/customer-groups', body).then((r) => r.data);
+export const updateCustomerGroup = (id, body) => erpApi.put(`/people/customer-groups/${id}`, body).then((r) => r.data);
+export const deleteCustomerGroup = (id) => erpApi.del(`/people/customer-groups/${id}`);
+
 export const listCustomers = () => erpApi.get('/people/customers');
 export const createCustomer = (body) => erpApi.post('/people/customers', body).then((r) => r.data);
 export const updateCustomer = (id, body) => erpApi.put(`/people/customers/${id}`, body).then((r) => r.data);

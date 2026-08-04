@@ -21,6 +21,7 @@ import {
   BillersSettingsPanel,
   BrandsSettingsPanel,
   CurrencySettingsPanel,
+  CustomerGroupsSettingsPanel,
   PosSettingsPanel,
   UnitsSettingsPanel,
   WarehousesSettingsPanel,
@@ -176,16 +177,7 @@ const GeneralSystemSettingsPage = () => {
         {tab === 'general' && <GeneralSettingPanel />}
         {tab === 'roles' && <RolesPermissionsPage />}
         {tab === 'warehouses' && <WarehousesSettingsPanel />}
-        {tab === 'customer-group' && (
-          <StubPanel
-            title="Customer Group"
-            description="Customer groups are managed with ERP customers for now."
-          >
-            <Button asChild className="bg-[#003D82]">
-              <Link to="/admin/erp/people">Open ERP People</Link>
-            </Button>
-          </StubPanel>
-        )}
+        {tab === 'customer-group' && <CustomerGroupsSettingsPanel />}
         {tab === 'brands' && <BrandsSettingsPanel />}
         {tab === 'units' && <UnitsSettingsPanel />}
         {tab === 'currency' && <CurrencySettingsPanel />}

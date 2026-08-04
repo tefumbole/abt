@@ -8,17 +8,21 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import {
   createBiller,
   createBrand,
+  createCustomerGroup,
   createUnit,
   createWarehouse,
   deleteBiller,
+  deleteCustomerGroup,
   deleteWarehouse,
   getPosSettings,
   listBillers,
   listBrands,
+  listCustomerGroups,
   listCustomers,
   listUnits,
   listWarehouses,
   savePosSettings,
+  updateCustomerGroup,
   updateWarehouse,
 } from '@/services/erpService';
 import { getSystemSettings, updateSystemSettings } from '@/services/settingsService';
@@ -333,6 +337,171 @@ function SimpleNameMaster({ title, subtitle, listFn, createFn }) {
               ))}
               {!rows?.length && (
                 <tr><td className="p-6 text-slate-500 text-center">No {title.toLowerCase()} yet</td></tr>
+              )}
+            </tbody>
+          </table>
+        )}
+      </div>
+    </div>
+  );
+}
+
+export function CustomerGroupsSettingsPanel() {
+  const EMPTY = { name: '', percentage: '0', credit_limit: '', is_active: true };
+  const [rows, setRows] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [form, setForm] = useState(EMPTY);
+  const [editId, setEditId] = useState(null);
+
+  const load = async () => {
+    setLoading(true);
+    try {
+      setRows(await listCustomerGroups());
+    } catch (e) {
+      toast.error(e.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { load(); }, []);
+
+  const submit = async (e) => {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      const payload = {
+        name: form.name.trim(),
+        percentage: Number(form.percentage) || 0,
+        credit_limit: form.credit_limit === '' ? null : Number(form.credit_limit),
+        is_active: !!form.is_active,
+      };
+      if (editId) await updateCustomerGroup(editId, payload);
+      else await createCustomerGroup(payload);
+      toast.success(editId ? 'Customer group updated' : 'Customer group created');
+      setForm(EMPTY);
+      setEditId(null);
+      await load();
+    } catch (err) {
+      toast.error(err.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      <div>
+        <h2 className="text-xl font-bold text-[#003D82]">Customer Groups</h2>
+        <p className="text-sm text-slate-600">
+          Price adjustment groups for customers (percentage applied on sales/quotations).
+        </p>
+      </div>
+      <form onSubmit={submit} className="rounded-xl border bg-white p-4 grid gap-3 md:grid-cols-2">
+        <div>
+          <Label>Group name *</Label>
+          <Input required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="e.g. Wholesale" />
+        </div>
+        <div>
+          <Label>Percentage (%)</Label>
+          <Input
+            type="number"
+            step="0.01"
+            value={form.percentage}
+            onChange={(e) => setForm({ ...form, percentage: e.target.value })}
+          />
+        </div>
+        <div>
+          <Label>Credit limit</Label>
+          <Input
+            type="number"
+            step="0.01"
+            value={form.credit_limit}
+            onChange={(e) => setForm({ ...form, credit_limit: e.target.value })}
+            placeholder="Optional"
+          />
+        </div>
+        <label className="flex items-center gap-2 text-sm self-end pb-2">
+          <input
+            type="checkbox"
+            checked={form.is_active}
+            onChange={(e) => setForm({ ...form, is_active: e.target.checked })}
+          />
+          Active
+        </label>
+        <div className="md:col-span-2 flex gap-2">
+          <Button type="submit" disabled={saving} className="bg-[#003D82]">
+            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+            {editId ? 'Update group' : 'Add customer group'}
+          </Button>
+          {editId && (
+            <Button type="button" variant="outline" onClick={() => { setEditId(null); setForm(EMPTY); }}>
+              Cancel
+            </Button>
+          )}
+        </div>
+      </form>
+      <div className="rounded-xl border bg-white overflow-x-auto">
+        {loading ? (
+          <div className="p-8 flex justify-center"><Loader2 className="animate-spin" /></div>
+        ) : (
+          <table className="w-full text-sm">
+            <thead className="bg-slate-50 text-left">
+              <tr>
+                <th className="p-3">Name</th>
+                <th className="p-3">Percentage</th>
+                <th className="p-3">Credit limit</th>
+                <th className="p-3">Status</th>
+                <th className="p-3" />
+              </tr>
+            </thead>
+            <tbody>
+              {(rows || []).map((r) => (
+                <tr key={r.id} className="border-t">
+                  <td className="p-3 font-medium">{r.name}</td>
+                  <td className="p-3">{Number(r.percentage) || 0}%</td>
+                  <td className="p-3">{r.credit_limit != null ? Number(r.credit_limit).toLocaleString() : '—'}</td>
+                  <td className="p-3">{r.is_active ? 'Active' : 'Inactive'}</td>
+                  <td className="p-3 text-right space-x-1">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => {
+                        setEditId(r.id);
+                        setForm({
+                          name: r.name || '',
+                          percentage: String(r.percentage ?? 0),
+                          credit_limit: r.credit_limit != null ? String(r.credit_limit) : '',
+                          is_active: !!r.is_active,
+                        });
+                      }}
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={async () => {
+                        if (!confirm('Delete this customer group?')) return;
+                        try {
+                          await deleteCustomerGroup(r.id);
+                          toast.success('Deleted');
+                          load();
+                        } catch (e) {
+                          toast.error(e.message);
+                        }
+                      }}
+                    >
+                      <Trash2 className="h-4 w-4 text-red-600" />
+                    </Button>
+                  </td>
+                </tr>
+              ))}
+              {!rows?.length && (
+                <tr>
+                  <td colSpan={5} className="p-6 text-center text-slate-500">No customer groups yet</td>
+                </tr>
               )}
             </tbody>
           </table>

@@ -65,14 +65,11 @@ export const SIDE_MENU_ITEMS = {
   releases: 'Deployment Versions',
 };
 
+/** System sidebar items (Settings hub tabs cover logs/roles/releases elsewhere). */
 export const SETTINGS_MENU_ITEMS = {
-  reports: 'Reports Hub',
-  logs: 'Activity Logs',
+  'site-content': 'Site Content',
   backup: 'Backup & Restore',
   'general-settings': 'Settings',
-  roles: 'Roles & Permissions',
-  history: 'System History',
-  releases: 'Deployment Versions',
 };
 
 /** Page schema: fields[key] = { type, label, default }. type: text|textarea|html|image */

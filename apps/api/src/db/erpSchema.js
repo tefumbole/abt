@@ -99,9 +99,21 @@ export const ERP_CREATE_STATEMENTS = [
     INDEX idx_adj_items_adj (adjustment_id)
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
 
+  `CREATE TABLE IF NOT EXISTS erp_customer_groups (
+    id CHAR(36) NOT NULL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    percentage DECIMAL(8,2) NOT NULL DEFAULT 0,
+    credit_limit DECIMAL(15,2) DEFAULT NULL,
+    is_active TINYINT(1) NOT NULL DEFAULT 1,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_erp_customer_groups_active (is_active)
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
+
   `CREATE TABLE IF NOT EXISTS erp_customers (
     id CHAR(36) NOT NULL PRIMARY KEY,
     user_id CHAR(36) DEFAULT NULL,
+    customer_group_id CHAR(36) DEFAULT NULL,
     name VARCHAR(255) NOT NULL,
     email VARCHAR(255) DEFAULT NULL,
     phone VARCHAR(50) DEFAULT NULL,
@@ -112,7 +124,8 @@ export const ERP_CREATE_STATEMENTS = [
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     INDEX idx_erp_customers_phone (phone),
-    INDEX idx_erp_customers_user (user_id)
+    INDEX idx_erp_customers_user (user_id),
+    INDEX idx_erp_customers_group (customer_group_id)
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
 
   `CREATE TABLE IF NOT EXISTS erp_suppliers (

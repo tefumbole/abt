@@ -29,10 +29,10 @@ function makePartyCrud(table) {
       }
       if (table === 'erp_customers') {
         await pool.query(
-          `INSERT INTO erp_customers (id, user_id, name, email, phone, company_name, address, city, is_active)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          `INSERT INTO erp_customers (id, user_id, customer_group_id, name, email, phone, company_name, address, city, is_active)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           [
-            id, b.user_id || null, b.name.trim(), b.email || null, b.phone || null,
+            id, b.user_id || null, b.customer_group_id || null, b.name.trim(), b.email || null, b.phone || null,
             b.company_name || null, b.address || null, b.city || null, bool(b.is_active, true) ? 1 : 0,
           ]
         );
@@ -74,9 +74,10 @@ function makePartyCrud(table) {
       }
       if (table === 'erp_customers') {
         await pool.query(
-          `UPDATE erp_customers SET user_id=?, name=?, email=?, phone=?, company_name=?, address=?, city=?, is_active=? WHERE id=?`,
+          `UPDATE erp_customers SET user_id=?, customer_group_id=?, name=?, email=?, phone=?, company_name=?, address=?, city=?, is_active=? WHERE id=?`,
           [
             b.user_id !== undefined ? b.user_id : c.user_id,
+            b.customer_group_id !== undefined ? b.customer_group_id : c.customer_group_id,
             b.name?.trim() || c.name,
             b.email !== undefined ? b.email : c.email,
             b.phone !== undefined ? b.phone : c.phone,
@@ -135,6 +136,87 @@ function makePartyCrud(table) {
   return r;
 }
 
+const customerGroups = Router();
+
+customerGroups.get('/', requireAuth, requireErpAdmin, async (_req, res) => {
+  try {
+    const [rows] = await getPool().query(
+      `SELECT * FROM erp_customer_groups ORDER BY name ASC`
+    );
+    res.json({
+      data: rows.map((row) => ({
+        ...row,
+        percentage: Number(row.percentage) || 0,
+        credit_limit: row.credit_limit != null ? Number(row.credit_limit) : null,
+        is_active: Boolean(row.is_active),
+      })),
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+customerGroups.post('/', requireAuth, requireErpAdmin, async (req, res) => {
+  try {
+    const b = req.body || {};
+    if (!b.name?.trim()) return res.status(400).json({ error: 'Name is required' });
+    const id = randomUUID();
+    await getPool().query(
+      `INSERT INTO erp_customer_groups (id, name, percentage, credit_limit, is_active)
+       VALUES (?, ?, ?, ?, ?)`,
+      [
+        id,
+        b.name.trim(),
+        Number(b.percentage) || 0,
+        b.credit_limit !== undefined && b.credit_limit !== '' ? Number(b.credit_limit) : null,
+        bool(b.is_active, true) ? 1 : 0,
+      ]
+    );
+    const [rows] = await getPool().query(`SELECT * FROM erp_customer_groups WHERE id = ?`, [id]);
+    res.status(201).json({ data: rows[0] });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+customerGroups.put('/:id', requireAuth, requireErpAdmin, async (req, res) => {
+  try {
+    const pool = getPool();
+    const [ex] = await pool.query(`SELECT * FROM erp_customer_groups WHERE id = ?`, [req.params.id]);
+    if (!ex.length) return res.status(404).json({ error: 'Not found' });
+    const c = ex[0];
+    const b = req.body || {};
+    await pool.query(
+      `UPDATE erp_customer_groups SET name=?, percentage=?, credit_limit=?, is_active=? WHERE id=?`,
+      [
+        b.name?.trim() || c.name,
+        b.percentage !== undefined ? Number(b.percentage) || 0 : Number(c.percentage) || 0,
+        b.credit_limit !== undefined
+          ? (b.credit_limit === '' || b.credit_limit == null ? null : Number(b.credit_limit))
+          : c.credit_limit,
+        (b.is_active !== undefined ? bool(b.is_active) : Boolean(c.is_active)) ? 1 : 0,
+        req.params.id,
+      ]
+    );
+    const [rows] = await pool.query(`SELECT * FROM erp_customer_groups WHERE id = ?`, [req.params.id]);
+    res.json({ data: rows[0] });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+customerGroups.delete('/:id', requireAuth, requireErpAdmin, async (req, res) => {
+  try {
+    const pool = getPool();
+    await pool.query(`UPDATE erp_customers SET customer_group_id = NULL WHERE customer_group_id = ?`, [req.params.id]);
+    await pool.query(`DELETE FROM erp_customer_groups WHERE id = ?`, [req.params.id]);
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.use('/customer-groups', customerGroups);
 router.use('/customers', makePartyCrud('erp_customers'));
 router.use('/suppliers', makePartyCrud('erp_suppliers'));
 router.use('/billers', makePartyCrud('erp_billers'));

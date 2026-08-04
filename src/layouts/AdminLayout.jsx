@@ -15,8 +15,6 @@ import {
   Menu, 
   X, 
   Clock, 
-  History, 
-  FileBarChart, 
   ChevronDown, 
   Briefcase, 
   Settings, 
@@ -37,7 +35,6 @@ import {
   FileText,
   ListTodo,
   CheckCircle,
-  Key,
   Inbox,
   Ticket,
   QrCode,
@@ -51,7 +48,6 @@ import {
   UserPlus,
   Wallet,
   UserCog,
-  ScrollText,
   Image as ImageIcon,
   Globe,
   Warehouse,
@@ -126,7 +122,6 @@ const AdminLayout = () => {
       label: 'Dashboard',
       items: [
         { label: 'Dashboard', path: '/admin/dashboard', icon: LayoutDashboard, permission: MENU_PERMISSIONS.dashboard, menuKey: 'dashboard' },
-        { label: 'Site Content', path: '/admin/site-content', icon: Globe, permission: MENU_PERMISSIONS.siteContent, menuKey: 'site-content' },
       ]
     },
     {
@@ -369,13 +364,9 @@ const AdminLayout = () => {
       collapsible: true,
       permission: MENU_PERMISSIONS.system,
       items: [
-        { label: 'Reports Hub', path: '/admin/reports', icon: FileBarChart, menuKey: 'reports' },
-        { label: 'Activity Logs', path: '/admin/logs', icon: ScrollText, menuKey: 'logs' },
+        { label: 'Site Content', path: '/admin/site-content', icon: Globe, permission: MENU_PERMISSIONS.siteContent, menuKey: 'site-content' },
         { label: 'Backup & Restore', path: '/admin/backup-restore', icon: Database, menuKey: 'backup' },
         { label: 'Settings', path: '/admin/general-settings', icon: Settings, menuKey: 'general-settings' },
-        { label: 'Roles & Permissions', path: '/admin/roles-permissions', icon: Key, permission: MENU_PERMISSIONS.roles, menuKey: 'roles' },
-        { label: 'System History', path: '/admin/history', icon: History, menuKey: 'history' },
-        { label: 'Deployment Versions', path: '/admin/releases', icon: Rocket, menuKey: 'releases' },
       ]
     }
   ];

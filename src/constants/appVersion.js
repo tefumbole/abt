@@ -1,11 +1,11 @@
 /** Alpha Bridge ERP release identifier — update when creating a new restore point. */
-export const APP_VERSION = 'ABT_ERP_V.2.2.1';
+export const APP_VERSION = 'ABT_ERP_V.2.2.2';
 
 export const APP_VERSION_LABEL = 'Version';
 
 export const RESTORE_POINT = {
   id: APP_VERSION,
-  name: 'Alpha Bridge ERP v2.2.1',
+  name: 'Alpha Bridge ERP v2.2.2',
   created: '2026-08-04',
   gitTag: APP_VERSION,
 };
@@ -15,6 +15,15 @@ export const RESTORE_POINT = {
  * Keep in sync with notable production deploys.
  */
 export const DEPLOYMENT_HISTORY = [
+  {
+    version: 'ABT_ERP_V.2.2.2',
+    date: '2026-08-04',
+    title: 'Slim System menu + Customer Groups',
+    notes: [
+      'System sidebar: Site Content, Backup & Restore, Settings only',
+      'Customer Group create/edit/delete in Settings',
+    ],
+  },
   {
     version: 'ABT_ERP_V.2.2.1',
     date: '2026-08-04',
