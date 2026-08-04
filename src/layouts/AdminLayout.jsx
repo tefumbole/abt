@@ -336,7 +336,22 @@ const AdminLayout = () => {
       permission: MENU_PERMISSIONS.erpCommerce,
       items: [
         { label: 'Warehouses', path: '/admin/erp/warehouses', icon: Warehouse, permission: MENU_PERMISSIONS.erpCommerce, menuKey: 'erp-warehouses' },
-        { label: 'Products & Stock', path: '/admin/erp/products', icon: Package, permission: MENU_PERMISSIONS.erpCommerce, menuKey: 'erp-products' },
+        {
+          label: 'Products & Stock',
+          icon: Package,
+          permission: MENU_PERMISSIONS.erpCommerce,
+          menuKey: 'erp-products',
+          hideTopNav: true,
+          submenu: [
+            { label: 'Category', path: '/admin/erp/products?tab=category', color: 'navy' },
+            { label: 'Product List', path: '/admin/erp/products?tab=product-list', color: 'gold' },
+            { label: '+ Add Product', path: '/admin/erp/products?tab=add-product', color: 'purple' },
+            { label: 'Print Barcode', path: '/admin/erp/products?tab=barcode', color: 'pink' },
+            { label: 'Adjustment List', path: '/admin/erp/products?tab=adjustment-list', color: 'green' },
+            { label: 'Add Adjustment', path: '/admin/erp/products?tab=add-adjustment', color: 'orange' },
+            { label: 'Stock Count', path: '/admin/erp/products?tab=stock-count', color: 'cyan' },
+          ],
+        },
         { label: 'Purchases', path: '/admin/erp/purchases', icon: Truck, permission: MENU_PERMISSIONS.erpCommerce, menuKey: 'erp-purchases' },
         { label: 'Sales', path: '/admin/erp/sales', icon: ShoppingCart, permission: MENU_PERMISSIONS.erpCommerce, menuKey: 'erp-sales' },
         { label: 'Quotations', path: '/admin/erp/quotations', icon: FileText, permission: MENU_PERMISSIONS.erpCommerce, menuKey: 'erp-quotations' },
@@ -463,6 +478,42 @@ const AdminLayout = () => {
     const isOpen = Boolean(openMenus[item.label]);
 
     if (item.submenu) {
+      if (item.hideTopNav) {
+        const current = location.pathname + location.search;
+        const onProductsRoot = location.pathname === '/admin/erp/products' && !location.search;
+        return (
+          <div className="space-y-1">
+            <div className={cn(
+              'flex items-center gap-3 px-4 py-2 text-xs font-bold uppercase tracking-wide',
+              isActive ? 'text-[#D4AF37]' : 'text-gray-300'
+            )}>
+              <item.icon className="w-4 h-4 text-[#D4AF37]" />
+              <span>{tl('menu', item.label)}</span>
+            </div>
+            <div className="ml-3 space-y-0.5 border-l border-white/15 pl-2">
+              {item.submenu.map((sub) => {
+                const subActive = current === sub.path
+                  || (onProductsRoot && sub.path.includes('tab=category'));
+                return (
+                  <Link
+                    key={sub.path}
+                    to={sub.path}
+                    onClick={() => setSidebarOpen(false)}
+                    className={cn(
+                      'block px-3 py-2 rounded-lg text-sm transition-colors',
+                      subActive
+                        ? 'bg-[#D4AF37] text-[#003D82] font-semibold'
+                        : 'text-gray-200 hover:bg-white/10 hover:text-white'
+                    )}
+                  >
+                    {tl('menu', sub.label)}
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        );
+      }
       const firstSub = item.submenu[0];
       return (
         <Link
@@ -643,7 +694,7 @@ const AdminLayout = () => {
           </Link>
           <LanguageSwitcher variant="admin" />
         </div>
-        {activeSection && (
+        {activeSection && !activeSection.hideTopNav && (
           activeSection.label === 'Human Resources' ? (
             <HrTopNav />
           ) : activeSection.label === 'HR Letters' ? (

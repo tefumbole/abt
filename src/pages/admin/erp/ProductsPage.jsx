@@ -1,7 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
-  ChevronDown, ClipboardList, FileSpreadsheet, FileText, Image as ImageIcon,
-  List, Loader2, PackagePlus, PencilLine, Plus, Printer, Search, Tags, Eye, X,
+  ChevronDown, FileSpreadsheet, FileText, Image as ImageIcon,
+  Loader2, Plus, Printer, Search, Eye, X,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -10,24 +11,16 @@ import { Label } from '@/components/ui/label';
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { getTabTheme } from '@/components/admin/tabTheme';
-import { cn } from '@/lib/utils';
 import { getSystemSettings } from '@/services/settingsService';
 import {
   createAdjustment, createCategory, createProduct,
   deleteCategory, listAdjustments, listBrands, listCategories, listProducts,
   listUnits, listWarehouses, updateCategory,
 } from '@/services/erpService';
-import ErpShell, { COMMERCE_TABS } from './ErpShell';
 
-const PRODUCT_TABS = [
-  { id: 'category', label: 'Category', color: 'navy', Icon: Tags },
-  { id: 'product-list', label: 'Product List', color: 'gold', Icon: List },
-  { id: 'add-product', label: '+ Add Product', color: 'purple', Icon: PackagePlus },
-  { id: 'barcode', label: 'Print Barcode', color: 'pink', Icon: Printer },
-  { id: 'adjustment-list', label: 'Adjustment List', color: 'green', Icon: ClipboardList },
-  { id: 'add-adjustment', label: 'Add Adjustment', color: 'orange', Icon: PencilLine },
-  { id: 'stock-count', label: 'Stock Count', color: 'cyan', Icon: List },
+const TAB_IDS = [
+  'category', 'product-list', 'add-product', 'barcode',
+  'adjustment-list', 'add-adjustment', 'stock-count',
 ];
 
 function money(n, currency = 'XAF') {
@@ -35,7 +28,14 @@ function money(n, currency = 'XAF') {
 }
 
 export default function ProductsPage() {
-  const [tab, setTab] = useState('category');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tab = useMemo(() => {
+    const raw = searchParams.get('tab') || 'category';
+    return TAB_IDS.includes(raw) ? raw : 'category';
+  }, [searchParams]);
+  const setTab = (id) => {
+    setSearchParams({ tab: id }, { replace: true });
+  };
   const [warehouses, setWarehouses] = useState([]);
   const [warehouseId, setWarehouseId] = useState('');
   const [products, setProducts] = useState([]);
@@ -185,30 +185,20 @@ export default function ProductsPage() {
     }
   };
 
+  useEffect(() => {
+    setPage(1);
+    setSearch('');
+  }, [tab]);
+
   return (
-    <ErpShell title="PRODUCT" subtitle="Categories, catalog & stock" tabs={COMMERCE_TABS}>
-      <div className="flex flex-wrap gap-2 mb-4">
-        {PRODUCT_TABS.map((item) => {
-          const theme = getTabTheme(item.color);
-          const active = tab === item.id;
-          const Icon = item.Icon;
-          return (
-            <button
-              key={item.id}
-              type="button"
-              onClick={() => { setTab(item.id); setPage(1); setSearch(''); }}
-              className={cn(
-                'inline-flex items-center gap-1.5 px-3 sm:px-4 py-2 rounded-full text-xs sm:text-sm font-semibold border-2 transition-all whitespace-nowrap',
-                active ? theme.active : theme.idle,
-              )}
-            >
-              <Icon className="h-3.5 w-3.5" />
-              {item.label}
-            </button>
-          );
-        })}
+    <div className="space-y-6">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900">PRODUCT</h1>
+          <p className="text-sm text-slate-600 mt-1">Categories, catalog & stock</p>
+        </div>
         <select
-          className="border rounded-md px-2 text-sm h-9 ml-auto"
+          className="border rounded-md px-2 text-sm h-9"
           value={warehouseId}
           onChange={(e) => setWarehouseId(e.target.value)}
         >
@@ -597,6 +587,6 @@ export default function ProductsPage() {
           </div>
         </div>
       )}
-    </ErpShell>
+    </div>
   );
 }
