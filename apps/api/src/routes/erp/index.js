@@ -10,12 +10,14 @@ import pos from './pos.js';
 import support from './support.js';
 import heavy from './heavy.js';
 import publicRoutes from './public.js';
+import currencies from './currencies.js';
 
 const router = Router();
 
 router.use('/warehouses', warehouses);
 router.use('/products', products);
 router.use('/people', people);
+router.use('/currencies', currencies);
 router.use('/purchases', purchases);
 router.use('/sales', sales);
 router.use('/quotations', quotations);

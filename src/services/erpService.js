@@ -38,6 +38,12 @@ export const erpApi = {
   del: (path) => apiJson(`/erp${path}`, { method: 'DELETE' }),
 };
 
+export const listCurrencies = () => erpApi.get('/currencies');
+export const createCurrency = (body) => erpApi.post('/currencies', body).then((r) => r.data);
+export const updateCurrency = (id, body) => erpApi.put(`/currencies/${id}`, body).then((r) => r.data);
+export const setDefaultCurrency = (id) => erpApi.post(`/currencies/${id}/set-default`, {}).then((r) => r.data);
+export const deleteCurrency = (id) => erpApi.del(`/currencies/${id}`);
+
 export const listWarehouses = () => erpApi.get('/warehouses');
 export const createWarehouse = (body) => erpApi.post('/warehouses', body).then((r) => r.data);
 export const updateWarehouse = (id, body) => erpApi.put(`/warehouses/${id}`, body).then((r) => r.data);

@@ -36,4 +36,33 @@ export async function seedErp(pool) {
     );
     console.log('Seeded default ERP cash account');
   }
+
+  const [currencies] = await pool.query(`SELECT id FROM erp_currencies LIMIT 1`);
+  if (!currencies.length) {
+    let defaultCode = 'XAF';
+    try {
+      const [sys] = await pool.query(`SELECT currency FROM system_settings LIMIT 1`);
+      if (sys[0]?.currency) defaultCode = String(sys[0].currency).toUpperCase();
+    } catch {
+      /* ignore */
+    }
+    const defaults = [
+      { name: 'Central African CFA franc', code: 'XAF', symbol: 'FCFA', rate: 1, isDefault: defaultCode === 'XAF' },
+      { name: 'US Dollar', code: 'USD', symbol: '$', rate: 1, isDefault: defaultCode === 'USD' },
+      { name: 'Euro', code: 'EUR', symbol: '€', rate: 1, isDefault: defaultCode === 'EUR' },
+    ];
+    if (!defaults.some((d) => d.isDefault)) defaults[0].isDefault = true;
+    for (const d of defaults) {
+      await pool.query(
+        `INSERT INTO erp_currencies (id, name, code, symbol, exchange_rate, is_active, is_default)
+         VALUES (?, ?, ?, ?, ?, 1, ?)`,
+        [randomUUID(), d.name, d.code, d.symbol, d.rate, d.isDefault ? 1 : 0]
+      );
+    }
+    const def = defaults.find((d) => d.isDefault);
+    if (def) {
+      await pool.query(`UPDATE system_settings SET currency = ? WHERE id IS NOT NULL`, [def.code]).catch(() => {});
+    }
+    console.log('Seeded default ERP currencies');
+  }
 }

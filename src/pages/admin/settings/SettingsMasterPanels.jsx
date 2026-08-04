@@ -8,20 +8,25 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import {
   createBiller,
   createBrand,
+  createCurrency,
   createCustomerGroup,
   createUnit,
   createWarehouse,
   deleteBiller,
+  deleteCurrency,
   deleteCustomerGroup,
   deleteWarehouse,
   getPosSettings,
   listBillers,
   listBrands,
+  listCurrencies,
   listCustomerGroups,
   listCustomers,
   listUnits,
   listWarehouses,
   savePosSettings,
+  setDefaultCurrency,
+  updateCurrency,
   updateCustomerGroup,
   updateWarehouse,
 } from '@/services/erpService';
@@ -534,56 +539,194 @@ export function UnitsSettingsPanel() {
 }
 
 export function CurrencySettingsPanel() {
-  const [currency, setCurrency] = useState('XAF');
+  const EMPTY = { name: '', code: '', symbol: '', exchange_rate: '1', is_active: true, is_default: false };
+  const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [form, setForm] = useState(EMPTY);
+  const [editId, setEditId] = useState(null);
 
-  useEffect(() => {
-    (async () => {
-      try {
-        const sys = await getSystemSettings();
-        setCurrency(sys?.currency || 'XAF');
-      } catch (e) {
-        toast.error(e.message);
-      } finally {
-        setLoading(false);
-      }
-    })();
-  }, []);
-
-  const save = async () => {
-    setSaving(true);
+  const load = async () => {
+    setLoading(true);
     try {
-      await updateSystemSettings({ currency: currency.trim().toUpperCase() });
-      toast.success('Currency saved');
+      setRows(await listCurrencies());
     } catch (e) {
       toast.error(e.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { load(); }, []);
+
+  const submit = async (e) => {
+    e.preventDefault();
+    if (!form.name.trim() || !form.code.trim()) {
+      toast.error('Name and code are required');
+      return;
+    }
+    setSaving(true);
+    try {
+      const payload = {
+        name: form.name.trim(),
+        code: form.code.trim().toUpperCase(),
+        symbol: form.symbol.trim() || form.code.trim().toUpperCase(),
+        exchange_rate: Number(form.exchange_rate) || 1,
+        is_active: !!form.is_active,
+        is_default: !!form.is_default,
+      };
+      if (editId) await updateCurrency(editId, payload);
+      else await createCurrency(payload);
+      toast.success(editId ? 'Currency updated' : 'Currency created');
+      setForm(EMPTY);
+      setEditId(null);
+      await load();
+    } catch (err) {
+      toast.error(err.message);
     } finally {
       setSaving(false);
     }
   };
 
-  if (loading) {
-    return <div className="p-8 flex justify-center"><Loader2 className="animate-spin text-[#003D82]" /></div>;
-  }
+  const makeDefault = async (id) => {
+    try {
+      await setDefaultCurrency(id);
+      toast.success('Default currency updated');
+      load();
+    } catch (e) {
+      toast.error(e.message);
+    }
+  };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-[#003D82]">Currency</CardTitle>
-        <CardDescription>Default currency code shown on invoices and reports (e.g. XAF, USD, EUR).</CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4 max-w-md">
-        <div className="space-y-2">
-          <Label htmlFor="currency">Currency code *</Label>
-          <Input id="currency" value={currency} onChange={(e) => setCurrency(e.target.value)} maxLength={10} />
+    <div className="space-y-4">
+      <div>
+        <h2 className="text-xl font-bold text-[#003D82]">Currencies</h2>
+        <p className="text-sm text-slate-600">
+          Create currencies and choose which one is the system default for invoices and reports.
+        </p>
+      </div>
+
+      <form onSubmit={submit} className="rounded-xl border bg-white p-4 grid gap-3 md:grid-cols-2">
+        <div>
+          <Label>Name *</Label>
+          <Input required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="e.g. US Dollar" />
         </div>
-        <Button onClick={save} disabled={saving} className="bg-[#003D82]">
-          {saving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />}
-          Save currency
-        </Button>
-      </CardContent>
-    </Card>
+        <div>
+          <Label>Code *</Label>
+          <Input required value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value })} placeholder="USD" maxLength={16} />
+        </div>
+        <div>
+          <Label>Symbol</Label>
+          <Input value={form.symbol} onChange={(e) => setForm({ ...form, symbol: e.target.value })} placeholder="$" maxLength={16} />
+        </div>
+        <div>
+          <Label>Exchange rate</Label>
+          <Input
+            type="number"
+            step="0.000001"
+            value={form.exchange_rate}
+            onChange={(e) => setForm({ ...form, exchange_rate: e.target.value })}
+          />
+        </div>
+        <label className="flex items-center gap-2 text-sm">
+          <input type="checkbox" checked={form.is_active} onChange={(e) => setForm({ ...form, is_active: e.target.checked })} />
+          Active
+        </label>
+        <label className="flex items-center gap-2 text-sm">
+          <input type="checkbox" checked={form.is_default} onChange={(e) => setForm({ ...form, is_default: e.target.checked })} />
+          Set as default
+        </label>
+        <div className="md:col-span-2 flex gap-2">
+          <Button type="submit" disabled={saving} className="bg-[#003D82]">
+            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+            {editId ? 'Update currency' : 'Add currency'}
+          </Button>
+          {editId && (
+            <Button type="button" variant="outline" onClick={() => { setEditId(null); setForm(EMPTY); }}>
+              Cancel
+            </Button>
+          )}
+        </div>
+      </form>
+
+      <div className="rounded-xl border bg-white overflow-x-auto">
+        {loading ? (
+          <div className="p-8 flex justify-center"><Loader2 className="animate-spin" /></div>
+        ) : (
+          <table className="w-full text-sm">
+            <thead className="bg-slate-50 text-left">
+              <tr>
+                <th className="p-3">Name</th>
+                <th className="p-3">Code</th>
+                <th className="p-3">Symbol</th>
+                <th className="p-3">Exchange rate</th>
+                <th className="p-3">Status</th>
+                <th className="p-3 text-right">Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {(rows || []).map((r) => (
+                <tr key={r.id} className="border-t">
+                  <td className="p-3 font-medium">
+                    {r.name}
+                    {r.is_default ? <span className="ml-2 text-xs font-semibold text-[#003D82]">(Default)</span> : null}
+                  </td>
+                  <td className="p-3 font-mono">{r.code}</td>
+                  <td className="p-3">{r.symbol || '—'}</td>
+                  <td className="p-3">{Number(r.exchange_rate) || 1}</td>
+                  <td className="p-3">{r.is_active ? 'Active' : 'Inactive'}</td>
+                  <td className="p-3 text-right space-x-1">
+                    {!r.is_default && r.is_active ? (
+                      <Button size="sm" variant="outline" onClick={() => makeDefault(r.id)}>
+                        Set default
+                      </Button>
+                    ) : null}
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => {
+                        setEditId(r.id);
+                        setForm({
+                          name: r.name || '',
+                          code: r.code || '',
+                          symbol: r.symbol || '',
+                          exchange_rate: String(r.exchange_rate ?? 1),
+                          is_active: !!r.is_active,
+                          is_default: !!r.is_default,
+                        });
+                      }}
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      disabled={!!r.is_default}
+                      onClick={async () => {
+                        if (!confirm('Delete this currency?')) return;
+                        try {
+                          await deleteCurrency(r.id);
+                          toast.success('Deleted');
+                          load();
+                        } catch (e) {
+                          toast.error(e.message);
+                        }
+                      }}
+                    >
+                      <Trash2 className="h-4 w-4 text-red-600" />
+                    </Button>
+                  </td>
+                </tr>
+              ))}
+              {!rows?.length && (
+                <tr><td colSpan={6} className="p-6 text-center text-slate-500">No currencies yet</td></tr>
+              )}
+            </tbody>
+          </table>
+        )}
+      </div>
+    </div>
   );
 }
 
