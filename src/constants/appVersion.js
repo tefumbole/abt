@@ -1,11 +1,11 @@
 /** Alpha Bridge ERP release identifier — update when creating a new restore point. */
-export const APP_VERSION = 'ABT_ERP_V.2.2.0';
+export const APP_VERSION = 'ABT_ERP_V.2.2.1';
 
 export const APP_VERSION_LABEL = 'Version';
 
 export const RESTORE_POINT = {
   id: APP_VERSION,
-  name: 'Alpha Bridge ERP v2.2.0',
+  name: 'Alpha Bridge ERP v2.2.1',
   created: '2026-08-04',
   gitTag: APP_VERSION,
 };
@@ -15,6 +15,17 @@ export const RESTORE_POINT = {
  * Keep in sync with notable production deploys.
  */
 export const DEPLOYMENT_HISTORY = [
+  {
+    version: 'ABT_ERP_V.2.2.1',
+    date: '2026-08-04',
+    title: 'Beyond-style Settings hub',
+    notes: [
+      'Side menu renamed to Settings',
+      'Colored settings tabs (General, Warehouse, Brand, Unit, POS, …)',
+      'General Setting form: title, logo, header/footer/watermark, timezone, letter serial',
+      'Branding merged into General Setting (existing assets preserved)',
+    ],
+  },
   {
     version: 'ABT_ERP_V.2.2.0',
     date: '2026-08-04',

@@ -56,8 +56,8 @@ export const uploadLogo = async (file) => {
  * @param {'header' | 'footer'} type
  */
 export const uploadPdfLetterheadImage = async (file, type) => {
-  if (!['header', 'footer'].includes(type)) {
-    throw new Error('Invalid letterhead type. Use "header" or "footer".');
+  if (!['header', 'footer', 'watermark'].includes(type)) {
+    throw new Error('Invalid letterhead type. Use "header", "footer", or "watermark".');
   }
 
   const validation = validateImageSize(file);

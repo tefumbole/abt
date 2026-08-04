@@ -175,7 +175,7 @@ const AdminDashboard = () => {
     { to: '/admin/users', title: 'Manage Users', desc: 'Staff & admins', icon: Users },
     { to: '/admin/site-content', title: 'Site Content', desc: 'Edit public pages', icon: Globe },
     { to: '/admin/gallery', title: 'Gallery', desc: 'Photos & embeds', icon: ImageIcon },
-    { to: '/admin/general-settings', title: 'General Settings', desc: 'System config', icon: Settings },
+    { to: '/admin/general-settings', title: 'Settings', desc: 'General, warehouses, billers & system', icon: Settings },
   ];
 
   const equityRows = [

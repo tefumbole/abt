@@ -50,5 +50,10 @@ export function enrichSystemSettingsAssets(settings = {}) {
       settings.pdf_footer_file_path,
       settings.pdf_footer_url
     ),
+    pdf_watermark_url: getStoragePublicUrl(
+      'system-assets',
+      settings.pdf_watermark_file_path,
+      settings.pdf_watermark_url
+    ),
   };
 }

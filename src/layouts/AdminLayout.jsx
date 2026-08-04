@@ -372,7 +372,7 @@ const AdminLayout = () => {
         { label: 'Reports Hub', path: '/admin/reports', icon: FileBarChart, menuKey: 'reports' },
         { label: 'Activity Logs', path: '/admin/logs', icon: ScrollText, menuKey: 'logs' },
         { label: 'Backup & Restore', path: '/admin/backup-restore', icon: Database, menuKey: 'backup' },
-        { label: 'General Settings', path: '/admin/general-settings', icon: Settings, menuKey: 'general-settings' },
+        { label: 'Settings', path: '/admin/general-settings', icon: Settings, menuKey: 'general-settings' },
         { label: 'Roles & Permissions', path: '/admin/roles-permissions', icon: Key, permission: MENU_PERMISSIONS.roles, menuKey: 'roles' },
         { label: 'System History', path: '/admin/history', icon: History, menuKey: 'history' },
         { label: 'Deployment Versions', path: '/admin/releases', icon: Rocket, menuKey: 'releases' },

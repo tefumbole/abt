@@ -1,12 +1,11 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Helmet } from 'react-helmet';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { getProfile, updateProfile } from '@/services/profileService';
 import { getSystemSettings, updateSystemSettings } from '@/services/settingsService';
 import { fetchEnvFiles, saveEnvFiles } from '@/services/systemEnvService';
-import SystemConfigTab from '@/components/admin/SystemConfigTab';
 import LicenseAgreementTab from '@/components/admin/LicenseAgreementTab';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,49 +13,82 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useToast } from '@/components/ui/use-toast';
+import { COLORED_TAB_BASE, getTabTheme } from '@/components/admin/tabTheme';
+import { cn } from '@/lib/utils';
+import { DEFAULT_SETTINGS_TAB, SETTINGS_NAV_TABS } from '@/config/settingsNavConfig';
+import GeneralSettingPanel from '@/pages/admin/settings/GeneralSettingPanel';
 import {
-  Settings, Save, Loader2, FileCode, Building2, User, Phone, Mail, Shield,
+  BillersSettingsPanel,
+  BrandsSettingsPanel,
+  CurrencySettingsPanel,
+  PosSettingsPanel,
+  UnitsSettingsPanel,
+  WarehousesSettingsPanel,
+} from '@/pages/admin/settings/SettingsMasterPanels';
+import RolesPermissionsPage from '@/pages/admin/RolesPermissionsPage';
+import AdminActivityLogsPage from '@/pages/admin/AdminActivityLogsPage';
+import AdminBackupRestorePage from '@/pages/admin/AdminBackupRestorePage';
+import {
+  Settings, Save, Loader2, FileCode, User, Phone, Mail, Shield,
 } from 'lucide-react';
+
+function StubPanel({ title, description, children }) {
+  return (
+    <Card className="max-w-3xl">
+      <CardHeader>
+        <CardTitle className="text-[#003D82]">{title}</CardTitle>
+        {description ? <CardDescription>{description}</CardDescription> : null}
+      </CardHeader>
+      {children ? <CardContent>{children}</CardContent> : null}
+    </Card>
+  );
+}
 
 const GeneralSystemSettingsPage = () => {
   const { user } = useAuth();
   const { toast } = useToast();
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tab = useMemo(() => {
+    const raw = searchParams.get('tab') || DEFAULT_SETTINGS_TAB;
+    if (raw === 'branding') return 'general';
+    return SETTINGS_NAV_TABS.some((t) => t.id === raw) ? raw : DEFAULT_SETTINGS_TAB;
+  }, [searchParams]);
+
+  const setTab = (id) => {
+    setSearchParams(id === DEFAULT_SETTINGS_TAB ? {} : { tab: id }, { replace: true });
+  };
+
+  const [loading, setLoading] = useState(false);
   const [savingEnv, setSavingEnv] = useState(false);
   const [savingProfile, setSavingProfile] = useState(false);
+  const [savingTax, setSavingTax] = useState(false);
   const [profile, setProfile] = useState(null);
   const [formData, setFormData] = useState({ full_name: '', phone: '', email: '' });
-  const [settings, setSettings] = useState({
-    application_name: '',
-    developed_by: '',
-    copyright_text: '',
-  });
+  const [taxRate, setTaxRate] = useState('0');
   const [envFiles, setEnvFiles] = useState({ frontend: '', api: '' });
 
   useEffect(() => {
+    if (!['profile', 'env', 'tax'].includes(tab)) return;
     (async () => {
       try {
         setLoading(true);
-        const tasks = [getSystemSettings(), fetchEnvFiles()];
-        if (user?.id) tasks.push(getProfile(user.id));
-        const [sys, env, prof] = await Promise.all(tasks);
-
-        if (sys) {
-          setSettings({
-            application_name: sys.application_name || 'Alpha Bridge',
-            developed_by: sys.developed_by || '',
-            copyright_text: sys.copyright_text || '',
-          });
+        if (tab === 'env') {
+          setEnvFiles(await fetchEnvFiles());
         }
-        setEnvFiles(env);
-        if (prof) {
-          setProfile(prof);
-          setFormData({
-            full_name: prof.full_name || '',
-            phone: prof.phone || '',
-            email: prof.email || user?.email || '',
-          });
+        if (tab === 'tax') {
+          const sys = await getSystemSettings();
+          setTaxRate(sys?.tax_rate != null ? String(sys.tax_rate) : '0');
+        }
+        if (tab === 'profile' && user?.id) {
+          const prof = await getProfile(user.id);
+          if (prof) {
+            setProfile(prof);
+            setFormData({
+              full_name: prof.full_name || '',
+              phone: prof.phone || '',
+              email: prof.email || user?.email || '',
+            });
+          }
         }
       } catch (err) {
         toast({ variant: 'destructive', title: 'Load failed', description: err.message });
@@ -64,19 +96,7 @@ const GeneralSystemSettingsPage = () => {
         setLoading(false);
       }
     })();
-  }, [user, toast]);
-
-  const saveAppSettings = async () => {
-    setSaving(true);
-    try {
-      await updateSystemSettings(settings);
-      toast({ title: 'Settings saved', description: 'Application settings updated.' });
-    } catch (err) {
-      toast({ variant: 'destructive', title: 'Save failed', description: err.message });
-    } finally {
-      setSaving(false);
-    }
-  };
+  }, [tab, user, toast]);
 
   const saveProfile = async (e) => {
     e?.preventDefault();
@@ -107,35 +127,140 @@ const GeneralSystemSettingsPage = () => {
     }
   };
 
-  if (loading) {
-    return (
-      <div className="flex justify-center p-12">
-        <Loader2 className="w-8 h-8 animate-spin text-[#003D82]" />
-      </div>
-    );
-  }
+  const saveTax = async () => {
+    setSavingTax(true);
+    try {
+      await updateSystemSettings({ tax_rate: Number(taxRate) || 0 });
+      toast({ title: 'Tax saved', description: 'Default tax rate updated.' });
+    } catch (err) {
+      toast({ variant: 'destructive', title: 'Save failed', description: err.message });
+    } finally {
+      setSavingTax(false);
+    }
+  };
+
+  const activeLabel = SETTINGS_NAV_TABS.find((t) => t.id === tab)?.label || 'Settings';
 
   return (
     <>
-      <Helmet><title>General Settings | Admin</title></Helmet>
-      <div className="space-y-6 max-w-5xl">
+      <Helmet><title>{activeLabel} | Settings | Admin</title></Helmet>
+      <div className="space-y-5">
         <div>
           <h1 className="text-3xl font-bold text-[#003D82] flex items-center gap-2">
-            <Settings className="w-8 h-8" /> General Settings
+            <Settings className="w-8 h-8" /> Settings
           </h1>
-          <p className="text-gray-500 mt-1">Profile, branding, and environment configuration.</p>
+          <p className="text-gray-500 mt-1">
+            General configuration, warehouses, billers, brands, units, POS, and system tools.
+          </p>
         </div>
 
-        <Tabs defaultValue="profile" className="w-full">
-          <TabsList className="mb-4 flex flex-wrap h-auto">
-            <TabsTrigger value="profile">My Profile</TabsTrigger>
-            <TabsTrigger value="branding">Branding</TabsTrigger>
-            <TabsTrigger value="license">License Agreement</TabsTrigger>
-            <TabsTrigger value="environment">Environment</TabsTrigger>
-          </TabsList>
+        <div className="flex flex-wrap gap-2">
+          {SETTINGS_NAV_TABS.map((item) => {
+            const theme = getTabTheme(item.color);
+            const Icon = item.icon;
+            const active = tab === item.id;
+            return (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => setTab(item.id)}
+                className={cn(COLORED_TAB_BASE, active ? theme.active : theme.idle)}
+              >
+                <Icon className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
+                {item.label}
+              </button>
+            );
+          })}
+        </div>
 
-          <TabsContent value="profile">
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {tab === 'general' && <GeneralSettingPanel />}
+        {tab === 'roles' && <RolesPermissionsPage />}
+        {tab === 'warehouses' && <WarehousesSettingsPanel />}
+        {tab === 'customer-group' && (
+          <StubPanel
+            title="Customer Group"
+            description="Customer groups are managed with ERP customers for now."
+          >
+            <Button asChild className="bg-[#003D82]">
+              <Link to="/admin/erp/people">Open ERP People</Link>
+            </Button>
+          </StubPanel>
+        )}
+        {tab === 'brands' && <BrandsSettingsPanel />}
+        {tab === 'units' && <UnitsSettingsPanel />}
+        {tab === 'currency' && <CurrencySettingsPanel />}
+        {tab === 'tax' && (
+          <Card className="max-w-md">
+            <CardHeader>
+              <CardTitle className="text-[#003D82]">Tax</CardTitle>
+              <CardDescription>Default tax rate (%) applied to sales when no line tax is set.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {loading ? (
+                <Loader2 className="w-6 h-6 animate-spin text-[#003D82]" />
+              ) : (
+                <>
+                  <div className="space-y-2">
+                    <Label htmlFor="tax_rate">Tax rate (%)</Label>
+                    <Input id="tax_rate" type="number" step="0.01" value={taxRate} onChange={(e) => setTaxRate(e.target.value)} />
+                  </div>
+                  <Button onClick={saveTax} disabled={savingTax} className="bg-[#003D82]">
+                    {savingTax ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />}
+                    Save tax
+                  </Button>
+                </>
+              )}
+            </CardContent>
+          </Card>
+        )}
+        {tab === 'mail' && (
+          <StubPanel
+            title="Mail Setting"
+            description="Outbound mail is configured via API environment variables (SMTP / provider keys)."
+          >
+            <Button type="button" variant="outline" onClick={() => setTab('env')}>
+              Open .env Settings
+            </Button>
+          </StubPanel>
+        )}
+        {tab === 'reward' && (
+          <StubPanel
+            title="Reward Point Setting"
+            description="Reward points are not enabled in Alpha Bridge. This tab is reserved for future use."
+          />
+        )}
+        {tab === 'pos' && <PosSettingsPanel />}
+        {tab === 'transactions' && (
+          <StubPanel
+            title="My Transactions"
+            description="View ERP payments and ledger activity."
+          >
+            <Button asChild className="bg-[#003D82]">
+              <Link to="/admin/erp/payments">Open Payments</Link>
+            </Button>
+          </StubPanel>
+        )}
+        {tab === 'empty-db' && (
+          <StubPanel
+            title="Empty Database"
+            description="Destructive wipe is disabled for safety. Use Backup Database to export, or contact a system administrator for controlled resets."
+          >
+            <Alert variant="destructive">
+              <AlertTitle>Disabled</AlertTitle>
+              <AlertDescription>This action will not run from the admin UI.</AlertDescription>
+            </Alert>
+          </StubPanel>
+        )}
+        {tab === 'logs' && <AdminActivityLogsPage />}
+        {tab === 'backup' && <AdminBackupRestorePage />}
+        {tab === 'billers' && <BillersSettingsPanel />}
+        {tab === 'license' && <LicenseAgreementTab />}
+
+        {tab === 'profile' && (
+          loading ? (
+            <div className="flex justify-center p-12"><Loader2 className="w-8 h-8 animate-spin text-[#003D82]" /></div>
+          ) : (
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 max-w-5xl">
               <Card className="lg:col-span-2">
                 <CardHeader>
                   <CardTitle>Profile Information</CardTitle>
@@ -147,8 +272,12 @@ const GeneralSystemSettingsPage = () => {
                       <Label htmlFor="full_name">Full Name</Label>
                       <div className="relative">
                         <User className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                        <Input id="full_name" name="full_name" value={formData.full_name}
-                          onChange={(e) => setFormData((p) => ({ ...p, full_name: e.target.value }))} className="pl-10" />
+                        <Input
+                          id="full_name"
+                          value={formData.full_name}
+                          onChange={(e) => setFormData((p) => ({ ...p, full_name: e.target.value }))}
+                          className="pl-10"
+                        />
                       </div>
                     </div>
                     <div className="space-y-2">
@@ -162,8 +291,13 @@ const GeneralSystemSettingsPage = () => {
                       <Label htmlFor="phone">Phone Number</Label>
                       <div className="relative">
                         <Phone className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                        <Input id="phone" name="phone" value={formData.phone}
-                          onChange={(e) => setFormData((p) => ({ ...p, phone: e.target.value }))} className="pl-10" placeholder="+237..." />
+                        <Input
+                          id="phone"
+                          value={formData.phone}
+                          onChange={(e) => setFormData((p) => ({ ...p, phone: e.target.value }))}
+                          className="pl-10"
+                          placeholder="+237..."
+                        />
                       </div>
                     </div>
                     <Button type="submit" disabled={savingProfile} className="bg-[#003D82]">
@@ -180,7 +314,10 @@ const GeneralSystemSettingsPage = () => {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3 text-sm">
-                  <div className="flex justify-between"><span>Role</span><span className="font-bold uppercase">{profile?.role || 'User'}</span></div>
+                  <div className="flex justify-between">
+                    <span>Role</span>
+                    <span className="font-bold uppercase">{profile?.role || 'User'}</span>
+                  </div>
                   <Alert className="bg-white border-blue-200">
                     <AlertTitle className="text-xs font-bold">WhatsApp OTP</AlertTitle>
                     <AlertDescription className="text-xs">Keep your phone number current for login verification.</AlertDescription>
@@ -188,44 +325,14 @@ const GeneralSystemSettingsPage = () => {
                 </CardContent>
               </Card>
             </div>
-          </TabsContent>
+          )
+        )}
 
-          <TabsContent value="branding" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2"><Building2 className="w-5 h-5" /> Application Identity</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="application_name">Application Name</Label>
-                  <Input id="application_name" value={settings.application_name}
-                    onChange={(e) => setSettings((s) => ({ ...s, application_name: e.target.value }))} />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="developed_by">Developed By</Label>
-                  <Input id="developed_by" value={settings.developed_by}
-                    onChange={(e) => setSettings((s) => ({ ...s, developed_by: e.target.value }))} />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="copyright_text">Copyright Text</Label>
-                  <Input id="copyright_text" value={settings.copyright_text}
-                    onChange={(e) => setSettings((s) => ({ ...s, copyright_text: e.target.value }))} />
-                </div>
-                <Button onClick={saveAppSettings} disabled={saving} className="bg-[#003D82]">
-                  {saving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />}
-                  Save Application Settings
-                </Button>
-              </CardContent>
-            </Card>
-            <SystemConfigTab />
-          </TabsContent>
-
-          <TabsContent value="license">
-            <LicenseAgreementTab />
-          </TabsContent>
-
-          <TabsContent value="environment">
-            <Card>
+        {tab === 'env' && (
+          loading ? (
+            <div className="flex justify-center p-12"><Loader2 className="w-8 h-8 animate-spin text-[#003D82]" /></div>
+          ) : (
+            <Card className="max-w-5xl">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2"><FileCode className="w-5 h-5" /> Environment Files</CardTitle>
                 <CardDescription>Edit `.env` files. Restart the API after changing server variables.</CardDescription>
@@ -233,13 +340,21 @@ const GeneralSystemSettingsPage = () => {
               <CardContent className="space-y-4">
                 <div className="space-y-2">
                   <Label>Frontend `.env` / `.env.local`</Label>
-                  <Textarea value={envFiles.frontend} onChange={(e) => setEnvFiles((f) => ({ ...f, frontend: e.target.value }))}
-                    rows={10} className="font-mono text-xs" />
+                  <Textarea
+                    value={envFiles.frontend}
+                    onChange={(e) => setEnvFiles((f) => ({ ...f, frontend: e.target.value }))}
+                    rows={10}
+                    className="font-mono text-xs"
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label>API `apps/api/.env`</Label>
-                  <Textarea value={envFiles.api} onChange={(e) => setEnvFiles((f) => ({ ...f, api: e.target.value }))}
-                    rows={12} className="font-mono text-xs" />
+                  <Textarea
+                    value={envFiles.api}
+                    onChange={(e) => setEnvFiles((f) => ({ ...f, api: e.target.value }))}
+                    rows={12}
+                    className="font-mono text-xs"
+                  />
                 </div>
                 <Button onClick={saveEnv} disabled={savingEnv} variant="outline" className="border-[#003D82] text-[#003D82]">
                   {savingEnv ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />}
@@ -247,8 +362,8 @@ const GeneralSystemSettingsPage = () => {
                 </Button>
               </CardContent>
             </Card>
-          </TabsContent>
-        </Tabs>
+          )
+        )}
       </div>
     </>
   );
