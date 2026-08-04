@@ -40,7 +40,7 @@ export const SIDE_MENU_ITEMS = {
   shareholders: 'ShareHolders',
   'erp-people': 'ERP People',
   'erp-warehouses': 'Warehouses',
-  'erp-products': 'Products & Stock',
+  'erp-products': 'Products',
   'erp-purchases': 'Purchases',
   'erp-sales': 'Sales',
   'erp-quotations': 'Quotations',

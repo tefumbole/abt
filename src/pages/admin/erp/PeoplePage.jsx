@@ -8,7 +8,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { COLORED_TAB_BASE, getTabTheme } from '@/components/admin/tabTheme';
 import { cn } from '@/lib/utils';
 import UserManagementForm from '@/components/admin/UserManagementForm';
 import { createUser, deleteUser, getAllUsers, updateUser } from '@/services/userService';
@@ -406,28 +405,6 @@ export default function PeoplePage() {
 
   return (
     <div className="space-y-5">
-      <div>
-        <h1 className="text-2xl font-bold text-[#003D82]">People</h1>
-        <p className="text-sm text-slate-600 mt-1">Users, customers, billers, and suppliers.</p>
-      </div>
-
-      <div className="flex flex-wrap gap-2">
-        {TABS.map((item) => {
-          const theme = getTabTheme(item.color);
-          const active = tab === item.id;
-          return (
-            <button
-              key={item.id}
-              type="button"
-              onClick={() => setTab(item.id)}
-              className={cn(COLORED_TAB_BASE, active ? theme.active : theme.idle)}
-            >
-              {item.label}
-            </button>
-          );
-        })}
-      </div>
-
       {loading ? (
         <div className="p-12 flex justify-center"><Loader2 className="h-8 w-8 animate-spin text-[#003D82]" /></div>
       ) : null}
