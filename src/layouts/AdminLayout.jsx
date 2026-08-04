@@ -53,7 +53,6 @@ import {
   Warehouse,
   Package,
   ShoppingCart,
-  ShoppingBag,
   Truck,
   ArrowLeftRight,
   Receipt,
