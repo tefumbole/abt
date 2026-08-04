@@ -320,7 +320,14 @@ const AdminLayout = () => {
           permission: MENU_PERMISSIONS.erpCommerce,
           menuKey: 'erp-people',
           submenu: [
-            { label: 'Customers / Suppliers / Billers', path: '/admin/erp/people', color: 'navy' },
+            { label: 'User List', path: '/admin/erp/people?tab=user-list', color: 'navy' },
+            { label: 'Add User', path: '/admin/erp/people?tab=add-user', color: 'gold' },
+            { label: 'Customer List', path: '/admin/erp/people?tab=customer-list', color: 'purple' },
+            { label: 'Add Customer', path: '/admin/erp/people?tab=add-customer', color: 'pink' },
+            { label: 'Biller List', path: '/admin/erp/people?tab=biller-list', color: 'orange' },
+            { label: 'Add Biller', path: '/admin/erp/people?tab=add-biller', color: 'cyan' },
+            { label: 'Supplier List', path: '/admin/erp/people?tab=supplier-list', color: 'rose' },
+            { label: 'Add Supplier', path: '/admin/erp/people?tab=add-supplier', color: 'indigo' },
           ],
         },
       ]
