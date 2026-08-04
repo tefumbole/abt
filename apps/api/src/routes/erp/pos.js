@@ -157,13 +157,27 @@ router.post('/sale', requireAuth, requireErpAdmin, async (req, res) => {
         );
         await adjustStock(conn, { productId: item.product_id, warehouseId: body.warehouse_id, delta: -num(item.qty) });
       }
-      if (paid > 0) {
+      const paidByMap = {
+        1: 'cash',
+        3: 'je',
+        6: 'deposit',
+        8: 'momo_orange',
+        9: 'pay_later',
+        10: 'credit',
+        11: 'group_credit',
+      };
+      const payingMethod = body.paying_method
+        || paidByMap[Number(body.paid_by_id)]
+        || 'cash';
+      if (paid > 0 || ['pay_later', 'credit', 'group_credit'].includes(payingMethod)) {
         await conn.query(
           `INSERT INTO erp_payments (id, reference, payable_type, payable_id, amount, paying_method, note, created_by)
            VALUES (?, ?, 'sale', ?, ?, ?, ?, ?)`,
           [
             randomUUID(), await nextErpReference('pay-', 'erp_payments'), id, paid,
-            body.paying_method || 'cash', body.note || null, req.user?.sub || req.user?.id || null,
+            payingMethod,
+            body.note || (body.paid_by_id != null ? `paid_by_id=${body.paid_by_id}` : null),
+            req.user?.sub || req.user?.id || null,
           ]
         );
       }

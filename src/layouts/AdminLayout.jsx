@@ -342,7 +342,6 @@ const AdminLayout = () => {
         { label: 'Sales', path: '/admin/erp/sales', icon: ShoppingCart, permission: MENU_PERMISSIONS.erpCommerce, menuKey: 'erp-sales' },
         { label: 'Quotations', path: '/admin/erp/quotations', icon: FileText, permission: MENU_PERMISSIONS.erpCommerce, menuKey: 'erp-quotations' },
         { label: 'Deliveries', path: '/admin/erp/deliveries', icon: Truck, permission: MENU_PERMISSIONS.erpCommerce, menuKey: 'erp-deliveries' },
-        { label: 'POS', path: '/admin/erp/pos', icon: ShoppingBag, permission: MENU_PERMISSIONS.erpCommerce, menuKey: 'erp-pos' },
         { label: 'Transfers', path: '/admin/erp/transfers', icon: ArrowLeftRight, permission: MENU_PERMISSIONS.erpCommerce, menuKey: 'erp-transfers' },
         { label: 'Returns', path: '/admin/erp/returns', icon: ArrowLeftRight, permission: MENU_PERMISSIONS.erpCommerce, menuKey: 'erp-returns' },
         { label: 'Expenses', path: '/admin/erp/expenses', icon: Receipt, permission: MENU_PERMISSIONS.erpCommerce, menuKey: 'erp-expenses' },

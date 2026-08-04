@@ -45,7 +45,6 @@ export const SIDE_MENU_ITEMS = {
   'erp-sales': 'Sales',
   'erp-quotations': 'Quotations',
   'erp-deliveries': 'Deliveries',
-  'erp-pos': 'POS',
   'erp-transfers': 'Transfers',
   'erp-returns': 'Returns',
   'erp-expenses': 'Expenses',
