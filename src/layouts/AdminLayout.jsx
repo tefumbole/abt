@@ -94,14 +94,22 @@ const AdminLayout = () => {
 
   useEffect(() => {
     let cancelled = false;
-    getAdminSiteContent()
-      .then((data) => {
-        if (cancelled) return;
-        setSideOrder(data?.menus?.side?.order || null);
-        setSettingsOrder(data?.menus?.settings?.order || null);
-      })
-      .catch(() => {});
-    return () => { cancelled = true; };
+    const loadMenuOrders = () => {
+      getAdminSiteContent()
+        .then((data) => {
+          if (cancelled) return;
+          setSideOrder(data?.menus?.side?.order || null);
+          setSettingsOrder(data?.menus?.settings?.order || null);
+        })
+        .catch(() => {});
+    };
+    loadMenuOrders();
+    const onUpdated = () => loadMenuOrders();
+    window.addEventListener('alphabridge:site-content-updated', onUpdated);
+    return () => {
+      cancelled = true;
+      window.removeEventListener('alphabridge:site-content-updated', onUpdated);
+    };
   }, []);
 
   const handleLogout = async () => {
@@ -383,32 +391,39 @@ const AdminLayout = () => {
       return { ...group, items };
     });
 
-    if (!sideOrder) return groups;
+    if (!Array.isArray(sideOrder) || sideOrder.length === 0) return groups;
 
-    const flat = [];
+    // Apply Site Content Side Menu order as a true flat sequence.
+    const byKey = new Map();
     groups.forEach((group) => {
-      group.items.forEach((item) => {
-        flat.push({ item, groupLabel: group.label, groupMeta: group });
+      (group.items || []).forEach((item) => {
+        if (!item?.menuKey || byKey.has(item.menuKey)) return;
+        byKey.set(item.menuKey, { item, group });
       });
     });
-    flat.sort(
-      (a, b) => orderIndex(sideOrder, a.item.menuKey) - orderIndex(sideOrder, b.item.menuKey)
-    );
 
+    const orderedKeys = [
+      ...sideOrder.filter((key) => byKey.has(key)),
+      ...[...byKey.keys()].filter((key) => !sideOrder.includes(key)),
+    ];
+
+    // Keep section headers, but split a group when another section interrupts it.
     const rebuilt = [];
-    const map = new Map();
-    flat.forEach(({ item, groupLabel, groupMeta }) => {
-      if (!map.has(groupLabel)) {
-        const g = {
-          label: groupLabel,
-          collapsible: groupMeta.collapsible,
-          permission: groupMeta.permission,
+    let current = null;
+    orderedKeys.forEach((key) => {
+      const entry = byKey.get(key);
+      if (!entry) return;
+      const { item, group } = entry;
+      if (!current || current.label !== group.label) {
+        current = {
+          label: group.label,
+          collapsible: group.collapsible,
+          permission: group.permission,
           items: [],
         };
-        map.set(groupLabel, g);
-        rebuilt.push(g);
+        rebuilt.push(current);
       }
-      map.get(groupLabel).items.push(item);
+      current.items.push(item);
     });
     return rebuilt;
   }, [sideOrder, settingsOrder]);

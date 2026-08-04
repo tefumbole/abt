@@ -222,6 +222,7 @@ export default function SiteContentPage() {
       else if (kind === 'contentTabs') await saveContentTabsOrder(order);
       toast({ title: 'Saved', description: 'Menu order updated.' });
       await load();
+      window.dispatchEvent(new CustomEvent('alphabridge:site-content-updated'));
     } catch (err) {
       toast({ title: 'Save failed', description: err.message, variant: 'destructive' });
     } finally {
