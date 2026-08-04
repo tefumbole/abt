@@ -55,6 +55,7 @@ const ADMIN_ROUTE_RULES = [
   ['/admin/letters', ['letters.send.view', 'letters.templates.view']],
   ['/admin/communication', ['letters.send.view', 'announcements.compose.view']],
   ['/admin/erp', ['menu.erp_commerce', 'erp.warehouses.view', 'erp.products.view', 'erp.sales.view', 'erp.pos.view']],
+  ['/admin/releases', ['system.settings.view', 'menu.system', 'dashboard.view']],
 ];
 
 export function canAccessAdminRoute(pathname, hasPermission, permissions = []) {

@@ -93,6 +93,7 @@ import AdminProgressPage from '@/pages/admin/AdminProgressPage';
 import AdminFeedbackPage from '@/pages/admin/AdminFeedbackPage';
 import AdminReportsPage from '@/pages/admin/AdminReportsPage';
 import AdminHistoryPage from '@/pages/admin/AdminHistoryPage';
+import DeploymentVersionsPage from '@/pages/admin/DeploymentVersionsPage';
 import ContactMessagesPage from '@/pages/admin/ContactMessagesPage';
 
 // Jobs Admin Pages
@@ -909,6 +910,14 @@ const AppContent = () => {
             element={
               <ProtectedRoute requireAdmin={true}>
                 <AdminHistoryPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="releases"
+            element={
+              <ProtectedRoute requireAdmin={true}>
+                <DeploymentVersionsPage />
               </ProtectedRoute>
             }
           />

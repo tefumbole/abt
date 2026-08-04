@@ -38,12 +38,31 @@ export const SIDE_MENU_ITEMS = {
   users: 'Users',
   members: 'Members (Team)',
   shareholders: 'ShareHolders',
+  'erp-people': 'ERP People',
+  'erp-warehouses': 'Warehouses',
+  'erp-products': 'Products & Stock',
+  'erp-purchases': 'Purchases',
+  'erp-sales': 'Sales',
+  'erp-quotations': 'Quotations',
+  'erp-deliveries': 'Deliveries',
+  'erp-pos': 'POS',
+  'erp-transfers': 'Transfers',
+  'erp-returns': 'Returns',
+  'erp-expenses': 'Expenses',
+  'erp-payments': 'ERP Payments',
+  'erp-accounting': 'Accounting',
+  'erp-rentals': 'Rentals / Bookings',
+  'erp-contracts': 'Contracts',
+  'erp-letters': 'ERP Letters',
+  'erp-assets': 'Fixed Assets',
+  'erp-leaders': 'Leaders',
   reports: 'Reports Hub',
   logs: 'Activity Logs',
   backup: 'Backup & Restore',
   'general-settings': 'General Settings',
   roles: 'Roles & Permissions',
   history: 'System History',
+  releases: 'Deployment Versions',
 };
 
 export const SETTINGS_MENU_ITEMS = {
@@ -53,6 +72,7 @@ export const SETTINGS_MENU_ITEMS = {
   'general-settings': 'General Settings',
   roles: 'Roles & Permissions',
   history: 'System History',
+  releases: 'Deployment Versions',
 };
 
 /** Page schema: fields[key] = { type, label, default }. type: text|textarea|html|image */

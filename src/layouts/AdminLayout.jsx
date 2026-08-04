@@ -64,6 +64,7 @@ import {
   Landmark,
   Building2,
   FileSignature,
+  Rocket,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -71,6 +72,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import LanguageSwitcher from '@/components/LanguageSwitcher';
 import { useSiteLabel } from '@/hooks/useSiteLabel';
 import { getAdminSiteContent } from '@/services/siteContentService';
+import { APP_VERSION } from '@/constants/appVersion';
 
 function orderIndex(order, key) {
   if (!Array.isArray(order) || !key) return 9999;
@@ -365,6 +367,7 @@ const AdminLayout = () => {
         { label: 'General Settings', path: '/admin/general-settings', icon: Settings, menuKey: 'general-settings' },
         { label: 'Roles & Permissions', path: '/admin/roles-permissions', icon: Key, permission: MENU_PERMISSIONS.roles, menuKey: 'roles' },
         { label: 'System History', path: '/admin/history', icon: History, menuKey: 'history' },
+        { label: 'Deployment Versions', path: '/admin/releases', icon: Rocket, menuKey: 'releases' },
       ]
     }
   ];
@@ -535,7 +538,7 @@ const AdminLayout = () => {
           <span className="font-bold text-lg text-[#D4AF37]">Alpha Admin</span>
         </div>
         <div className="flex items-center gap-2">
-          {itemVisible(hasPermission, MENU_PERMISSIONS.erpCommerce) && (
+          {(hasStaffAccess || itemVisible(hasPermission, MENU_PERMISSIONS.erpCommerce)) && (
             <Link
               to="/admin/erp/pos"
               onClick={() => setSidebarOpen(false)}
@@ -598,6 +601,14 @@ const AdminLayout = () => {
             <LogOut className="w-5 h-5 mr-2" />
             {tl('menu', 'Sign Out')}
           </Button>
+          <Link
+            to="/admin/releases"
+            onClick={() => setSidebarOpen(false)}
+            className="mt-3 block text-center text-[10px] text-[#D4AF37]/90 hover:text-[#D4AF37] tracking-wide"
+            title="Deployment versions"
+          >
+            {APP_VERSION}
+          </Link>
         </div>
       </aside>
 
@@ -610,7 +621,7 @@ const AdminLayout = () => {
 
       <main className="flex-1 p-4 md:p-8 overflow-y-auto bg-gray-50 h-[calc(100vh-64px)] md:h-screen">
         <div className="hidden md:flex justify-end items-center gap-3 mb-4">
-          {itemVisible(hasPermission, MENU_PERMISSIONS.erpCommerce) && (
+          {(hasStaffAccess || itemVisible(hasPermission, MENU_PERMISSIONS.erpCommerce)) && (
             <Link
               to="/admin/erp/pos"
               className="rounded-full bg-[#D4AF37] px-5 py-2 text-sm font-bold uppercase tracking-wide text-[#0A2540] shadow-sm hover:bg-[#c9a227] transition-colors"
@@ -618,6 +629,14 @@ const AdminLayout = () => {
               POS
             </Link>
           )}
+          <Link
+            to="/admin/releases"
+            className="inline-flex items-center gap-1.5 rounded-md border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:border-[#003D82]/40 hover:text-[#003D82]"
+            title="Deployment versions"
+          >
+            <Rocket className="h-3.5 w-3.5 text-[#D4AF37]" />
+            {APP_VERSION}
+          </Link>
           <LanguageSwitcher variant="admin" />
         </div>
         {activeSection && (
