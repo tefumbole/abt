@@ -192,7 +192,11 @@ export default function ProductsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-end">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900">PRODUCT</h1>
+          <p className="text-sm text-slate-600 mt-1">Categories, catalog & stock</p>
+        </div>
         <select
           className="border rounded-md px-2 text-sm h-9"
           value={warehouseId}

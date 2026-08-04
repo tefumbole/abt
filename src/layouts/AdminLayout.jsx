@@ -15,6 +15,7 @@ import {
   Menu, 
   X, 
   Clock, 
+  ChevronDown, 
   Briefcase, 
   Settings, 
   CalendarDays, 
@@ -43,7 +44,6 @@ import {
   Sliders,
   Utensils,
   ClipboardCheck,
-  ClipboardList,
   Trash2,
   UserPlus,
   Wallet,
@@ -52,7 +52,6 @@ import {
   Globe,
   Warehouse,
   Package,
-  PackagePlus,
   ShoppingCart,
   Truck,
   ArrowLeftRight,
@@ -61,13 +60,10 @@ import {
   Building2,
   FileSignature,
   Rocket,
-  Tags,
-  List,
-  PencilLine,
-  Printer,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import LanguageSwitcher from '@/components/LanguageSwitcher';
 import { useSiteLabel } from '@/hooks/useSiteLabel';
 import { getAdminSiteContent } from '@/services/siteContentService';
@@ -85,6 +81,7 @@ const AdminLayout = () => {
   const location = useLocation();
   const tl = useSiteLabel();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [openMenus, setOpenMenus] = useState({});
   const [sideOrder, setSideOrder] = useState(null);
   const [settingsOrder, setSettingsOrder] = useState(null);
   const { hasPermission, hasStaffAccess, loading: permLoading } = usePermission();
@@ -340,18 +337,19 @@ const AdminLayout = () => {
       items: [
         { label: 'Warehouses', path: '/admin/erp/warehouses', icon: Warehouse, permission: MENU_PERMISSIONS.erpCommerce, menuKey: 'erp-warehouses' },
         {
-          label: 'Products',
+          label: 'Products & Stock',
           icon: Package,
           permission: MENU_PERMISSIONS.erpCommerce,
           menuKey: 'erp-products',
+          hideTopNav: true,
           submenu: [
-            { label: 'Category', path: '/admin/erp/products?tab=category', color: 'navy', icon: Tags },
-            { label: 'Product List', path: '/admin/erp/products?tab=product-list', color: 'gold', icon: List },
-            { label: 'Add Product', path: '/admin/erp/products?tab=add-product', color: 'purple', icon: PackagePlus },
-            { label: 'Print Barcode', path: '/admin/erp/products?tab=barcode', color: 'pink', icon: Printer },
-            { label: 'Adjustment List', path: '/admin/erp/products?tab=adjustment-list', color: 'green', icon: ClipboardList },
-            { label: 'Add Adjustment', path: '/admin/erp/products?tab=add-adjustment', color: 'orange', icon: PencilLine },
-            { label: 'Stock Count', path: '/admin/erp/products?tab=stock-count', color: 'cyan', icon: List },
+            { label: 'Category', path: '/admin/erp/products?tab=category', color: 'navy' },
+            { label: 'Product List', path: '/admin/erp/products?tab=product-list', color: 'gold' },
+            { label: '+ Add Product', path: '/admin/erp/products?tab=add-product', color: 'purple' },
+            { label: 'Print Barcode', path: '/admin/erp/products?tab=barcode', color: 'pink' },
+            { label: 'Adjustment List', path: '/admin/erp/products?tab=adjustment-list', color: 'green' },
+            { label: 'Add Adjustment', path: '/admin/erp/products?tab=add-adjustment', color: 'orange' },
+            { label: 'Stock Count', path: '/admin/erp/products?tab=stock-count', color: 'cyan' },
           ],
         },
         { label: 'Purchases', path: '/admin/erp/purchases', icon: Truck, permission: MENU_PERMISSIONS.erpCommerce, menuKey: 'erp-purchases' },
@@ -404,58 +402,61 @@ const AdminLayout = () => {
       return { ...group, items };
     });
 
-    // Flat unique list — no section headings (avoids duplicate group labels).
+    if (!Array.isArray(sideOrder) || sideOrder.length === 0) return groups;
+
+    // Apply Site Content Side Menu order as a true flat sequence.
     const byKey = new Map();
     groups.forEach((group) => {
       (group.items || []).forEach((item) => {
         if (!item?.menuKey || byKey.has(item.menuKey)) return;
-        byKey.set(item.menuKey, item);
+        byKey.set(item.menuKey, { item, group });
       });
     });
 
-    const orderedKeys = Array.isArray(sideOrder) && sideOrder.length
-      ? [
-          ...sideOrder.filter((key) => byKey.has(key)),
-          ...[...byKey.keys()].filter((key) => !sideOrder.includes(key)),
-        ]
-      : [...byKey.keys()];
+    const orderedKeys = [
+      ...sideOrder.filter((key) => byKey.has(key)),
+      ...[...byKey.keys()].filter((key) => !sideOrder.includes(key)),
+    ];
 
-    return [{
-      label: 'Menu',
-      items: orderedKeys.map((key) => byKey.get(key)).filter(Boolean),
-    }];
+    // Keep section headers, but split a group when another section interrupts it.
+    const rebuilt = [];
+    let current = null;
+    orderedKeys.forEach((key) => {
+      const entry = byKey.get(key);
+      if (!entry) return;
+      const { item, group } = entry;
+      if (!current || current.label !== group.label) {
+        current = {
+          label: group.label,
+          collapsible: true,
+          permission: group.permission,
+          items: [],
+        };
+        rebuilt.push(current);
+      }
+      current.items.push(item);
+    });
+    return rebuilt;
   }, [sideOrder, settingsOrder]);
+
+  const toggleMenu = (label) => {
+    setOpenMenus(prev => ({
+      ...prev,
+      [label]: !prev[label]
+    }));
+  };
 
   const pathMatches = (path) => {
     const base = path.split('?')[0];
-    const hasQuery = path.includes('?');
-    if (hasQuery) {
-      const full = `${location.pathname}${location.search}`;
-      if (full === path) return true;
-      // Default Product/People tab when URL has no query
-      if (
-        (path.includes('tab=category') || path.includes('tab=user-list'))
-        && location.pathname === base
-        && (!location.search || location.search === `?${path.split('?')[1]}`)
-      ) {
-        return true;
-      }
-      return false;
-    }
-    return location.pathname === base || location.pathname.startsWith(`${base}/`);
-  };
-
-  const sectionMatches = (path) => {
-    const base = path.split('?')[0];
     return location.pathname === base
       || location.pathname.startsWith(`${base}/`)
-      || pathMatches(path);
+      || location.pathname + location.search === path;
   };
 
   const findActiveSection = () => {
     for (const group of menuGroupsOrdered) {
       for (const item of group.items || []) {
-        if (item.submenu?.some((sub) => sectionMatches(sub.path))) {
+        if (item.submenu?.some((sub) => pathMatches(sub.path))) {
           return item;
         }
       }
@@ -471,10 +472,48 @@ const AdminLayout = () => {
     const pathMatch = item.path?.split('?')[0];
     const activePaths = item.activePaths || (pathMatch ? [pathMatch] : []);
     const isActive = item.submenu
-      ? item.submenu.some((sub) => sectionMatches(sub.path))
+      ? item.submenu.some((sub) => pathMatches(sub.path))
       : (item.path ? activePaths.some((p) => location.pathname === p || location.pathname.startsWith(`${p}/`) || location.pathname + location.search === item.path) : false);
 
+    const isOpen = Boolean(openMenus[item.label]);
+
     if (item.submenu) {
+      if (item.hideTopNav) {
+        const current = location.pathname + location.search;
+        const onProductsRoot = location.pathname === '/admin/erp/products' && !location.search;
+        return (
+          <div className="space-y-1">
+            <div className={cn(
+              'flex items-center gap-3 px-4 py-2 text-xs font-bold uppercase tracking-wide',
+              isActive ? 'text-[#D4AF37]' : 'text-gray-300'
+            )}>
+              <item.icon className="w-4 h-4 text-[#D4AF37]" />
+              <span>{tl('menu', item.label)}</span>
+            </div>
+            <div className="ml-3 space-y-0.5 border-l border-white/15 pl-2">
+              {item.submenu.map((sub) => {
+                const subActive = current === sub.path
+                  || (onProductsRoot && sub.path.includes('tab=category'));
+                return (
+                  <Link
+                    key={sub.path}
+                    to={sub.path}
+                    onClick={() => setSidebarOpen(false)}
+                    className={cn(
+                      'block px-3 py-2 rounded-lg text-sm transition-colors',
+                      subActive
+                        ? 'bg-[#D4AF37] text-[#003D82] font-semibold'
+                        : 'text-gray-200 hover:bg-white/10 hover:text-white'
+                    )}
+                  >
+                    {tl('menu', sub.label)}
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        );
+      }
       const firstSub = item.submenu[0];
       return (
         <Link
@@ -499,12 +538,12 @@ const AdminLayout = () => {
         onClick={() => setSidebarOpen(false)}
         className={cn(
           "flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 group relative overflow-hidden",
-          isActive
+          location.pathname === item.path
             ? "bg-[#D4AF37] text-[#003D82] font-bold shadow-md" 
             : "text-gray-100 hover:bg-white/10 hover:text-white"
         )}
       >
-        <item.icon className={cn("w-5 h-5 transition-transform group-hover:scale-110", isActive ? "text-[#003D82]" : "text-[#D4AF37]")} />
+        <item.icon className={cn("w-5 h-5 transition-transform group-hover:scale-110", location.pathname === item.path ? "text-[#003D82]" : "text-[#D4AF37]")} />
         <span className="relative z-10">{tl('menu', item.label)}</span>
       </Link>
     );
@@ -518,13 +557,32 @@ const AdminLayout = () => {
     );
     if (!visibleItems.length) return null;
 
-    // No section headings — render menu items only
+    const groupKey = group.label;
+    const groupActive = visibleItems.some((item) =>
+      item.submenu
+        ? item.submenu.some((sub) => pathMatches(sub.path))
+        : item.path && pathMatches(item.path)
+    );
+    // Collapsed by default; keep the active section open unless user toggled it.
+    const isGroupOpen = openMenus[groupKey] !== undefined ? openMenus[groupKey] : groupActive;
+
     return (
-      <div className="space-y-1">
-        {visibleItems.map((item) => (
-          <MenuItem key={item.menuKey || item.label} item={item} />
-        ))}
-      </div>
+      <Collapsible
+        open={isGroupOpen}
+        onOpenChange={(open) => setOpenMenus((prev) => ({ ...prev, [groupKey]: open }))}
+        className="w-full"
+      >
+        <CollapsibleTrigger className={cn(
+          'flex items-center justify-between w-full px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider text-gray-400 hover:text-white hover:bg-white/5',
+          groupActive && 'text-[#D4AF37]'
+        )}>
+          <span>{tl('menu', group.label)}</span>
+          <ChevronDown className={cn('w-4 h-4 transition-transform', isGroupOpen && 'rotate-180')} />
+        </CollapsibleTrigger>
+        <CollapsibleContent className="space-y-1 mt-1">
+          {visibleItems.map((item, i) => <MenuItem key={i} item={item} />)}
+        </CollapsibleContent>
+      </Collapsible>
     );
   };
 
@@ -560,7 +618,7 @@ const AdminLayout = () => {
           <p className="text-xs text-gray-300 mt-1 uppercase tracking-widest">Technologies Ltd</p>
         </div>
 
-        <nav className="flex-1 p-4 space-y-1 overflow-y-auto scrollbar-thin scrollbar-thumb-blue-800">
+        <nav className="flex-1 p-4 space-y-6 overflow-y-auto scrollbar-thin scrollbar-thumb-blue-800">
           {menuGroupsOrdered.map((group, idx) => (
             <MenuGroup key={idx} group={group} />
           ))}
@@ -636,14 +694,14 @@ const AdminLayout = () => {
           </Link>
           <LanguageSwitcher variant="admin" />
         </div>
-        {activeSection && (
+        {activeSection && !activeSection.hideTopNav && (
           activeSection.label === 'Human Resources' ? (
             <HrTopNav />
           ) : activeSection.label === 'HR Letters' ? (
             <HrLettersTopNav />
           ) : (
           <div className="mb-6 overflow-x-auto scrollbar-thin">
-            <nav className="flex flex-wrap gap-2 min-w-max">
+            <nav className="flex flex-wrap gap-2 min-w-max rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
               {activeSection.submenu.map((sub, index) => {
                 const active = pathMatches(sub.path);
                 const theme = getTabTheme(sub.color || index);
