@@ -54,6 +54,16 @@ import {
   ScrollText,
   Image as ImageIcon,
   Globe,
+  Warehouse,
+  Package,
+  ShoppingCart,
+  ShoppingBag,
+  Truck,
+  ArrowLeftRight,
+  Receipt,
+  Landmark,
+  Building2,
+  FileSignature,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -299,7 +309,50 @@ const AdminLayout = () => {
             { label: 'Settings', path: '/admin/shareholders/settings', color: 'slate' }
           ]
         },
+        {
+          label: 'ERP People',
+          icon: Users,
+          permission: MENU_PERMISSIONS.erpCommerce,
+          menuKey: 'erp-people',
+          submenu: [
+            { label: 'Customers / Suppliers / Billers', path: '/admin/erp/people', color: 'navy' },
+          ],
+        },
       ]
+    },
+    {
+      label: 'ERP / Commerce',
+      permission: MENU_PERMISSIONS.erpCommerce,
+      items: [
+        { label: 'Warehouses', path: '/admin/erp/warehouses', icon: Warehouse, permission: MENU_PERMISSIONS.erpCommerce, menuKey: 'erp-warehouses' },
+        { label: 'Products & Stock', path: '/admin/erp/products', icon: Package, permission: MENU_PERMISSIONS.erpCommerce, menuKey: 'erp-products' },
+        { label: 'Purchases', path: '/admin/erp/purchases', icon: Truck, permission: MENU_PERMISSIONS.erpCommerce, menuKey: 'erp-purchases' },
+        { label: 'Sales', path: '/admin/erp/sales', icon: ShoppingCart, permission: MENU_PERMISSIONS.erpCommerce, menuKey: 'erp-sales' },
+        { label: 'Quotations', path: '/admin/erp/quotations', icon: FileText, permission: MENU_PERMISSIONS.erpCommerce, menuKey: 'erp-quotations' },
+        { label: 'Deliveries', path: '/admin/erp/deliveries', icon: Truck, permission: MENU_PERMISSIONS.erpCommerce, menuKey: 'erp-deliveries' },
+        { label: 'POS', path: '/admin/erp/pos', icon: ShoppingBag, permission: MENU_PERMISSIONS.erpCommerce, menuKey: 'erp-pos' },
+        { label: 'Transfers', path: '/admin/erp/transfers', icon: ArrowLeftRight, permission: MENU_PERMISSIONS.erpCommerce, menuKey: 'erp-transfers' },
+        { label: 'Returns', path: '/admin/erp/returns', icon: ArrowLeftRight, permission: MENU_PERMISSIONS.erpCommerce, menuKey: 'erp-returns' },
+        { label: 'Expenses', path: '/admin/erp/expenses', icon: Receipt, permission: MENU_PERMISSIONS.erpCommerce, menuKey: 'erp-expenses' },
+        { label: 'Payments', path: '/admin/erp/payments', icon: Wallet, permission: MENU_PERMISSIONS.erpCommerce, menuKey: 'erp-payments' },
+        { label: 'Accounting', path: '/admin/erp/accounting', icon: Landmark, permission: MENU_PERMISSIONS.erpCommerce, menuKey: 'erp-accounting' },
+      ],
+    },
+    {
+      label: 'ERP Rentals',
+      permission: MENU_PERMISSIONS.erpRentals,
+      items: [
+        { label: 'Bookings', path: '/admin/erp/rentals', icon: CalendarDays, permission: MENU_PERMISSIONS.erpRentals, menuKey: 'erp-rentals' },
+      ],
+    },
+    {
+      label: 'ERP Contracts & Assets',
+      items: [
+        { label: 'Contracts', path: '/admin/erp/contracts', icon: FileSignature, permission: MENU_PERMISSIONS.erpContracts, menuKey: 'erp-contracts' },
+        { label: 'ERP Letters', path: '/admin/erp/letters', icon: Mail, permission: MENU_PERMISSIONS.erpContracts, menuKey: 'erp-letters' },
+        { label: 'Fixed Assets', path: '/admin/erp/assets', icon: Building2, permission: MENU_PERMISSIONS.erpAssets, menuKey: 'erp-assets' },
+        { label: 'Leaders', path: '/admin/erp/leaders', icon: Users, permission: MENU_PERMISSIONS.erpAssets, menuKey: 'erp-leaders' },
+      ],
     },
     {
       label: 'System',

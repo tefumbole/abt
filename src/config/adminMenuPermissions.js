@@ -21,6 +21,10 @@ export const MENU_PERMISSIONS = {
   hr: 'menu.hr',
   system: 'menu.system',
   roles: 'menu.roles',
+  erpCommerce: 'menu.erp_commerce',
+  erpRentals: 'menu.erp_rentals',
+  erpAssets: 'menu.erp_assets',
+  erpContracts: 'menu.erp_contracts',
 };
 
 export function itemVisible(hasPermission, permission) {
@@ -50,6 +54,7 @@ const ADMIN_ROUTE_RULES = [
   ['/admin/hr/letters', ['view_hr', 'hr.letters.view', 'menu.hr']],
   ['/admin/letters', ['letters.send.view', 'letters.templates.view']],
   ['/admin/communication', ['letters.send.view', 'announcements.compose.view']],
+  ['/admin/erp', ['menu.erp_commerce', 'erp.warehouses.view', 'erp.products.view', 'erp.sales.view', 'erp.pos.view']],
 ];
 
 export function canAccessAdminRoute(pathname, hasPermission, permissions = []) {

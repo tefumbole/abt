@@ -1,6 +1,8 @@
 /**
  * Idempotent ALTER patches for databases created from an older schema.sql.
  */
+import { ERP_CREATE_STATEMENTS } from './erpSchema.js';
+
 export const SCHEMA_PATCHES = [
   'ALTER TABLE profiles ADD COLUMN status VARCHAR(50) DEFAULT \'active\'',
   'ALTER TABLE shareholders MODIFY COLUMN email VARCHAR(255) NULL',
@@ -515,6 +517,8 @@ export const CREATE_STATEMENTS = [
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
+
+  ...ERP_CREATE_STATEMENTS,
 ];
 
 export const DATA_PATCHES = [];

@@ -127,6 +127,25 @@ import GalleryAdminPage from '@/pages/admin/GalleryAdminPage';
 import SiteContentPage from '@/pages/admin/SiteContentPage';
 import TemplateManagementPage from '@/pages/admin/TemplateManagementPage';
 
+// ERP (Beyond Tech port)
+import WarehousesPage from '@/pages/admin/erp/WarehousesPage';
+import ProductsPage from '@/pages/admin/erp/ProductsPage';
+import PeoplePage from '@/pages/admin/erp/PeoplePage';
+import PurchasesPage from '@/pages/admin/erp/PurchasesPage';
+import SalesPage from '@/pages/admin/erp/SalesPage';
+import QuotationsPage from '@/pages/admin/erp/QuotationsPage';
+import DeliveriesPage from '@/pages/admin/erp/DeliveriesPage';
+import PosPage from '@/pages/admin/erp/PosPage';
+import {
+  TransfersPage, ReturnsPage, ExpensesPage, PaymentsPage, AccountingPage,
+} from '@/pages/admin/erp/SupportPages';
+import {
+  RentalsPage, ContractsPage, ErpLettersPage, FixedAssetsPage, LeadersPage,
+} from '@/pages/admin/erp/HeavyPages';
+import PublicQuotationPage from '@/pages/erp/PublicQuotationPage';
+import PublicDeliveryPage from '@/pages/erp/PublicDeliveryPage';
+import PublicBookingPage from '@/pages/erp/PublicBookingPage';
+
 // Time Sheet Admin Pages
 import AdminTimeSheetManagementPage from '@/pages/admin/AdminTimeSheetManagementPage';
 import AdminTimeSheetReportPage from '@/pages/admin/AdminTimeSheetReportPage';
@@ -352,6 +371,11 @@ const AppContent = () => {
           <Route path="gallery" element={<GalleryPage />} />
           <Route path="contact" element={<ContactUsPage />} />
           <Route path="student/progress" element={<StudentProgressPage />} />
+
+          {/* ERP public WhatsApp portals */}
+          <Route path="erp/public/quotation/:token" element={<PublicQuotationPage />} />
+          <Route path="erp/public/delivery/:token" element={<PublicDeliveryPage />} />
+          <Route path="erp/public/booking/:token" element={<PublicBookingPage />} />
 
           {/* Audio Mixing Assistant User Routes */}
           <Route path="audio/templates" element={<MixingTemplatesLibrary />} />
@@ -981,6 +1005,27 @@ const AppContent = () => {
               </ProtectedRoute>
             }
           />
+
+          {/* ERP / Commerce */}
+          <Route path="erp" element={<Navigate to="/admin/erp/warehouses" replace />} />
+          <Route path="erp/warehouses" element={<ProtectedRoute requireAdmin={true}><WarehousesPage /></ProtectedRoute>} />
+          <Route path="erp/products" element={<ProtectedRoute requireAdmin={true}><ProductsPage /></ProtectedRoute>} />
+          <Route path="erp/people" element={<ProtectedRoute requireAdmin={true}><PeoplePage /></ProtectedRoute>} />
+          <Route path="erp/purchases" element={<ProtectedRoute requireAdmin={true}><PurchasesPage /></ProtectedRoute>} />
+          <Route path="erp/sales" element={<ProtectedRoute requireAdmin={true}><SalesPage /></ProtectedRoute>} />
+          <Route path="erp/quotations" element={<ProtectedRoute requireAdmin={true}><QuotationsPage /></ProtectedRoute>} />
+          <Route path="erp/deliveries" element={<ProtectedRoute requireAdmin={true}><DeliveriesPage /></ProtectedRoute>} />
+          <Route path="erp/pos" element={<ProtectedRoute requireAdmin={true}><PosPage /></ProtectedRoute>} />
+          <Route path="erp/transfers" element={<ProtectedRoute requireAdmin={true}><TransfersPage /></ProtectedRoute>} />
+          <Route path="erp/returns" element={<ProtectedRoute requireAdmin={true}><ReturnsPage /></ProtectedRoute>} />
+          <Route path="erp/expenses" element={<ProtectedRoute requireAdmin={true}><ExpensesPage /></ProtectedRoute>} />
+          <Route path="erp/payments" element={<ProtectedRoute requireAdmin={true}><PaymentsPage /></ProtectedRoute>} />
+          <Route path="erp/accounting" element={<ProtectedRoute requireAdmin={true}><AccountingPage /></ProtectedRoute>} />
+          <Route path="erp/rentals" element={<ProtectedRoute requireAdmin={true}><RentalsPage /></ProtectedRoute>} />
+          <Route path="erp/contracts" element={<ProtectedRoute requireAdmin={true}><ContractsPage /></ProtectedRoute>} />
+          <Route path="erp/letters" element={<ProtectedRoute requireAdmin={true}><ErpLettersPage /></ProtectedRoute>} />
+          <Route path="erp/assets" element={<ProtectedRoute requireAdmin={true}><FixedAssetsPage /></ProtectedRoute>} />
+          <Route path="erp/leaders" element={<ProtectedRoute requireAdmin={true}><LeadersPage /></ProtectedRoute>} />
 
           <Route path="messaging/compose" element={<Navigate to="/admin/announcements/compose" replace />} />
           <Route path="messaging/listing" element={<Navigate to="/admin/announcements/list" replace />} />

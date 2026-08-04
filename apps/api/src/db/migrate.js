@@ -10,6 +10,7 @@ import { seedTrainingCourses } from './seed-training-courses.js';
 import { seedRbac } from './seed-rbac.js';
 import { seedHr } from './seed-hr.js';
 import { seedHrLetters } from './seed-hr-letters.js';
+import { seedErp } from './seed-erp.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 dotenv.config({ path: path.resolve(__dirname, '../../.env') });
@@ -47,6 +48,8 @@ try {
   await seedHr(pool);
   console.log('\nSeeding HR letter templates...');
   await seedHrLetters(pool);
+  console.log('\nSeeding ERP defaults...');
+  await seedErp(pool);
   console.log('\nMigration complete.');
 } catch (error) {
   if (error.code === 'ER_ACCESS_DENIED_ERROR') {

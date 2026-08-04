@@ -111,6 +111,26 @@ export const PERMISSION_CATALOG = [
   ...VIEW_EDIT.flatMap((a) => crudModule('System', 'system.backup', 'Backup & Restore', [a])),
   ...crudModule('Roles & Permissions', 'roles', 'Roles & Permissions'),
 
+  // ERP / Commerce (Beyond Tech port) — isolated from HR/Tasks/Events
+  ...crudModule('ERP Commerce', 'erp.warehouses', 'Warehouses'),
+  ...crudModule('ERP Commerce', 'erp.products', 'Products & Stock'),
+  ...crudModule('ERP Commerce', 'erp.people', 'ERP Customers / Suppliers / Billers'),
+  ...crudModule('ERP Commerce', 'erp.purchases', 'Purchases'),
+  ...crudModule('ERP Commerce', 'erp.sales', 'Sales'),
+  ...crudModule('ERP Commerce', 'erp.quotations', 'Quotations'),
+  ...crudModule('ERP Commerce', 'erp.deliveries', 'Deliveries'),
+  ...crudModule('ERP Commerce', 'erp.pos', 'POS'),
+  ...crudModule('ERP Commerce', 'erp.transfers', 'Stock Transfers'),
+  ...crudModule('ERP Commerce', 'erp.returns', 'Returns'),
+  ...crudModule('ERP Commerce', 'erp.expenses', 'Expenses'),
+  ...crudModule('ERP Commerce', 'erp.payments', 'ERP Payments'),
+  ...crudModule('ERP Commerce', 'erp.accounting', 'Accounting'),
+  ...crudModule('ERP Commerce', 'erp.rentals', 'Rentals'),
+  ...crudModule('ERP Commerce', 'erp.contracts', 'Contracts'),
+  ...crudModule('ERP Commerce', 'erp.letters', 'ERP Letters'),
+  ...crudModule('ERP Commerce', 'erp.assets', 'Fixed Assets'),
+  ...crudModule('ERP Commerce', 'erp.leaders', 'Leaders'),
+
   ...Object.entries({
     'menu.dashboard': 'Menu: Dashboard',
     'menu.events': 'Menu: Events',
@@ -130,6 +150,10 @@ export const PERMISSION_CATALOG = [
     'menu.hr': 'Menu: HR & Payroll',
     'menu.system': 'Menu: System',
     'menu.roles': 'Menu: Roles & Permissions',
+    'menu.erp_commerce': 'Menu: ERP Commerce',
+    'menu.erp_rentals': 'Menu: ERP Rentals',
+    'menu.erp_assets': 'Menu: ERP Assets',
+    'menu.erp_contracts': 'Menu: ERP Contracts',
   }).map(([id, label]) => ({
     id,
     category: 'Sidebar Menu Access',
