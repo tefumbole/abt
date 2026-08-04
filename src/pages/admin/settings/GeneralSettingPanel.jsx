@@ -14,6 +14,7 @@ import {
   listCategories,
   listUnits,
   listWarehouses,
+  setDefaultUnit,
   updateWarehouse,
   updateBiller,
 } from '@/services/erpService';
@@ -104,7 +105,7 @@ export default function GeneralSettingPanel() {
         letter_serial_no: sys?.letter_serial_no || '',
         default_warehouse_id: defaultWh,
         default_biller_id: defaultBl,
-        default_unit_id: sys?.default_unit_id || (un || [])[0]?.id || '',
+        default_unit_id: sys?.default_unit_id || (un || []).find((u) => u.is_default)?.id || (un || [])[0]?.id || '',
         default_category_id: sys?.default_category_id || (cats || [])[0]?.id || '',
         tax_rate: sys?.tax_rate != null ? String(sys.tax_rate) : '0',
         logo_url: sys?.logo_url || '',
@@ -150,6 +151,9 @@ export default function GeneralSettingPanel() {
         default_category_id: form.default_category_id || null,
         tax_rate: Number(form.tax_rate) || 0,
       });
+      if (form.default_unit_id) {
+        await setDefaultUnit(form.default_unit_id).catch(() => {});
+      }
 
       // Keep ERP default flags in sync when a default warehouse/biller is chosen
       if (form.default_warehouse_id) {
@@ -465,10 +469,16 @@ export default function GeneralSettingPanel() {
                 className="w-full border rounded-md h-10 px-2 bg-white"
                 value={form.default_unit_id}
                 onChange={(e) => setField('default_unit_id', e.target.value)}
+                required
               >
-                <option value="">—</option>
-                {units.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
+                <option value="">Select default unit...</option>
+                {units.map((u) => (
+                  <option key={u.id} value={u.id}>
+                    {u.name}{u.is_default ? ' (Default)' : ''}
+                  </option>
+                ))}
               </select>
+              <p className="text-xs text-slate-500">Also managed under Settings → Unit. Used when creating products.</p>
             </div>
 
             <div className="space-y-2">

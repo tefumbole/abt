@@ -126,10 +126,25 @@ router.delete('/brands/:id', requireAuth, requireErpAdmin, async (req, res) => {
   }
 });
 
+async function syncDefaultUnitSetting(pool, unitId) {
+  if (!unitId) return;
+  const [rows] = await pool.query(`SELECT id FROM system_settings LIMIT 1`);
+  if (rows.length) {
+    await pool.query(`UPDATE system_settings SET default_unit_id = ? WHERE id = ?`, [unitId, rows[0].id]);
+  }
+}
+
 // --- Units ---
 router.get('/units', requireAuth, requireErpAdmin, async (_req, res) => {
   try {
-    res.json({ data: await crudList('erp_units') });
+    const rows = await crudList('erp_units');
+    res.json({
+      data: rows.map((r) => ({
+        ...r,
+        is_active: Boolean(r.is_active),
+        is_default: Boolean(r.is_default),
+      })).sort((a, b) => Number(b.is_default) - Number(a.is_default) || String(a.name).localeCompare(String(b.name))),
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -137,14 +152,19 @@ router.get('/units', requireAuth, requireErpAdmin, async (_req, res) => {
 
 router.post('/units', requireAuth, requireErpAdmin, async (req, res) => {
   try {
-    const { name, code = null, is_active = true } = req.body || {};
+    const { name, code = null, is_active = true, is_default = false } = req.body || {};
     if (!name?.trim()) return res.status(400).json({ error: 'Name is required' });
+    const pool = getPool();
     const id = randomUUID();
-    await getPool().query(
-      `INSERT INTO erp_units (id, name, code, is_active) VALUES (?, ?, ?, ?)`,
-      [id, name.trim(), code, bool(is_active) ? 1 : 0]
+    const [countRows] = await pool.query(`SELECT COUNT(*) AS c FROM erp_units`);
+    const makeDefault = bool(is_default, false) || Number(countRows[0]?.c || 0) === 0;
+    if (makeDefault) await pool.query(`UPDATE erp_units SET is_default = 0`);
+    await pool.query(
+      `INSERT INTO erp_units (id, name, code, is_active, is_default) VALUES (?, ?, ?, ?, ?)`,
+      [id, name.trim(), code, bool(is_active) ? 1 : 0, makeDefault ? 1 : 0]
     );
-    const [rows] = await getPool().query(`SELECT * FROM erp_units WHERE id = ?`, [id]);
+    if (makeDefault) await syncDefaultUnitSetting(pool, id);
+    const [rows] = await pool.query(`SELECT * FROM erp_units WHERE id = ?`, [id]);
     res.status(201).json({ data: rows[0] });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -157,15 +177,34 @@ router.put('/units/:id', requireAuth, requireErpAdmin, async (req, res) => {
     const [ex] = await pool.query(`SELECT * FROM erp_units WHERE id = ?`, [req.params.id]);
     if (!ex.length) return res.status(404).json({ error: 'Not found' });
     const c = ex[0];
+    const makeDefault = req.body?.is_default !== undefined ? bool(req.body.is_default) : Boolean(c.is_default);
+    if (makeDefault) await pool.query(`UPDATE erp_units SET is_default = 0`);
     await pool.query(
-      `UPDATE erp_units SET name=?, code=?, is_active=? WHERE id=?`,
+      `UPDATE erp_units SET name=?, code=?, is_active=?, is_default=? WHERE id=?`,
       [
         req.body?.name?.trim() || c.name,
         req.body?.code !== undefined ? req.body.code : c.code,
         (req.body?.is_active !== undefined ? bool(req.body.is_active) : Boolean(c.is_active)) ? 1 : 0,
+        makeDefault ? 1 : 0,
         req.params.id,
       ]
     );
+    if (makeDefault) await syncDefaultUnitSetting(pool, req.params.id);
+    const [rows] = await pool.query(`SELECT * FROM erp_units WHERE id = ?`, [req.params.id]);
+    res.json({ data: rows[0] });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.post('/units/:id/set-default', requireAuth, requireErpAdmin, async (req, res) => {
+  try {
+    const pool = getPool();
+    const [ex] = await pool.query(`SELECT * FROM erp_units WHERE id = ?`, [req.params.id]);
+    if (!ex.length) return res.status(404).json({ error: 'Not found' });
+    await pool.query(`UPDATE erp_units SET is_default = 0`);
+    await pool.query(`UPDATE erp_units SET is_default = 1 WHERE id = ?`, [req.params.id]);
+    await syncDefaultUnitSetting(pool, req.params.id);
     const [rows] = await pool.query(`SELECT * FROM erp_units WHERE id = ?`, [req.params.id]);
     res.json({ data: rows[0] });
   } catch (err) {
@@ -175,7 +214,13 @@ router.put('/units/:id', requireAuth, requireErpAdmin, async (req, res) => {
 
 router.delete('/units/:id', requireAuth, requireErpAdmin, async (req, res) => {
   try {
-    await getPool().query(`DELETE FROM erp_units WHERE id = ?`, [req.params.id]);
+    const pool = getPool();
+    const [ex] = await pool.query(`SELECT * FROM erp_units WHERE id = ?`, [req.params.id]);
+    if (!ex.length) return res.status(404).json({ error: 'Not found' });
+    if (ex[0].is_default) {
+      return res.status(400).json({ error: 'You cannot delete the default unit. Set another default first.' });
+    }
+    await pool.query(`DELETE FROM erp_units WHERE id = ?`, [req.params.id]);
     res.json({ ok: true });
   } catch (err) {
     res.status(500).json({ error: err.message });

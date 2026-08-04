@@ -19,13 +19,25 @@ export async function seedErp(pool) {
 
   const [units] = await pool.query(`SELECT id FROM erp_units LIMIT 1`);
   if (!units.length) {
+    let firstId = null;
     for (const [name, code] of [['Piece', 'pc'], ['Box', 'box'], ['Kg', 'kg']]) {
+      const id = randomUUID();
+      if (!firstId) firstId = id;
       await pool.query(
-        `INSERT INTO erp_units (id, name, code, is_active) VALUES (?, ?, ?, 1)`,
-        [randomUUID(), name, code]
+        `INSERT INTO erp_units (id, name, code, is_active, is_default) VALUES (?, ?, ?, 1, ?)`,
+        [id, name, code, id === firstId ? 1 : 0]
       );
     }
+    if (firstId) {
+      await pool.query(`UPDATE system_settings SET default_unit_id = ? WHERE id IS NOT NULL`, [firstId]).catch(() => {});
+    }
     console.log('Seeded default ERP units');
+  } else {
+    const [def] = await pool.query(`SELECT id FROM erp_units WHERE is_default = 1 LIMIT 1`);
+    if (!def.length) {
+      await pool.query(`UPDATE erp_units SET is_default = 1 WHERE id = ?`, [units[0].id]);
+      await pool.query(`UPDATE system_settings SET default_unit_id = ? WHERE id IS NOT NULL`, [units[0].id]).catch(() => {});
+    }
   }
 
   const [accounts] = await pool.query(`SELECT id FROM erp_accounts LIMIT 1`);

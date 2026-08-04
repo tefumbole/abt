@@ -60,6 +60,9 @@ export const listBrands = () => erpApi.get('/products/brands');
 export const createBrand = (body) => erpApi.post('/products/brands', body).then((r) => r.data);
 export const listUnits = () => erpApi.get('/products/units');
 export const createUnit = (body) => erpApi.post('/products/units', body).then((r) => r.data);
+export const updateUnit = (id, body) => erpApi.put(`/products/units/${id}`, body).then((r) => r.data);
+export const setDefaultUnit = (id) => erpApi.post(`/products/units/${id}/set-default`, {}).then((r) => r.data);
+export const deleteUnit = (id) => erpApi.del(`/products/units/${id}`);
 export const listAdjustments = () => erpApi.get('/products/adjustments/list');
 export const createAdjustment = (body) => erpApi.post('/products/adjustments', body).then((r) => r.data);
 

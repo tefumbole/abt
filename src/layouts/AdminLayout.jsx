@@ -413,7 +413,7 @@ const AdminLayout = () => {
       if (!current || current.label !== group.label) {
         current = {
           label: group.label,
-          collapsible: group.collapsible,
+          collapsible: true,
           permission: group.permission,
           items: [],
         };
@@ -507,38 +507,31 @@ const AdminLayout = () => {
     if (!visibleItems.length) return null;
 
     const groupKey = group.label;
-    const isGroupOpen = openMenus[groupKey] ?? !group.collapsible;
-
-    if (group.collapsible) {
-      const groupActive = visibleItems.some((item) =>
-        item.submenu
-          ? item.submenu.some((sub) => location.pathname.startsWith(sub.path.split('?')[0]))
-          : item.path && (location.pathname.startsWith(item.path.split('?')[0]) || location.pathname + location.search === item.path)
-      );
-
-      return (
-        <Collapsible open={isGroupOpen} onOpenChange={() => toggleMenu(groupKey)} className="w-full">
-          <CollapsibleTrigger className={cn(
-            'flex items-center justify-between w-full px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider text-gray-400 hover:text-white hover:bg-white/5',
-            groupActive && 'text-[#D4AF37]'
-          )}>
-            <span>{tl('menu', group.label)}</span>
-            <ChevronDown className={cn('w-4 h-4 transition-transform', isGroupOpen && 'rotate-180')} />
-          </CollapsibleTrigger>
-          <CollapsibleContent className="space-y-1 mt-1">
-            {visibleItems.map((item, i) => <MenuItem key={i} item={item} />)}
-          </CollapsibleContent>
-        </Collapsible>
-      );
-    }
+    const groupActive = visibleItems.some((item) =>
+      item.submenu
+        ? item.submenu.some((sub) => pathMatches(sub.path))
+        : item.path && pathMatches(item.path)
+    );
+    // Collapsed by default; keep the active section open unless user toggled it.
+    const isGroupOpen = openMenus[groupKey] !== undefined ? openMenus[groupKey] : groupActive;
 
     return (
-      <div>
-        <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 px-4">{tl('menu', group.label)}</h3>
-        <div className="space-y-1">
+      <Collapsible
+        open={isGroupOpen}
+        onOpenChange={(open) => setOpenMenus((prev) => ({ ...prev, [groupKey]: open }))}
+        className="w-full"
+      >
+        <CollapsibleTrigger className={cn(
+          'flex items-center justify-between w-full px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider text-gray-400 hover:text-white hover:bg-white/5',
+          groupActive && 'text-[#D4AF37]'
+        )}>
+          <span>{tl('menu', group.label)}</span>
+          <ChevronDown className={cn('w-4 h-4 transition-transform', isGroupOpen && 'rotate-180')} />
+        </CollapsibleTrigger>
+        <CollapsibleContent className="space-y-1 mt-1">
           {visibleItems.map((item, i) => <MenuItem key={i} item={item} />)}
-        </div>
-      </div>
+        </CollapsibleContent>
+      </Collapsible>
     );
   };
 
