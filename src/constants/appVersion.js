@@ -1,11 +1,11 @@
 /** Alpha Bridge ERP release identifier — update when creating a new restore point. */
-export const APP_VERSION = 'ABT_ERP_V.2.2.10';
+export const APP_VERSION = 'ABT_ERP_V.2.2.11';
 
 export const APP_VERSION_LABEL = 'Version';
 
 export const RESTORE_POINT = {
   id: APP_VERSION,
-  name: 'Alpha Bridge ERP v2.2.10',
+  name: 'Alpha Bridge ERP v2.2.11',
   created: '2026-08-05',
   gitTag: APP_VERSION,
 };
@@ -15,6 +15,15 @@ export const RESTORE_POINT = {
  * Keep in sync with notable production deploys.
  */
 export const DEPLOYMENT_HISTORY = [
+  {
+    version: 'ABT_ERP_V.2.2.11',
+    date: '2026-08-05',
+    title: 'Products & Stock as link with top tabs',
+    notes: [
+      'Sidebar shows Products & Stock as a single link',
+      'Category, Product List, Add Product, Barcode, Adjustments, Stock Count as top tabs',
+    ],
+  },
   {
     version: 'ABT_ERP_V.2.2.10',
     date: '2026-08-05',
