@@ -157,7 +157,18 @@ async function bookingCounts(db) {
      FROM erp_bookings b`
   );
   const r = rows[0] || {};
+
+  // Per-status tallies so every filter pill can carry a number.
+  const [byStatus] = await db.query(
+    `SELECT booking_status, COUNT(*) AS total FROM erp_bookings GROUP BY booking_status`
+  );
+  const statuses = Object.fromEntries([...BOOKING_STATUSES].map((key) => [key, 0]));
+  for (const row of byStatus) {
+    if (BOOKING_STATUSES.has(row.booking_status)) statuses[row.booking_status] = num(row.total);
+  }
+
   return {
+    ...statuses,
     all: num(r.all_count),
     request: num(r.request),
     awaiting_signature: num(r.awaiting_signature),
@@ -574,11 +585,9 @@ router.post('/bookings/:id/send-sign-link', requireAuth, requireErpAdmin, async 
 
     let token = booking.signature_token;
     if (!token) token = randomBytes(24).toString('hex');
-    // `review_status` is armed here so the booking lands in the review queue as soon as it is signed.
+    // review_status stays untouched — the public sign handler sets it to 'pending' on signing.
     await pool.query(
-      `UPDATE erp_bookings SET signature_token = ?, signature_status = 'pending',
-        review_status = CASE WHEN review_status = 'none' THEN 'pending' ELSE review_status END
-       WHERE id = ?`,
+      `UPDATE erp_bookings SET signature_token = ?, signature_status = 'pending' WHERE id = ?`,
       [token, booking.id]
     );
     const link = `${publicBaseUrl(req)}/erp/public/booking/${token}`;

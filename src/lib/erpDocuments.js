@@ -121,14 +121,21 @@ function itemRows(company, items = []) {
     .join('');
 }
 
+const DOCUMENT_HEADINGS = {
+  invoice: 'Invoice',
+  quotation: 'Quotation',
+  booking: 'Booking Sheet',
+};
+
 /**
- * @param {'invoice'|'quotation'} kind
- * @param {object} doc  normalised sale/quotation (see SalesPage / QuotationsPage)
+ * @param {'invoice'|'quotation'|'booking'} kind
+ * @param {object} doc  normalised sale/quotation/booking (see SalesPage / QuotationsPage / BookingDetailsModal)
  * @param {object} company from loadErpCompany()
  */
 export function buildDocumentHtml({ kind = 'invoice', doc = {}, company = {} }) {
-  const isQuotation = kind === 'quotation';
-  const heading = isQuotation ? 'Quotation' : 'Invoice';
+  // Quotations and bookings share a layout: no payment received or balance-due block.
+  const isQuotation = kind === 'quotation' || kind === 'booking';
+  const heading = DOCUMENT_HEADINGS[kind] || DOCUMENT_HEADINGS.invoice;
   const customer = doc.customer || {};
   const itemsTotal = (doc.items || []).reduce(
     (sum, item) => sum + num(item.subtotal ?? num(item.qty) * num(item.net_unit_price)),
@@ -170,7 +177,7 @@ export function buildDocumentHtml({ kind = 'invoice', doc = {}, company = {} }) 
 
   <div class="meta">
     <div>
-      <h4>${isQuotation ? 'Quotation for' : 'Bill to'}</h4>
+      <h4>${kind === 'booking' ? 'Booking for' : isQuotation ? 'Quotation for' : 'Bill to'}</h4>
       <p class="b">${escapeHtml(customer.name || 'Walk-in Customer')}</p>
       ${customer.company_name ? `<p>${escapeHtml(customer.company_name)}</p>` : ''}
       ${customer.phone ? `<p>${escapeHtml(customer.phone)}</p>` : ''}

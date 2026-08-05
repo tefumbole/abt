@@ -82,14 +82,11 @@ export function bookingToDocument(booking = {}, dateFormat = 'd-m-Y') {
 
 export async function buildBookingSheetHtml(booking, dateFormat = 'd-m-Y') {
   const company = await loadErpCompany();
-  const html = buildDocumentHtml({
-    kind: 'quotation',
+  return buildDocumentHtml({
+    kind: 'booking',
     doc: bookingToDocument(booking, company.dateFormat || dateFormat),
     company,
   });
-  // The shared builder only knows "invoice" and "quotation" headings; the quotation
-  // layout is the right one for a booking (no paid/balance block), only the title differs.
-  return html.replace('<h1>Quotation</h1>', '<h1>Booking Sheet</h1>');
 }
 
 export async function printBookingSheet(booking, dateFormat = 'd-m-Y') {
