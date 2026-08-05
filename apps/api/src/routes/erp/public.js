@@ -88,11 +88,22 @@ router.post('/delivery/:token/sign', async (req, res) => {
     if (d.signature_status === 'signed') {
       return res.status(400).json({ error: 'Already signed' });
     }
-    await pool.query(
-      `UPDATE deliveries SET signature_status = 'signed', signature_data = ?, signed_at = NOW(), status = 'delivered'
-       WHERE id = ?`,
-      [signature_data, d.id]
-    );
+    // Mark signed + delivered. delivered_at is optional (older DBs may lack the column).
+    try {
+      await pool.query(
+        `UPDATE deliveries SET signature_status = 'signed', signature_data = ?, signed_at = NOW(),
+          status = 'delivered', delivered_at = COALESCE(delivered_at, NOW())
+         WHERE id = ?`,
+        [signature_data, d.id]
+      );
+    } catch (err) {
+      if (err.code !== 'ER_BAD_FIELD_ERROR') throw err;
+      await pool.query(
+        `UPDATE deliveries SET signature_status = 'signed', signature_data = ?, signed_at = NOW(), status = 'delivered'
+         WHERE id = ?`,
+        [signature_data, d.id]
+      );
+    }
     if (isWasenderConfigured() && d.customer_phone) {
       try {
         await sendTextMessage(

@@ -292,17 +292,21 @@ export const ERP_CREATE_STATEMENTS = [
     sale_id CHAR(36) NOT NULL,
     customer_id CHAR(36) DEFAULT NULL,
     address TEXT DEFAULT NULL,
+    courier VARCHAR(255) DEFAULT NULL,
+    note TEXT DEFAULT NULL,
     status VARCHAR(32) NOT NULL DEFAULT 'packing',
     signature_status VARCHAR(32) NOT NULL DEFAULT 'pending',
     signature_token CHAR(64) DEFAULT NULL,
     signature_data LONGTEXT DEFAULT NULL,
     signed_at DATETIME DEFAULT NULL,
+    delivered_at DATETIME DEFAULT NULL,
     created_by CHAR(36) DEFAULT NULL,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     UNIQUE KEY uq_deliveries_ref (reference),
     UNIQUE KEY uq_deliveries_token (signature_token),
-    INDEX idx_deliveries_sale (sale_id)
+    INDEX idx_deliveries_sale (sale_id),
+    INDEX idx_deliveries_status (status)
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
 
   `CREATE TABLE IF NOT EXISTS cash_registers (
@@ -475,6 +479,8 @@ export const ERP_CREATE_STATEMENTS = [
     order_discount DECIMAL(15,2) NOT NULL DEFAULT 0,
     shipping DECIMAL(15,2) NOT NULL DEFAULT 0,
     source VARCHAR(16) NOT NULL DEFAULT 'admin',
+    goods_received_at DATETIME DEFAULT NULL,
+    goods_receipt_note TEXT DEFAULT NULL,
     created_by CHAR(36) DEFAULT NULL,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,

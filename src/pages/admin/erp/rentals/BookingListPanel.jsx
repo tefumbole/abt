@@ -756,6 +756,7 @@ export default function BookingListPanel({
           dateFormat={dateFormat}
           onClose={() => setDetailId(null)}
           onEdit={(id) => { setDetailId(null); onEdit(id); }}
+          onUpdated={() => { loadList(); }}
         />
       )}
     </div>

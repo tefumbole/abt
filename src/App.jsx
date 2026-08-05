@@ -140,6 +140,7 @@ import PosPage from '@/pages/admin/erp/PosPage';
 import {
   TransfersPage, ReturnsPage, ExpensesPage, PaymentsPage, AccountingPage,
 } from '@/pages/admin/erp/SupportPages';
+import ReportsPage from '@/pages/admin/erp/ReportsPage';
 import {
   ContractsPage, ErpLettersPage, FixedAssetsPage, LeadersPage,
 } from '@/pages/admin/erp/HeavyPages';
@@ -1031,6 +1032,7 @@ const AppContent = () => {
           <Route path="erp/expenses" element={<ProtectedRoute requireAdmin={true}><ExpensesPage /></ProtectedRoute>} />
           <Route path="erp/payments" element={<ProtectedRoute requireAdmin={true}><PaymentsPage /></ProtectedRoute>} />
           <Route path="erp/accounting" element={<ProtectedRoute requireAdmin={true}><AccountingPage /></ProtectedRoute>} />
+          <Route path="erp/reports" element={<ProtectedRoute requireAdmin={true}><ReportsPage /></ProtectedRoute>} />
           <Route path="erp/rentals" element={<ProtectedRoute requireAdmin={true}><RentalsPage /></ProtectedRoute>} />
           <Route path="erp/contracts" element={<ProtectedRoute requireAdmin={true}><ContractsPage /></ProtectedRoute>} />
           <Route path="erp/letters" element={<ProtectedRoute requireAdmin={true}><ErpLettersPage /></ProtectedRoute>} />

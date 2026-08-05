@@ -372,6 +372,7 @@ const AdminLayout = () => {
         { label: 'Expenses', path: '/admin/erp/expenses', icon: Receipt, permission: MENU_PERMISSIONS.erpCommerce, menuKey: 'erp-expenses' },
         { label: 'Payments', path: '/admin/erp/payments', icon: Wallet, permission: MENU_PERMISSIONS.erpCommerce, menuKey: 'erp-payments' },
         { label: 'Accounting', path: '/admin/erp/accounting', icon: Landmark, permission: MENU_PERMISSIONS.erpCommerce, menuKey: 'erp-accounting' },
+        { label: 'Reports Hub', path: '/admin/erp/reports', icon: LineChart, permission: MENU_PERMISSIONS.erpCommerce, menuKey: 'reports' },
       ],
     },
     {

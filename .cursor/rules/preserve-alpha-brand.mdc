@@ -1,0 +1,26 @@
+---
+description: Keep Alpha Bridge marketing and Shareholders when porting Beyond ERP
+alwaysApply: true
+---
+
+# Preserve Alpha brand surfaces
+
+When porting Beyondtechworld / Stocky ERP into Alpha Bridge:
+
+## Never replace or overwrite
+
+- Public landing (`src/pages/HomePage.jsx`)
+- About Us (`src/pages/AboutPage.jsx`)
+- Shareholders public + admin share/agreement flows
+- Alpha Site Content CMS branding for the marketing site
+- Alpha MySQL database name / production `.env` pointing at Beyond’s DB
+
+## Allowed to change
+
+- Admin ERP pages under `src/pages/admin/erp/**`
+- `apps/api/src/routes/erp/**` and ERP schema patches
+- Admin sidebar ERP menu items (not marketing menus)
+
+## Deploy
+
+Only Alpha Bridge VPS root `/var/www/alphabridge`. Never stop or rewrite Beyond’s site.

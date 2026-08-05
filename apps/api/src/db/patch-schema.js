@@ -130,6 +130,14 @@ export const SCHEMA_PATCHES = [
   'ALTER TABLE products ADD COLUMN product_location VARCHAR(255) DEFAULT NULL',
   'ALTER TABLE products ADD COLUMN is_featured TINYINT(1) NOT NULL DEFAULT 0',
   'ALTER TABLE products ADD COLUMN has_warehouse_price TINYINT(1) NOT NULL DEFAULT 0',
+  // Deliveries e-sign parity (courier / note / delivered_at)
+  'ALTER TABLE deliveries ADD COLUMN courier VARCHAR(255) DEFAULT NULL',
+  'ALTER TABLE deliveries ADD COLUMN note TEXT DEFAULT NULL',
+  'ALTER TABLE deliveries ADD COLUMN delivered_at DATETIME DEFAULT NULL',
+  'CREATE INDEX idx_deliveries_status ON deliveries (status)',
+  // Rental goods-receipt leftovers
+  'ALTER TABLE erp_bookings ADD COLUMN goods_received_at DATETIME DEFAULT NULL',
+  'ALTER TABLE erp_bookings ADD COLUMN goods_receipt_note TEXT DEFAULT NULL',
 ];
 
 export const CREATE_STATEMENTS = [

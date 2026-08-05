@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Download, Loader2, Pencil, Printer } from 'lucide-react';
+import { Download, Loader2, PackageCheck, Pencil, Printer } from 'lucide-react';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -14,7 +14,7 @@ import {
 } from '@/lib/rentalFormat';
 import { DOCUMENT_STYLES, buildDocumentHtml, loadErpCompany } from '@/lib/erpDocuments';
 import { downloadHtmlPdf, openPrintWindow } from '@/lib/erpExport';
-import { getBooking } from '@/services/erpService';
+import { getBooking, markBookingGoodsReceived } from '@/services/erpService';
 
 /** "12-05-2026 08:00 → 14-05-2026 17:00" */
 export function bookingPeriod(booking, dateFormat = 'd-m-Y') {
@@ -130,6 +130,7 @@ export default function BookingDetailsModal({
   dateFormat = 'd-m-Y',
   onClose,
   onEdit,
+  onUpdated,
 }) {
   const [booking, setBooking] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -167,6 +168,24 @@ export default function BookingDetailsModal({
       else await downloadBookingSheet(booking, dateFormat);
     } catch (err) {
       toast.error(err.message || 'The booking sheet could not be produced.');
+    } finally {
+      setBusy('');
+    }
+  };
+
+  const markGoodsReceived = async () => {
+    if (!booking) return;
+    const note = window.prompt('Goods receipt note (optional):', booking.goods_receipt_note || '') ?? undefined;
+    if (note === undefined) return;
+    setBusy('goods');
+    try {
+      await markBookingGoodsReceived(booking.id, { note: note || null });
+      const refreshed = await getBooking(booking.id);
+      setBooking(refreshed || booking);
+      toast.success('Goods marked as received');
+      onUpdated?.(booking.id);
+    } catch (err) {
+      toast.error(err.message || 'Could not mark goods received');
     } finally {
       setBusy('');
     }
@@ -239,6 +258,11 @@ export default function BookingDetailsModal({
                   {booking.reminder_sent_at
                     ? formatErpDate(booking.reminder_sent_at, dateFormat, { withTime: true })
                     : 'Never'}
+                </Field>
+                <Field label="Goods Received">
+                  {booking.goods_received_at
+                    ? formatErpDate(booking.goods_received_at, dateFormat, { withTime: true })
+                    : 'Not yet'}
                 </Field>
               </div>
 
@@ -333,10 +357,28 @@ export default function BookingDetailsModal({
                 <span className="whitespace-pre-wrap">{booking.staff_note}</span>
               </div>
             ) : null}
+
+            {booking.goods_receipt_note ? (
+              <div className="rounded-lg border bg-emerald-50/60 p-3 text-sm">
+                <span className="font-semibold text-[#003D82]">Goods receipt note: </span>
+                <span className="whitespace-pre-wrap">{booking.goods_receipt_note}</span>
+              </div>
+            ) : null}
           </div>
         )}
 
         <div className="flex flex-wrap justify-end gap-2 border-t pt-4">
+          <Button
+            type="button"
+            variant="outline"
+            disabled={!booking || busy === 'goods'}
+            onClick={markGoodsReceived}
+          >
+            {busy === 'goods'
+              ? <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              : <PackageCheck className="h-4 w-4 mr-2" />}
+            {booking?.goods_received_at ? 'Update goods receipt' : 'Mark goods received'}
+          </Button>
           <Button type="button" variant="outline" disabled={!booking || busy === 'print'} onClick={() => runDocument('print')}>
             {busy === 'print'
               ? <Loader2 className="h-4 w-4 mr-2 animate-spin" />

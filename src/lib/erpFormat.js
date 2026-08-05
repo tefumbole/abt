@@ -94,6 +94,12 @@ export const SALE_STATUS_META = {
   returned: { label: 'Returned', className: 'bg-rose-100 text-rose-800 border-rose-200' },
 };
 
+export const PURCHASE_STATUS_META = {
+  received: { label: 'Received', className: 'bg-emerald-100 text-emerald-800 border-emerald-200' },
+  pending: { label: 'Pending', className: 'bg-amber-100 text-amber-800 border-amber-200' },
+  ordered: { label: 'Ordered', className: 'bg-blue-100 text-blue-800 border-blue-200' },
+};
+
 export const PAYMENT_STATUS_META = {
   paid: { label: 'Paid', className: 'bg-emerald-100 text-emerald-800 border-emerald-200' },
   partial: { label: 'Partial', className: 'bg-amber-100 text-amber-800 border-amber-200' },

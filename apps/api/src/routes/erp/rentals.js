@@ -562,6 +562,34 @@ router.post('/bookings/:id/status', requireAuth, requireErpAdmin, async (req, re
   }
 });
 
+/** Goods-receipt style mark: note + received_at on the booking. */
+router.post('/bookings/:id/goods-receipt', requireAuth, requireErpAdmin, async (req, res) => {
+  try {
+    const pool = getPool();
+    const [ex] = await pool.query(`SELECT id, goods_received_at FROM erp_bookings WHERE id = ?`, [req.params.id]);
+    if (!ex.length) return res.status(404).json({ error: 'Not found' });
+    const note = req.body?.note != null ? String(req.body.note) : null;
+    try {
+      await pool.query(
+        `UPDATE erp_bookings
+         SET goods_received_at = COALESCE(goods_received_at, NOW()),
+             goods_receipt_note = COALESCE(?, goods_receipt_note)
+         WHERE id = ?`,
+        [note, req.params.id]
+      );
+    } catch (err) {
+      if (err.code !== 'ER_BAD_FIELD_ERROR') throw err;
+      return res.status(503).json({
+        error: 'goods_received_at / goods_receipt_note columns missing — run schema patches',
+      });
+    }
+    const booking = await loadBooking(pool, req.params.id);
+    res.json({ data: booking });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 router.post('/bookings/:id/review', requireAuth, requireErpAdmin, async (req, res) => {
   try {
     const pool = getPool();

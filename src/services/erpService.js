@@ -105,7 +105,13 @@ export const updateBiller = (id, body) => erpApi.put(`/people/billers/${id}`, bo
 export const deleteBiller = (id) => erpApi.del(`/people/billers/${id}`);
 
 export const listPurchases = (q = '') => erpApi.get(`/purchases${q}`);
+export const getPurchase = (id) => erpApi.get(`/purchases/${id}`);
 export const createPurchase = (body) => erpApi.post('/purchases', body).then((r) => r.data);
+export const updatePurchase = (id, body) => erpApi.put(`/purchases/${id}`, body).then((r) => r.data);
+export const deletePurchase = (id) => erpApi.del(`/purchases/${id}`);
+export const listPurchasePayments = (id) => erpApi.get(`/purchases/${id}/payments`);
+export const createPurchasePayment = (id, body) => erpApi.post(`/purchases/${id}/payments`, body).then((r) => r.data);
+export const deletePurchasePayment = (purchaseId, paymentId) => erpApi.del(`/purchases/${purchaseId}/payments/${paymentId}`);
 export const listSales = (q = '') => erpApi.get(`/sales${q}`);
 /** Paged list: `{ data, total, page, per_page, totals, counts }`. */
 export const querySales = (params = {}) => erpApi.getRaw(`/sales${toQuery(params)}`);
@@ -152,7 +158,10 @@ export const setQuotationStatus = (id, status) =>
 export const sendQuotationWhatsApp = (id, body = {}) => erpApi.post(`/quotations/${id}/send-whatsapp`, body);
 export const convertQuotation = (id) => erpApi.post(`/quotations/${id}/convert-sale`, {});
 export const listDeliveries = (q = '') => erpApi.get(`/deliveries${q}`);
+export const getDelivery = (id) => erpApi.get(`/deliveries/${id}`);
 export const createDelivery = (body) => erpApi.post('/deliveries', body).then((r) => r.data);
+export const updateDelivery = (id, body) => erpApi.put(`/deliveries/${id}`, body).then((r) => r.data);
+export const deleteDelivery = (id) => erpApi.del(`/deliveries/${id}`);
 export const sendDeliverySignLink = (id, body = {}) => erpApi.post(`/deliveries/${id}/send-sign-link`, body);
 
 export const getPosSettings = () => erpApi.get('/pos/settings');
@@ -166,22 +175,44 @@ export const createPosSale = (body) => erpApi.post('/pos/sale', body).then((r) =
 export const listRecentPosSales = (params = {}) => erpApi.get(`/pos/recent-sales${toQuery(params)}`);
 
 export const listTransfers = () => erpApi.get('/support/transfers');
+export const getTransfer = (id) => erpApi.get(`/support/transfers/${id}`);
 export const createTransfer = (body) => erpApi.post('/support/transfers', body).then((r) => r.data);
+export const completeTransfer = (id) => erpApi.put(`/support/transfers/${id}`, { status: 'completed' }).then((r) => r.data);
+export const deleteTransfer = (id) => erpApi.del(`/support/transfers/${id}`);
 export const listSaleReturns = () => erpApi.get('/support/sale-returns');
+export const getSaleReturn = (id) => erpApi.get(`/support/sale-returns/${id}`);
 export const createSaleReturn = (body) => erpApi.post('/support/sale-returns', body).then((r) => r.data);
+export const deleteSaleReturn = (id) => erpApi.del(`/support/sale-returns/${id}`);
 export const listPurchaseReturns = () => erpApi.get('/support/purchase-returns');
+export const getPurchaseReturn = (id) => erpApi.get(`/support/purchase-returns/${id}`);
 export const createPurchaseReturn = (body) => erpApi.post('/support/purchase-returns', body).then((r) => r.data);
+export const deletePurchaseReturn = (id) => erpApi.del(`/support/purchase-returns/${id}`);
 export const listExpenseCategories = () => erpApi.get('/support/expense-categories');
 export const createExpenseCategory = (body) => erpApi.post('/support/expense-categories', body).then((r) => r.data);
 export const listExpenses = (q = '') => erpApi.get(`/support/expenses${q}`);
 export const createExpense = (body) => erpApi.post('/support/expenses', body).then((r) => r.data);
+export const updateExpense = (id, body) => erpApi.put(`/support/expenses/${id}`, body).then((r) => r.data);
+export const deleteExpense = (id) => erpApi.del(`/support/expenses/${id}`);
 export const listErpPayments = (q = '') => erpApi.get(`/support/payments${q}`);
 export const createErpPayment = (body) => erpApi.post('/support/payments', body).then((r) => r.data);
+export const deleteErpPayment = (id) => erpApi.del(`/support/payments/${id}`);
 export const listAccounts = () => erpApi.get('/support/accounts');
 export const createAccount = (body) => erpApi.post('/support/accounts', body).then((r) => r.data);
+export const updateAccount = (id, body) => erpApi.put(`/support/accounts/${id}`, body).then((r) => r.data);
+export const deactivateAccount = (id) => erpApi.del(`/support/accounts/${id}`);
 export const listMoneyTransfers = () => erpApi.get('/support/money-transfers');
 export const createMoneyTransfer = (body) => erpApi.post('/support/money-transfers', body).then((r) => r.data);
+export const deleteMoneyTransfer = (id) => erpApi.del(`/support/money-transfers/${id}`);
 export const getBalanceSheet = () => erpApi.get('/support/balance-sheet');
+export const getProfitLoss = (q = '') => erpApi.get(`/support/profit-loss${q}`);
+
+/** Generic ERP report fetch: path like `/sales-summary?from=…` under `/erp/reports`. */
+export const getReport = (path) => erpApi.get(`/reports${path.startsWith('/') ? path : `/${path}`}`);
+export const listReportSalesSummary = (params = {}) => getReport(`/sales-summary${toQuery(params)}`);
+export const listReportPurchasesSummary = (params = {}) => getReport(`/purchases-summary${toQuery(params)}`);
+export const listReportStockSummary = (params = {}) => getReport(`/stock-summary${toQuery(params)}`);
+export const listReportProfitLoss = (params = {}) => getReport(`/profit-loss${toQuery(params)}`);
+export const listReportExpensesSummary = (params = {}) => getReport(`/expenses-summary${toQuery(params)}`);
 
 export const listBookings = (q = '') => erpApi.get(`/heavy/bookings${q}`);
 export const createBooking = (body) => erpApi.post('/rentals/bookings', body).then((r) => r.data);
@@ -199,16 +230,43 @@ export const setBookingStatus = (id, booking_status) =>
   erpApi.post(`/rentals/bookings/${id}/status`, { booking_status }).then((r) => r.data);
 export const reviewBooking = (id, body) => erpApi.post(`/rentals/bookings/${id}/review`, body).then((r) => r.data);
 export const sendBookingReminder = (id, body = {}) => erpApi.post(`/rentals/bookings/${id}/reminder`, body);
+export const markBookingGoodsReceived = (id, body = {}) =>
+  erpApi.post(`/rentals/bookings/${id}/goods-receipt`, body).then((r) => r.data);
 export const listBookedProducts = (filters = {}) => erpApi.get(`/rentals/booked-products${toQuery(filters)}`);
 export const listBookingCalendar = (filters = {}) => erpApi.get(`/rentals/calendar${toQuery(filters)}`);
 export const listContracts = (q = '') => erpApi.get(`/heavy/contracts${q}`);
 export const createContract = (body) => erpApi.post('/heavy/contracts', body).then((r) => r.data);
 export const updateContract = (id, body) => erpApi.put(`/heavy/contracts/${id}`, body).then((r) => r.data);
+export const deleteContract = (id) => erpApi.del(`/heavy/contracts/${id}`);
+export const listContractTemplates = () => erpApi.get('/heavy/contract-templates');
+export const createContractTemplate = (body) => erpApi.post('/heavy/contract-templates', body).then((r) => r.data);
+export const updateContractTemplate = (id, body) => erpApi.put(`/heavy/contract-templates/${id}`, body).then((r) => r.data);
+export const deleteContractTemplate = (id) => erpApi.del(`/heavy/contract-templates/${id}`);
 export const listErpLetters = () => erpApi.get('/heavy/letters');
 export const createErpLetter = (body) => erpApi.post('/heavy/letters', body).then((r) => r.data);
-export const listFixedAssets = () => erpApi.get('/heavy/fixed-assets');
+export const updateErpLetter = (id, body) => erpApi.put(`/heavy/letters/${id}`, body).then((r) => r.data);
+export const deleteErpLetter = (id) => erpApi.del(`/heavy/letters/${id}`);
+export const listLetterCategories = () => erpApi.get('/heavy/letter-categories');
+export const createLetterCategory = (body) => erpApi.post('/heavy/letter-categories', body).then((r) => r.data);
+export const updateLetterCategory = (id, body) => erpApi.put(`/heavy/letter-categories/${id}`, body).then((r) => r.data);
+export const deleteLetterCategory = (id) => erpApi.del(`/heavy/letter-categories/${id}`);
+export const listFixedAssets = (q = '') => erpApi.get(`/heavy/fixed-assets${q}`);
 export const createFixedAsset = (body) => erpApi.post('/heavy/fixed-assets', body).then((r) => r.data);
+export const updateFixedAsset = (id, body) => erpApi.put(`/heavy/fixed-assets/${id}`, body).then((r) => r.data);
+export const deleteFixedAsset = (id) => erpApi.del(`/heavy/fixed-assets/${id}`);
 export const disposeFixedAsset = (id) => erpApi.post(`/heavy/fixed-assets/${id}/dispose`, {});
+export const listAssetCategories = () => erpApi.get('/heavy/asset-categories');
+export const updateAssetCategory = (id, body) => erpApi.put(`/heavy/asset-categories/${id}`, body).then((r) => r.data);
+export const deleteAssetCategory = (id) => erpApi.del(`/heavy/asset-categories/${id}`);
+export const listAssetRegions = () => erpApi.get('/heavy/asset-regions');
+export const updateAssetRegion = (id, body) => erpApi.put(`/heavy/asset-regions/${id}`, body).then((r) => r.data);
+export const deleteAssetRegion = (id) => erpApi.del(`/heavy/asset-regions/${id}`);
+export const listAssetStations = () => erpApi.get('/heavy/asset-stations');
+export const updateAssetStation = (id, body) => erpApi.put(`/heavy/asset-stations/${id}`, body).then((r) => r.data);
+export const deleteAssetStation = (id) => erpApi.del(`/heavy/asset-stations/${id}`);
+export const listAssetDonors = () => erpApi.get('/heavy/asset-donors');
+export const updateAssetDonor = (id, body) => erpApi.put(`/heavy/asset-donors/${id}`, body).then((r) => r.data);
+export const deleteAssetDonor = (id) => erpApi.del(`/heavy/asset-donors/${id}`);
 export const listLeaders = () => erpApi.get('/heavy/leaders');
 export const createLeader = (body) => erpApi.post('/heavy/leaders', body).then((r) => r.data);
 export const updateLeader = (id, body) => erpApi.put(`/heavy/leaders/${id}`, body).then((r) => r.data);

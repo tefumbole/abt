@@ -1,34 +1,68 @@
 import React, { useEffect, useState } from 'react';
-import { Loader2, Trash2 } from 'lucide-react';
+import { Loader2, Pencil, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import {
+  Dialog, DialogContent, DialogHeader, DialogTitle,
+} from '@/components/ui/dialog';
+import {
   createContract, createErpLetter, createFixedAsset, createLeader,
-  deleteLeader, disposeFixedAsset, listContracts, listCustomers,
-  listErpLetters, listFixedAssets, listLeaders, updateContract, updateLeader,
+  deleteContract, deleteErpLetter, deleteFixedAsset, deleteLeader,
+  disposeFixedAsset, listContracts, listCustomers,
+  listErpLetters, listFixedAssets, listLeaders, updateContract,
+  updateFixedAsset, updateLeader,
 } from '@/services/erpService';
 import ErpShell from './ErpShell';
+
+const CONTRACT_STATUSES = ['draft', 'awaiting_client', 'awaiting_admin', 'signed'];
 
 export function ContractsPage() {
   const [rows, setRows] = useState([]);
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [statusFilter, setStatusFilter] = useState('');
   const [form, setForm] = useState({ title: '', customer_id: '', body_html: '', status: 'draft' });
+  const [edit, setEdit] = useState(null);
 
   const load = async () => {
     setLoading(true);
     try {
-      const [c, cust] = await Promise.all([listContracts(), listCustomers()]);
+      const q = statusFilter ? `?status=${statusFilter}` : '';
+      const [c, cust] = await Promise.all([listContracts(q), listCustomers()]);
       setRows(c); setCustomers(cust);
     } catch (e) { toast.error(e.message); } finally { setLoading(false); }
   };
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); }, [statusFilter]);
+
+  const saveEdit = async (e) => {
+    e.preventDefault();
+    if (!edit) return;
+    try {
+      await updateContract(edit.id, {
+        title: edit.title,
+        customer_id: edit.customer_id || null,
+        body_html: edit.body_html,
+        status: edit.status,
+        expires_at: edit.expires_at || null,
+      });
+      toast.success('Contract updated');
+      setEdit(null);
+      load();
+    } catch (err) { toast.error(err.message); }
+  };
 
   return (
     <ErpShell title="ERP Contracts" subtitle="General contract pipeline">
+      <div className="flex flex-wrap gap-2 mb-4">
+        {['', ...CONTRACT_STATUSES].map((f) => (
+          <Button key={f || 'all'} size="sm" variant={statusFilter === f ? 'default' : 'outline'} onClick={() => setStatusFilter(f)}>
+            {f || 'All'}
+          </Button>
+        ))}
+      </div>
       <form className="rounded-xl border bg-white p-4 space-y-3 mb-4" onSubmit={async (e) => {
         e.preventDefault();
         try {
@@ -61,13 +95,30 @@ export function ContractsPage() {
                   <td className="p-3">{r.title}</td>
                   <td className="p-3">{r.customer_name || '—'}</td>
                   <td className="p-3">{r.status}</td>
-                  <td className="p-3 space-x-1">
-                    {['draft', 'awaiting_client', 'awaiting_admin', 'signed'].map((st) => (
+                  <td className="p-3 space-x-1 text-right whitespace-nowrap">
+                    {CONTRACT_STATUSES.map((st) => (
                       <Button key={st} size="sm" variant="ghost" onClick={async () => {
                         try { await updateContract(r.id, { status: st }); load(); }
                         catch (e) { toast.error(e.message); }
                       }}>{st}</Button>
                     ))}
+                    <Button size="sm" variant="outline" onClick={() => setEdit({
+                      id: r.id,
+                      title: r.title || '',
+                      customer_id: r.customer_id || '',
+                      body_html: r.body_html || '',
+                      status: r.status || 'draft',
+                      expires_at: r.expires_at ? String(r.expires_at).slice(0, 10) : '',
+                    })}>
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                    <Button size="sm" variant="ghost" onClick={async () => {
+                      if (!confirm('Delete this contract?')) return;
+                      try { await deleteContract(r.id); toast.success('Deleted'); load(); }
+                      catch (e) { toast.error(e.message); }
+                    }}>
+                      <Trash2 className="h-4 w-4 text-red-600" />
+                    </Button>
                   </td>
                 </tr>
               ))}
@@ -75,6 +126,31 @@ export function ContractsPage() {
           </table>
         )}
       </div>
+
+      <Dialog open={!!edit} onOpenChange={(open) => { if (!open) setEdit(null); }}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader><DialogTitle>Edit contract</DialogTitle></DialogHeader>
+          {edit && (
+            <form className="space-y-3" onSubmit={saveEdit}>
+              <div><Label>Title</Label><Input value={edit.title} onChange={(e) => setEdit({ ...edit, title: e.target.value })} required /></div>
+              <div><Label>Customer</Label>
+                <select className="w-full border rounded-md h-10 px-2" value={edit.customer_id} onChange={(e) => setEdit({ ...edit, customer_id: e.target.value })}>
+                  <option value="">—</option>
+                  {customers.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </select>
+              </div>
+              <div><Label>Status</Label>
+                <select className="w-full border rounded-md h-10 px-2" value={edit.status} onChange={(e) => setEdit({ ...edit, status: e.target.value })}>
+                  {CONTRACT_STATUSES.map((st) => <option key={st} value={st}>{st}</option>)}
+                </select>
+              </div>
+              <div><Label>Expires</Label><Input type="date" value={edit.expires_at} onChange={(e) => setEdit({ ...edit, expires_at: e.target.value })} /></div>
+              <div><Label>Body</Label><Textarea rows={6} value={edit.body_html} onChange={(e) => setEdit({ ...edit, body_html: e.target.value })} /></div>
+              <Button type="submit">Save</Button>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
     </ErpShell>
   );
 }
@@ -109,7 +185,7 @@ export function ErpLettersPage() {
         {loading ? <div className="p-8 flex justify-center"><Loader2 className="animate-spin" /></div> : (
           <table className="w-full text-sm">
             <thead className="bg-slate-50 text-left"><tr>
-              <th className="p-3">Ref</th><th className="p-3">Subject</th><th className="p-3">Recipient</th><th className="p-3">Status</th>
+              <th className="p-3">Ref</th><th className="p-3">Subject</th><th className="p-3">Recipient</th><th className="p-3">Status</th><th className="p-3" />
             </tr></thead>
             <tbody>
               {rows.map((r) => (
@@ -118,6 +194,15 @@ export function ErpLettersPage() {
                   <td className="p-3">{r.subject}</td>
                   <td className="p-3">{r.recipient_name || '—'}</td>
                   <td className="p-3">{r.status}</td>
+                  <td className="p-3 text-right">
+                    <Button size="sm" variant="ghost" onClick={async () => {
+                      if (!confirm('Delete this letter?')) return;
+                      try { await deleteErpLetter(r.id); toast.success('Deleted'); load(); }
+                      catch (e) { toast.error(e.message); }
+                    }}>
+                      <Trash2 className="h-4 w-4 text-red-600" />
+                    </Button>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -131,18 +216,47 @@ export function ErpLettersPage() {
 export function FixedAssetsPage() {
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [form, setForm] = useState({ name: '', purchase_cost: 0, book_value: 0, purchase_date: '', note: '' });
+  const [statusFilter, setStatusFilter] = useState('');
+  const [form, setForm] = useState({ name: '', purchase_cost: 0, book_value: 0, purchase_date: '', note: '', status: 'active' });
+  const [edit, setEdit] = useState(null);
 
   const load = async () => {
     setLoading(true);
-    try { setRows(await listFixedAssets()); }
-    catch (e) { toast.error(e.message); }
+    try {
+      const q = statusFilter ? `?status=${statusFilter}` : '';
+      setRows(await listFixedAssets(q));
+    } catch (e) { toast.error(e.message); }
     finally { setLoading(false); }
   };
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); }, [statusFilter]);
+
+  const saveEdit = async (e) => {
+    e.preventDefault();
+    if (!edit) return;
+    try {
+      await updateFixedAsset(edit.id, {
+        name: edit.name,
+        purchase_cost: Number(edit.purchase_cost),
+        book_value: Number(edit.book_value),
+        purchase_date: edit.purchase_date || null,
+        note: edit.note,
+        status: edit.status,
+      });
+      toast.success('Asset updated');
+      setEdit(null);
+      load();
+    } catch (err) { toast.error(err.message); }
+  };
 
   return (
     <ErpShell title="Fixed Assets" subtitle="Asset register">
+      <div className="flex flex-wrap gap-2 mb-4">
+        {['', 'active', 'disposed', 'maintenance'].map((f) => (
+          <Button key={f || 'all'} size="sm" variant={statusFilter === f ? 'default' : 'outline'} onClick={() => setStatusFilter(f)}>
+            {f || 'All'}
+          </Button>
+        ))}
+      </div>
       <form className="rounded-xl border bg-white p-4 grid md:grid-cols-2 gap-3 mb-4" onSubmit={async (e) => {
         e.preventDefault();
         try {
@@ -173,13 +287,31 @@ export function FixedAssetsPage() {
                   <td className="p-3">{Number(r.purchase_cost).toFixed(2)}</td>
                   <td className="p-3">{Number(r.book_value).toFixed(2)}</td>
                   <td className="p-3">{r.status}</td>
-                  <td className="p-3">
+                  <td className="p-3 space-x-1 text-right whitespace-nowrap">
+                    <Button size="sm" variant="outline" onClick={() => setEdit({
+                      id: r.id,
+                      name: r.name || '',
+                      purchase_cost: r.purchase_cost ?? 0,
+                      book_value: r.book_value ?? 0,
+                      purchase_date: r.purchase_date ? String(r.purchase_date).slice(0, 10) : '',
+                      note: r.note || '',
+                      status: r.status || 'active',
+                    })}>
+                      <Pencil className="h-4 w-4" />
+                    </Button>
                     {r.status !== 'disposed' && (
                       <Button size="sm" variant="outline" onClick={async () => {
                         try { await disposeFixedAsset(r.id); toast.success('Disposed'); load(); }
                         catch (e) { toast.error(e.message); }
                       }}>Dispose</Button>
                     )}
+                    <Button size="sm" variant="ghost" onClick={async () => {
+                      if (!confirm('Delete this asset?')) return;
+                      try { await deleteFixedAsset(r.id); toast.success('Deleted'); load(); }
+                      catch (e) { toast.error(e.message); }
+                    }}>
+                      <Trash2 className="h-4 w-4 text-red-600" />
+                    </Button>
                   </td>
                 </tr>
               ))}
@@ -187,6 +319,29 @@ export function FixedAssetsPage() {
           </table>
         )}
       </div>
+
+      <Dialog open={!!edit} onOpenChange={(open) => { if (!open) setEdit(null); }}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader><DialogTitle>Edit fixed asset</DialogTitle></DialogHeader>
+          {edit && (
+            <form className="space-y-3" onSubmit={saveEdit}>
+              <div><Label>Name</Label><Input value={edit.name} onChange={(e) => setEdit({ ...edit, name: e.target.value })} required /></div>
+              <div className="grid grid-cols-2 gap-3">
+                <div><Label>Purchase cost</Label><Input type="number" value={edit.purchase_cost} onChange={(e) => setEdit({ ...edit, purchase_cost: e.target.value })} /></div>
+                <div><Label>Book value</Label><Input type="number" value={edit.book_value} onChange={(e) => setEdit({ ...edit, book_value: e.target.value })} /></div>
+              </div>
+              <div><Label>Purchase date</Label><Input type="date" value={edit.purchase_date} onChange={(e) => setEdit({ ...edit, purchase_date: e.target.value })} /></div>
+              <div><Label>Status</Label>
+                <select className="w-full border rounded-md h-10 px-2" value={edit.status} onChange={(e) => setEdit({ ...edit, status: e.target.value })}>
+                  {['active', 'disposed', 'maintenance'].map((st) => <option key={st} value={st}>{st}</option>)}
+                </select>
+              </div>
+              <div><Label>Note</Label><Textarea rows={3} value={edit.note} onChange={(e) => setEdit({ ...edit, note: e.target.value })} /></div>
+              <Button type="submit">Save</Button>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
     </ErpShell>
   );
 }
