@@ -1,0 +1,27 @@
+---
+description: How to number Alpha Bridge ERP releases
+alwaysApply: true
+---
+
+# Release numbering
+
+Versions live in `src/constants/appVersion.js` and `apps/api/src/constants/appVersion.js`
+as `ABT_ERP_V.major.minor.patch`, and both must always match.
+
+## The scheme
+
+Numbers roll over at ten instead of running on:
+
+- Patch counts `1 … 10`. A patch of ten is the last of that minor.
+- After `x.y.10`, the next release is `x.(y+1).0`.
+- Minor ten closes the major: after `x.10.0`, the next release is `(x+1).1.0`.
+
+So: `2.2.1 … 2.2.10 → 2.3.0 … 2.3.10 → 2.4.0 … 2.9.10 → 2.10.0 → 3.1.0`.
+
+## How to bump
+
+Run `npm run version:bump`, which applies the rule above to both files. Do not
+hand-edit the version — if you must, follow the same rule. Add a matching entry
+at the top of `DEPLOYMENT_HISTORY` in the frontend file describing the release.
+
+Bump as part of a deploy, so the committed version matches what production runs.

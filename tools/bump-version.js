@@ -1,6 +1,10 @@
 #!/usr/bin/env node
 /**
- * Increment ERP patch version (ABT_ERP_V.x.y.z -> z+1) in frontend + API constants.
+ * Increment the ERP release version in the frontend + API constants.
+ *
+ * Numbering rolls over at ten instead of running on:
+ *   2.2.1 … 2.2.10 -> 2.3.0 … 2.3.10 -> 2.4.0 … 2.9.10 -> 2.10.0 -> 3.1.0
+ * A patch above ten opens the next minor, and minor ten closes the major.
  */
 import fs from 'node:fs';
 import path from 'node:path';
@@ -25,13 +29,18 @@ function readVersion(filePath) {
   return match[1];
 }
 
+const ROLLOVER = 10;
+
 function bumpVersionString(version) {
   const match = version.match(VERSION_RE);
   if (!match) throw new Error(`Invalid version format: ${version}`);
   const major = Number(match[1]);
   const minor = Number(match[2]);
-  const patch = Number(match[3]) + 1;
-  return `ABT_ERP_V.${major}.${minor}.${patch}`;
+  const patch = Number(match[3]);
+
+  if (minor >= ROLLOVER) return `ABT_ERP_V.${major + 1}.1.0`;
+  if (patch >= ROLLOVER) return `ABT_ERP_V.${major}.${minor + 1}.0`;
+  return `ABT_ERP_V.${major}.${minor}.${patch + 1}`;
 }
 
 function shortLabel(nextVersion) {
