@@ -54,8 +54,10 @@ sleep 2
 curl -sf http://127.0.0.1:3003/health || { echo "API health check failed on :3003"; exit 1; }
 echo "    Alpha Bridge API OK on :3003"
 
-echo "==> 7. Nginx — apply all VPS vhost configs"
-bash "$ROOT/tools/vps-apply-nginx.sh" "$ROOT"
+echo "==> 7. Nginx — apply the alpha-bridge.net vhost only"
+# Scoped on purpose: no other domain on this VPS is touched by an Alpha Bridge deploy.
+# Run tools/vps-apply-nginx.sh by hand if you ever need to reapply every vhost.
+bash "$ROOT/tools/vps-apply-nginx-alphabridge.sh" "$ROOT"
 
 echo ""
 echo "Alpha Bridge deploy complete."

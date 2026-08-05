@@ -1,6 +1,11 @@
 #!/usr/bin/env bash
-# Apply all VPS nginx vhosts from repo — run ON the VPS from /var/www/alphabridge
+# Apply ALL VPS nginx vhosts from repo — run ON the VPS from /var/www/alphabridge
 # Usage: bash tools/vps-apply-nginx.sh
+#
+# MANUAL USE ONLY. This rewrites and re-enables every domain on the box, so it is
+# no longer part of the Alpha Bridge deploy — that runs vps-apply-nginx-alphabridge.sh,
+# which touches nothing but alpha-bridge.net. Only run this when you intend to
+# reapply the configs of every site here, including ones owned by other projects.
 set -euo pipefail
 
 ROOT="${1:-/var/www/alphabridge}"

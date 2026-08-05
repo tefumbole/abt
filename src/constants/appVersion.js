@@ -1,11 +1,11 @@
 /** Alpha Bridge ERP release identifier — update when creating a new restore point. */
-export const APP_VERSION = 'ABT_ERP_V.2.2.13';
+export const APP_VERSION = 'ABT_ERP_V.2.2.14';
 
 export const APP_VERSION_LABEL = 'Version';
 
 export const RESTORE_POINT = {
   id: APP_VERSION,
-  name: 'Alpha Bridge ERP v2.2.13',
+  name: 'Alpha Bridge ERP v2.2.14',
   created: '2026-08-05',
   gitTag: APP_VERSION,
 };
