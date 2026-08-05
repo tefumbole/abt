@@ -130,6 +130,7 @@ export default function ProductFormFields({
   const fileRef = useRef(null);
   const codeSeeded = useRef(mode !== 'create');
 
+  // Stockless types are intangible: no brand, units, cost or inventory either.
   const trackStock = productTypeTracksStock(form.product_type);
   const showWarehousePrices = trackStock && form.has_warehouse_price;
 
@@ -206,7 +207,16 @@ export default function ProductFormFields({
       product_type: productType,
       ...(productTypeTracksStock(productType)
         ? {}
-        : { qty: '0', alert_quantity: '', has_warehouse_price: false }),
+        : {
+          qty: '0',
+          alert_quantity: '',
+          has_warehouse_price: false,
+          brand_id: '',
+          unit_id: '',
+          sale_unit_id: '',
+          purchase_unit_id: '',
+          cost: '',
+        }),
     }));
   };
 
@@ -269,9 +279,11 @@ export default function ProductFormFields({
     event.preventDefault();
     if (!form.name.trim()) return toast.error('Product name is required');
     if (!form.code.trim()) return toast.error('Product code is required');
-    if (!form.unit_id) return toast.error('Product unit is required');
+    if (trackStock && !form.unit_id) return toast.error('Product unit is required');
     if (!form.category_id) return toast.error('Category is required');
-    if (form.cost === '' || num(form.cost) < 0) return toast.error('Product cost is required');
+    if (trackStock && (form.cost === '' || num(form.cost) < 0)) {
+      return toast.error('Product cost is required');
+    }
     if (form.price === '' || num(form.price) < 0) return toast.error('Product price is required');
     if (trackStock && (form.qty === '' || num(form.qty) < 0)) {
       return toast.error('Quantity is required for a standard product');
@@ -284,11 +296,11 @@ export default function ProductFormFields({
       barcode: (form.barcode || form.code).trim() || null,
       product_type: form.product_type,
       category_id: form.category_id || null,
-      brand_id: form.brand_id || null,
-      unit_id: form.unit_id || null,
-      sale_unit_id: form.sale_unit_id || null,
-      purchase_unit_id: form.purchase_unit_id || null,
-      cost: num(form.cost),
+      brand_id: trackStock ? form.brand_id || null : null,
+      unit_id: trackStock ? form.unit_id || null : null,
+      sale_unit_id: trackStock ? form.sale_unit_id || null : null,
+      purchase_unit_id: trackStock ? form.purchase_unit_id || null : null,
+      cost: trackStock ? num(form.cost) : 0,
       price: num(form.price),
       rent_price_hour: numOr(form.rent_price_hour, 0),
       rent_price_day: numOr(form.rent_price_day, 0),
@@ -360,28 +372,32 @@ export default function ProductFormFields({
       </div>
 
       <div className={ROW_CLASS}>
-        <div>
-          <Label>Product Unit *</Label>
-          <select
-            className={SELECT_CLASS}
-            value={form.unit_id}
-            onChange={(e) => patch({ unit_id: e.target.value })}
-          >
-            <option value="">Select Product Unit…</option>
-            {units.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
-          </select>
-        </div>
-        <div>
-          <Label>Brand</Label>
-          <select
-            className={SELECT_CLASS}
-            value={form.brand_id}
-            onChange={(e) => patch({ brand_id: e.target.value })}
-          >
-            <option value="">Select Brand…</option>
-            {brands.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
-          </select>
-        </div>
+        {trackStock && (
+          <div>
+            <Label>Product Unit *</Label>
+            <select
+              className={SELECT_CLASS}
+              value={form.unit_id}
+              onChange={(e) => patch({ unit_id: e.target.value })}
+            >
+              <option value="">Select Product Unit…</option>
+              {units.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
+            </select>
+          </div>
+        )}
+        {trackStock && (
+          <div>
+            <Label>Brand</Label>
+            <select
+              className={SELECT_CLASS}
+              value={form.brand_id}
+              onChange={(e) => patch({ brand_id: e.target.value })}
+            >
+              <option value="">Select Brand…</option>
+              {brands.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
+            </select>
+          </div>
+        )}
         <div>
           <Label>Category *</Label>
           <select
@@ -395,44 +411,48 @@ export default function ProductFormFields({
         </div>
       </div>
 
-      <div className={ROW_CLASS}>
-        <div className="hidden md:block" />
-        <div>
-          <Label>Sale Unit</Label>
-          <select
-            className={SELECT_CLASS}
-            value={form.sale_unit_id}
-            onChange={(e) => patch({ sale_unit_id: e.target.value })}
-          >
-            <option value="">Nothing selected</option>
-            {units.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
-          </select>
+      {trackStock && (
+        <div className={ROW_CLASS}>
+          <div className="hidden md:block" />
+          <div>
+            <Label>Sale Unit</Label>
+            <select
+              className={SELECT_CLASS}
+              value={form.sale_unit_id}
+              onChange={(e) => patch({ sale_unit_id: e.target.value })}
+            >
+              <option value="">Nothing selected</option>
+              {units.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
+            </select>
+          </div>
+          <div>
+            <Label>Purchase Unit</Label>
+            <select
+              className={SELECT_CLASS}
+              value={form.purchase_unit_id}
+              onChange={(e) => patch({ purchase_unit_id: e.target.value })}
+            >
+              <option value="">Nothing selected</option>
+              {units.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
+            </select>
+          </div>
         </div>
-        <div>
-          <Label>Purchase Unit</Label>
-          <select
-            className={SELECT_CLASS}
-            value={form.purchase_unit_id}
-            onChange={(e) => patch({ purchase_unit_id: e.target.value })}
-          >
-            <option value="">Nothing selected</option>
-            {units.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
-          </select>
-        </div>
-      </div>
+      )}
 
       <div className={ROW_CLASS}>
-        <div>
-          <Label>Product Cost *</Label>
-          <Input
-            type="number"
-            step="0.01"
-            min="0"
-            className="mt-1"
-            value={form.cost}
-            onChange={(e) => patch({ cost: e.target.value })}
-          />
-        </div>
+        {trackStock && (
+          <div>
+            <Label>Product Cost *</Label>
+            <Input
+              type="number"
+              step="0.01"
+              min="0"
+              className="mt-1"
+              value={form.cost}
+              onChange={(e) => patch({ cost: e.target.value })}
+            />
+          </div>
+        )}
         <div>
           <Label>Product Price *</Label>
           <Input
@@ -444,7 +464,7 @@ export default function ProductFormFields({
             onChange={(e) => patch({ price: e.target.value })}
           />
         </div>
-        {trackStock ? (
+        {trackStock && (
           <div>
             <Label>Quantity *</Label>
             <Input
@@ -456,7 +476,7 @@ export default function ProductFormFields({
               onChange={(e) => patch({ qty: e.target.value })}
             />
           </div>
-        ) : <div className="hidden md:block" />}
+        )}
       </div>
 
       {trackStock && !showWarehousePrices && (
@@ -518,7 +538,7 @@ export default function ProductFormFields({
       </div>
 
       <div className={ROW_CLASS}>
-        {trackStock ? (
+        {trackStock && (
           <div>
             <Label>Alert Quantity</Label>
             <Input
@@ -530,7 +550,7 @@ export default function ProductFormFields({
               onChange={(e) => patch({ alert_quantity: e.target.value })}
             />
           </div>
-        ) : <div className="hidden md:block" />}
+        )}
         <div>
           <Label>Product Tax</Label>
           <select
