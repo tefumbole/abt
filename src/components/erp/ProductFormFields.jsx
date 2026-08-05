@@ -409,6 +409,19 @@ export default function ProductFormFields({
             {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
           </select>
         </div>
+        {!trackStock && (
+          <div>
+            <Label>Product Price *</Label>
+            <Input
+              type="number"
+              step="0.01"
+              min="0"
+              className="mt-1"
+              value={form.price}
+              onChange={(e) => patch({ price: e.target.value })}
+            />
+          </div>
+        )}
       </div>
 
       {trackStock && (
@@ -439,8 +452,8 @@ export default function ProductFormFields({
         </div>
       )}
 
-      <div className={ROW_CLASS}>
-        {trackStock && (
+      {trackStock && (
+        <div className={ROW_CLASS}>
           <div>
             <Label>Product Cost *</Label>
             <Input
@@ -452,19 +465,17 @@ export default function ProductFormFields({
               onChange={(e) => patch({ cost: e.target.value })}
             />
           </div>
-        )}
-        <div>
-          <Label>Product Price *</Label>
-          <Input
-            type="number"
-            step="0.01"
-            min="0"
-            className="mt-1"
-            value={form.price}
-            onChange={(e) => patch({ price: e.target.value })}
-          />
-        </div>
-        {trackStock && (
+          <div>
+            <Label>Product Price *</Label>
+            <Input
+              type="number"
+              step="0.01"
+              min="0"
+              className="mt-1"
+              value={form.price}
+              onChange={(e) => patch({ price: e.target.value })}
+            />
+          </div>
           <div>
             <Label>Quantity *</Label>
             <Input
@@ -476,8 +487,8 @@ export default function ProductFormFields({
               onChange={(e) => patch({ qty: e.target.value })}
             />
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
       {trackStock && !showWarehousePrices && (
         <div className={ROW_CLASS}>

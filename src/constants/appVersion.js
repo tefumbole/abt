@@ -1,11 +1,11 @@
 /** Alpha Bridge ERP release identifier — update when creating a new restore point. */
-export const APP_VERSION = 'ABT_ERP_V.2.3.0';
+export const APP_VERSION = 'ABT_ERP_V.2.3.1';
 
 export const APP_VERSION_LABEL = 'Version';
 
 export const RESTORE_POINT = {
   id: APP_VERSION,
-  name: 'Alpha Bridge ERP v2.3.0',
+  name: 'Alpha Bridge ERP v2.3.1',
   created: '2026-08-05',
   gitTag: APP_VERSION,
 };
@@ -15,6 +15,15 @@ export const RESTORE_POINT = {
  * Keep in sync with notable production deploys.
  */
 export const DEPLOYMENT_HISTORY = [
+  {
+    version: 'ABT_ERP_V.2.3.1',
+    date: '2026-08-05',
+    title: 'Digital product price beside category',
+    notes: [
+      'Digital products show Product Price on the same row as Category',
+      'Blank hourly, daily and monthly rent prices default to zero',
+    ],
+  },
   {
     version: 'ABT_ERP_V.2.3.0',
     date: '2026-08-05',
