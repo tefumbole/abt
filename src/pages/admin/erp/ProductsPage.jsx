@@ -12,10 +12,11 @@ import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { getSystemSettings } from '@/services/settingsService';
+import ProductFormFields from '@/components/erp/ProductFormFields';
 import {
-  createAdjustment, createCategory, createProduct,
-  deleteCategory, listAdjustments, listBrands, listCategories, listProducts,
-  listUnits, listWarehouses, updateCategory,
+  createAdjustment, createCategory, createProduct, deleteCategory, deleteProduct, getProduct,
+  listAdjustments, listBrands, listCategories, listProducts, listTaxes,
+  listUnits, listWarehouses, updateCategory, updateProduct,
 } from '@/services/erpService';
 
 const TAB_IDS = [
@@ -33,15 +34,17 @@ export default function ProductsPage() {
     const raw = searchParams.get('tab') || 'category';
     return TAB_IDS.includes(raw) ? raw : 'category';
   }, [searchParams]);
-  const setTab = (id) => {
-    setSearchParams({ tab: id }, { replace: true });
+  const setTab = (id, extra = {}) => {
+    setSearchParams({ tab: id, ...extra }, { replace: true });
   };
+  const editProductId = tab === 'add-product' ? searchParams.get('id') : null;
   const [warehouses, setWarehouses] = useState([]);
   const [warehouseId, setWarehouseId] = useState('');
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
   const [brands, setBrands] = useState([]);
   const [units, setUnits] = useState([]);
+  const [taxes, setTaxes] = useState([]);
   const [adjustments, setAdjustments] = useState([]);
   const [currency, setCurrency] = useState('XAF');
   const [loading, setLoading] = useState(true);
@@ -54,9 +57,8 @@ export default function ProductsPage() {
   const [editCategory, setEditCategory] = useState(null);
   const [catForm, setCatForm] = useState({ name: '', parent_id: '', image_url: '' });
   const [importText, setImportText] = useState('name,parent_category\n');
-  const [productForm, setProductForm] = useState({
-    name: '', code: '', barcode: '', category_id: '', brand_id: '', unit_id: '', cost: 0, price: 0, qty: 0, warehouse_id: '',
-  });
+  const [editProduct, setEditProduct] = useState(null);
+  const [savingProduct, setSavingProduct] = useState(false);
   const [adjForm, setAdjForm] = useState({ warehouse_id: '', product_id: '', qty: 0, note: '' });
   const [barcodeId, setBarcodeId] = useState('');
 
@@ -72,19 +74,20 @@ export default function ProductsPage() {
       const def = wh.find((w) => w.is_default) || wh[0];
       const wid = warehouseId || def?.id || '';
       if (!warehouseId && wid) setWarehouseId(wid);
-      const [p, c, b, u, a] = await Promise.all([
+      const [p, c, b, u, a, t] = await Promise.all([
         listProducts(wid || undefined),
         listCategories(),
         listBrands(),
         listUnits(),
         listAdjustments(),
+        listTaxes().catch(() => []),
       ]);
       setProducts(p || []);
       setCategories(c || []);
       setBrands(b || []);
       setUnits(u || []);
       setAdjustments(a || []);
-      if (!productForm.warehouse_id && wid) setProductForm((f) => ({ ...f, warehouse_id: wid }));
+      setTaxes(t || []);
       if (!adjForm.warehouse_id && wid) setAdjForm((f) => ({ ...f, warehouse_id: wid }));
     } catch (e) {
       toast.error(e.message);
@@ -94,6 +97,47 @@ export default function ProductsPage() {
   };
 
   useEffect(() => { reload(); }, [warehouseId]);
+
+  useEffect(() => {
+    if (!editProductId) {
+      setEditProduct(null);
+      return;
+    }
+    (async () => {
+      try {
+        setEditProduct(await getProduct(editProductId));
+      } catch (err) {
+        toast.error(err.message);
+        setTab('product-list');
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editProductId]);
+
+  useEffect(() => {
+    if (tab !== 'barcode') return;
+    const id = searchParams.get('id');
+    if (id) setBarcodeId(id);
+  }, [tab, searchParams]);
+
+  const submitProduct = async (body) => {
+    setSavingProduct(true);
+    try {
+      if (editProductId) {
+        await updateProduct(editProductId, body);
+        toast.success('Product updated');
+      } else {
+        await createProduct(body);
+        toast.success('Product created');
+      }
+      setTab('product-list');
+      reload();
+    } catch (err) {
+      toast.error(err.message);
+    } finally {
+      setSavingProduct(false);
+    }
+  };
 
   const filteredCategories = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -361,6 +405,7 @@ export default function ProductsPage() {
                 <th className="p-3">Price</th>
                 <th className="p-3">Cost</th>
                 <th className="p-3">Stock</th>
+                <th className="p-3 text-right">Action</th>
               </tr>
             </thead>
             <tbody>
@@ -371,11 +416,45 @@ export default function ProductsPage() {
                   <td className="p-3">{p.category_name || '—'}</td>
                   <td className="p-3">{Number(p.price).toFixed(2)}</td>
                   <td className="p-3">{Number(p.cost).toFixed(2)}</td>
-                  <td className="p-3">{Number(p.stock_qty || 0)}</td>
+                  <td className="p-3">
+                    {p.tracks_stock === false ? '—' : Number(p.stock_qty || 0)}
+                  </td>
+                  <td className="p-3 text-right">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button size="sm" className="bg-purple-600 hover:bg-purple-700">
+                          Action <ChevronDown className="h-3 w-3 ml-1" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => setTab('add-product', { id: p.id })}>
+                          Edit
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => setTab('barcode', { id: p.id })}>
+                          Print barcode
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          className="text-red-600"
+                          onClick={async () => {
+                            if (!confirm(`Delete "${p.name}"? This also removes its stock records.`)) return;
+                            try {
+                              await deleteProduct(p.id);
+                              toast.success('Deleted');
+                              reload();
+                            } catch (e) {
+                              toast.error(e.message);
+                            }
+                          }}
+                        >
+                          Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </td>
                 </tr>
               ))}
               {!products.length && (
-                <tr><td colSpan={6} className="p-8 text-center text-slate-500">No products yet</td></tr>
+                <tr><td colSpan={7} className="p-8 text-center text-slate-500">No products yet</td></tr>
               )}
             </tbody>
           </table>
@@ -383,49 +462,20 @@ export default function ProductsPage() {
       )}
 
       {!loading && tab === 'add-product' && (
-        <form className="rounded-xl border bg-white p-4 grid md:grid-cols-2 gap-3" onSubmit={async (e) => {
-          e.preventDefault();
-          try {
-            const stocks = productForm.warehouse_id && Number(productForm.qty)
-              ? [{ warehouse_id: productForm.warehouse_id, qty: Number(productForm.qty), price: Number(productForm.price), cost: Number(productForm.cost) }]
-              : [];
-            await createProduct({ ...productForm, cost: Number(productForm.cost), price: Number(productForm.price), stocks });
-            toast.success('Product created');
-            setTab('product-list');
-            reload();
-          } catch (err) { toast.error(err.message); }
-        }}>
-          <div><Label>Name</Label><Input required value={productForm.name} onChange={(e) => setProductForm({ ...productForm, name: e.target.value })} /></div>
-          <div><Label>Code</Label><Input value={productForm.code} onChange={(e) => setProductForm({ ...productForm, code: e.target.value })} /></div>
-          <div><Label>Barcode</Label><Input value={productForm.barcode} onChange={(e) => setProductForm({ ...productForm, barcode: e.target.value })} /></div>
-          <div><Label>Category</Label>
-            <select className="w-full border rounded-md h-10 px-2" value={productForm.category_id} onChange={(e) => setProductForm({ ...productForm, category_id: e.target.value })}>
-              <option value="">—</option>
-              {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-            </select>
-          </div>
-          <div><Label>Brand</Label>
-            <select className="w-full border rounded-md h-10 px-2" value={productForm.brand_id} onChange={(e) => setProductForm({ ...productForm, brand_id: e.target.value })}>
-              <option value="">—</option>
-              {brands.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-            </select>
-          </div>
-          <div><Label>Unit</Label>
-            <select className="w-full border rounded-md h-10 px-2" value={productForm.unit_id} onChange={(e) => setProductForm({ ...productForm, unit_id: e.target.value })}>
-              <option value="">—</option>
-              {units.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-            </select>
-          </div>
-          <div><Label>Cost</Label><Input type="number" step="0.01" value={productForm.cost} onChange={(e) => setProductForm({ ...productForm, cost: e.target.value })} /></div>
-          <div><Label>Price</Label><Input type="number" step="0.01" value={productForm.price} onChange={(e) => setProductForm({ ...productForm, price: e.target.value })} /></div>
-          <div><Label>Initial warehouse</Label>
-            <select className="w-full border rounded-md h-10 px-2" value={productForm.warehouse_id} onChange={(e) => setProductForm({ ...productForm, warehouse_id: e.target.value })}>
-              {warehouses.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
-            </select>
-          </div>
-          <div><Label>Initial qty</Label><Input type="number" step="0.001" value={productForm.qty} onChange={(e) => setProductForm({ ...productForm, qty: e.target.value })} /></div>
-          <div className="md:col-span-2"><Button type="submit" className="bg-[#003D82]">Create product</Button></div>
-        </form>
+        <ProductFormFields
+          key={editProductId || 'new'}
+          mode={editProductId ? 'edit' : 'create'}
+          initialProduct={editProductId ? editProduct : null}
+          categories={categories}
+          brands={brands}
+          units={units}
+          warehouses={warehouses}
+          taxes={taxes}
+          defaultWarehouseId={warehouseId}
+          saving={savingProduct}
+          onSubmit={submitProduct}
+          onCancel={() => setTab('product-list')}
+        />
       )}
 
       {!loading && tab === 'adjustment-list' && (

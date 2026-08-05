@@ -3,7 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { getPool } from '../../db/pool.js';
 import { requireAuth } from '../../middleware/auth.js';
 import { nextErpReference } from '../../services/erp/referenceNumbers.js';
-import { adjustStock, getStock } from '../../services/erp/stock.js';
+import { adjustStock, getNonStockProductIds, getStock } from '../../services/erp/stock.js';
 import { bool, mysqlDateTime, num, requireErpAdmin } from './helpers.js';
 
 const router = Router();
@@ -267,7 +267,9 @@ router.post('/', requireAuth, requireErpAdmin, async (req, res) => {
     if (!b.warehouse_id) return res.status(400).json({ error: 'warehouse_id required' });
     if (!items.length) return res.status(400).json({ error: 'items required' });
 
+    const nonStockIds = await getNonStockProductIds(pool, items.map((i) => i.product_id));
     for (const item of items) {
+      if (nonStockIds.has(item.product_id)) continue;
       const stock = await getStock(item.product_id, b.warehouse_id);
       if (stock < num(item.qty)) {
         return res.status(400).json({ error: `Insufficient stock for product ${item.product_id}` });
@@ -308,7 +310,7 @@ router.post('/', requireAuth, requireErpAdmin, async (req, res) => {
          VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
         [randomUUID(), id, item.product_id, qty, price, num(item.discount), num(item.tax), line]
       );
-      if ((b.sale_status || 'completed') === 'completed') {
+      if ((b.sale_status || 'completed') === 'completed' && !nonStockIds.has(item.product_id)) {
         await adjustStock(conn, { productId: item.product_id, warehouseId: b.warehouse_id, delta: -qty });
       }
     }
@@ -348,6 +350,10 @@ router.put('/:id', requireAuth, requireErpAdmin, async (req, res) => {
     const oldCompleted = sale.sale_status === 'completed';
     const warehouseId = b.warehouse_id || oldWarehouseId;
     const saleStatus = b.sale_status || sale.sale_status || 'completed';
+    const nonStockIds = await getNonStockProductIds(pool, [
+      ...items.map((i) => i.product_id),
+      ...sale.items.map((i) => i.product_id),
+    ]);
 
     if (saleStatus === 'completed') {
       // Stock released by the old (completed) lines is available again on the same warehouse.
@@ -359,6 +365,7 @@ router.put('/:id', requireAuth, requireErpAdmin, async (req, res) => {
       }
       const required = new Map();
       for (const item of items) {
+        if (nonStockIds.has(item.product_id)) continue;
         required.set(item.product_id, (required.get(item.product_id) || 0) + num(item.qty));
       }
       for (const [productId, qty] of required) {
@@ -375,6 +382,7 @@ router.put('/:id', requireAuth, requireErpAdmin, async (req, res) => {
 
     if (oldCompleted) {
       for (const item of sale.items) {
+        if (nonStockIds.has(item.product_id)) continue;
         await adjustStock(conn, {
           productId: item.product_id,
           warehouseId: oldWarehouseId,
@@ -395,7 +403,7 @@ router.put('/:id', requireAuth, requireErpAdmin, async (req, res) => {
          VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
         [randomUUID(), req.params.id, item.product_id, qty, price, num(item.discount), num(item.tax), line]
       );
-      if (saleStatus === 'completed') {
+      if (saleStatus === 'completed' && !nonStockIds.has(item.product_id)) {
         await adjustStock(conn, { productId: item.product_id, warehouseId, delta: -qty });
       }
     }
@@ -523,7 +531,9 @@ router.delete('/:id', requireAuth, requireErpAdmin, async (req, res) => {
     if (!sale) return res.status(404).json({ error: 'Not found' });
     await conn.beginTransaction();
     if (sale.sale_status === 'completed') {
+      const nonStockIds = await getNonStockProductIds(pool, sale.items.map((i) => i.product_id));
       for (const item of sale.items) {
+        if (nonStockIds.has(item.product_id)) continue;
         await adjustStock(conn, {
           productId: item.product_id,
           warehouseId: sale.warehouse_id,

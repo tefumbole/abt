@@ -8,6 +8,87 @@ import { bool, num, requireErpAdmin } from './helpers.js';
 
 const router = Router();
 
+const PRODUCT_TYPES = new Set(['standard', 'digital', 'donation', 'service']);
+const TAX_METHODS = new Set(['exclusive', 'inclusive']);
+
+const PRODUCT_SELECT = `SELECT p.*,
+    c.name AS category_name, b.name AS brand_name, u.name AS unit_name,
+    su.name AS sale_unit_name, pu.name AS purchase_unit_name,
+    t.name AS tax_name, t.rate AS tax_rate
+   FROM products p
+   LEFT JOIN erp_categories c ON c.id = p.category_id
+   LEFT JOIN erp_brands b ON b.id = p.brand_id
+   LEFT JOIN erp_units u ON u.id = p.unit_id
+   LEFT JOIN erp_units su ON su.id = p.sale_unit_id
+   LEFT JOIN erp_units pu ON pu.id = p.purchase_unit_id
+   LEFT JOIN erp_taxes t ON t.id = p.tax_id`;
+
+function mapProduct(r) {
+  const product_type = r.product_type || 'standard';
+  const rent_price_hour = num(r.rent_price_hour);
+  const rent_price_day = num(r.rent_price_day);
+  const rent_price_month = num(r.rent_price_month);
+  return {
+    ...r,
+    product_type,
+    tax_method: r.tax_method || 'exclusive',
+    is_active: Boolean(r.is_active),
+    is_featured: Boolean(r.is_featured),
+    has_warehouse_price: Boolean(r.has_warehouse_price),
+    cost: num(r.cost),
+    price: num(r.price),
+    rent_price_hour,
+    rent_price_day,
+    rent_price_month,
+    alert_quantity: num(r.alert_quantity),
+    tax_rate: r.tax_rate == null ? null : num(r.tax_rate),
+    tracks_stock: product_type === 'standard',
+    is_rentable: rent_price_hour > 0 || rent_price_day > 0 || rent_price_month > 0,
+  };
+}
+
+function randomProductCode() {
+  return String(Math.floor(1_000_000_000 + Math.random() * 9_000_000_000));
+}
+
+async function generateProductCode(pool) {
+  for (let attempt = 0; attempt < 10; attempt += 1) {
+    const code = randomProductCode();
+    const [rows] = await pool.query(`SELECT id FROM products WHERE code = ? LIMIT 1`, [code]);
+    if (!rows.length) return code;
+  }
+  return String(Date.now()).slice(-10);
+}
+
+async function isProductCodeTaken(pool, code, excludeId = null) {
+  const [rows] = await pool.query(
+    `SELECT id FROM products WHERE code = ? AND id <> ? LIMIT 1`,
+    [code, excludeId || '']
+  );
+  return rows.length > 0;
+}
+
+/** Set the absolute quantity of a warehouse line, reusing the delta-based helper. */
+async function setWarehouseStock(pool, productId, stock, price, cost) {
+  const [rows] = await pool.query(
+    `SELECT qty FROM product_warehouse WHERE product_id = ? AND warehouse_id = ? LIMIT 1`,
+    [productId, stock.warehouse_id]
+  );
+  const current = rows.length ? num(rows[0].qty) : 0;
+  await adjustStock(pool, {
+    productId,
+    warehouseId: stock.warehouse_id,
+    delta: num(stock.qty) - current,
+    price,
+    cost,
+  });
+}
+
+async function loadProduct(pool, id) {
+  const [rows] = await pool.query(`${PRODUCT_SELECT} WHERE p.id = ?`, [id]);
+  return rows.length ? mapProduct(rows[0]) : null;
+}
+
 async function crudList(table, order = 'name ASC') {
   const pool = getPool();
   const [rows] = await pool.query(`SELECT * FROM ${table} ORDER BY ${order}`);
@@ -264,15 +345,7 @@ router.get('/', requireAuth, requireErpAdmin, async (req, res) => {
   try {
     const pool = getPool();
     const warehouseId = req.query.warehouse_id || null;
-    const [rows] = await pool.query(
-      `SELECT p.*,
-        c.name AS category_name, b.name AS brand_name, u.name AS unit_name
-       FROM products p
-       LEFT JOIN erp_categories c ON c.id = p.category_id
-       LEFT JOIN erp_brands b ON b.id = p.brand_id
-       LEFT JOIN erp_units u ON u.id = p.unit_id
-       ORDER BY p.name ASC`
-    );
+    const [rows] = await pool.query(`${PRODUCT_SELECT} ORDER BY p.name ASC`);
     let stockMap = {};
     if (warehouseId) {
       const [stocks] = await pool.query(
@@ -288,10 +361,7 @@ router.get('/', requireAuth, requireErpAdmin, async (req, res) => {
     }
     res.json({
       data: rows.map((r) => ({
-        ...r,
-        is_active: Boolean(r.is_active),
-        cost: num(r.cost),
-        price: num(r.price),
+        ...mapProduct(r),
         stock_qty: stockMap[r.id] ? num(stockMap[r.id].qty) : 0,
       })),
     });
@@ -364,17 +434,37 @@ router.get('/barcode/:id', requireAuth, requireErpAdmin, async (req, res) => {
   }
 });
 
+router.get('/next-code', requireAuth, requireErpAdmin, async (_req, res) => {
+  try {
+    res.json({ code: await generateProductCode(getPool()) });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 router.get('/:id', requireAuth, requireErpAdmin, async (req, res) => {
   try {
     const pool = getPool();
-    const [rows] = await pool.query(`SELECT * FROM products WHERE id = ?`, [req.params.id]);
+    const [rows] = await pool.query(`${PRODUCT_SELECT} WHERE p.id = ?`, [req.params.id]);
     if (!rows.length) return res.status(404).json({ error: 'Not found' });
     const [stocks] = await pool.query(
       `SELECT pw.*, w.name AS warehouse_name FROM product_warehouse pw
        JOIN warehouses w ON w.id = pw.warehouse_id WHERE pw.product_id = ?`,
       [req.params.id]
     );
-    res.json({ data: { ...rows[0], warehouses: stocks } });
+    res.json({
+      data: {
+        ...mapProduct(rows[0]),
+        warehouses: stocks,
+        warehouse_prices: stocks.map((s) => ({
+          warehouse_id: s.warehouse_id,
+          warehouse_name: s.warehouse_name,
+          qty: num(s.qty),
+          price: s.price == null ? null : num(s.price),
+          cost: s.cost == null ? null : num(s.cost),
+        })),
+      },
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -384,32 +474,55 @@ router.post('/', requireAuth, requireErpAdmin, async (req, res) => {
   try {
     const b = req.body || {};
     if (!b.name?.trim()) return res.status(400).json({ error: 'Name is required' });
+    const productType = String(b.product_type || 'standard').toLowerCase();
+    if (!PRODUCT_TYPES.has(productType)) {
+      return res.status(400).json({ error: `Invalid product type "${b.product_type}"` });
+    }
+    const taxMethod = String(b.tax_method || 'exclusive').toLowerCase();
+    if (!TAX_METHODS.has(taxMethod)) {
+      return res.status(400).json({ error: `Invalid tax method "${b.tax_method}"` });
+    }
     const pool = getPool();
     const id = randomUUID();
-    const code = b.code?.trim() || `P-${id.slice(0, 8).toUpperCase()}`;
+    const code = b.code?.trim() || (await generateProductCode(pool));
+    if (await isProductCodeTaken(pool, code)) {
+      return res.status(409).json({ error: `Product code "${code}" is already used by another product` });
+    }
+    const tracksStock = productType === 'standard';
+    const hasWarehousePrice = bool(b.has_warehouse_price, false);
+    const price = num(b.price);
+    const cost = num(b.cost);
     await pool.query(
-      `INSERT INTO products (id, name, code, barcode, category_id, brand_id, unit_id, cost, price, image_url, description, product_type, is_active)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO products (id, name, code, barcode, category_id, brand_id, unit_id, sale_unit_id, purchase_unit_id,
+        cost, price, rent_price_hour, rent_price_day, rent_price_month, alert_quantity, tax_id, tax_method,
+        product_location, is_featured, has_warehouse_price, image_url, description, product_type, is_active)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         id, b.name.trim(), code, b.barcode || null, b.category_id || null, b.brand_id || null, b.unit_id || null,
-        num(b.cost), num(b.price), b.image_url || null, b.description || null, b.product_type || 'standard',
+        b.sale_unit_id || null, b.purchase_unit_id || null,
+        cost, price, num(b.rent_price_hour), num(b.rent_price_day), num(b.rent_price_month),
+        tracksStock ? num(b.alert_quantity) : 0, b.tax_id || null, taxMethod,
+        b.product_location || null, bool(b.is_featured, false) ? 1 : 0, hasWarehousePrice ? 1 : 0,
+        b.image_url || null, b.description || null, productType,
         bool(b.is_active, true) ? 1 : 0,
       ]
     );
-    const stocks = Array.isArray(b.stocks) ? b.stocks : [];
+    const stocks = tracksStock && Array.isArray(b.stocks) ? b.stocks : [];
     for (const s of stocks) {
       if (!s.warehouse_id) continue;
       await adjustStock(pool, {
         productId: id,
         warehouseId: s.warehouse_id,
         delta: num(s.qty),
-        price: s.price != null ? num(s.price) : num(b.price),
-        cost: s.cost != null ? num(s.cost) : num(b.cost),
+        price: hasWarehousePrice && s.price != null ? num(s.price) : price,
+        cost: hasWarehousePrice && s.cost != null ? num(s.cost) : cost,
       });
     }
-    const [rows] = await pool.query(`SELECT * FROM products WHERE id = ?`, [id]);
-    res.status(201).json({ data: rows[0] });
+    res.status(201).json({ data: await loadProduct(pool, id) });
   } catch (err) {
+    if (err.code === 'ER_DUP_ENTRY') {
+      return res.status(409).json({ error: 'Product code is already used by another product' });
+    }
     res.status(500).json({ error: err.message });
   }
 });
@@ -421,28 +534,75 @@ router.put('/:id', requireAuth, requireErpAdmin, async (req, res) => {
     if (!ex.length) return res.status(404).json({ error: 'Not found' });
     const c = ex[0];
     const b = req.body || {};
+    const productType = String(b.product_type || c.product_type || 'standard').toLowerCase();
+    if (!PRODUCT_TYPES.has(productType)) {
+      return res.status(400).json({ error: `Invalid product type "${b.product_type}"` });
+    }
+    const taxMethod = String(b.tax_method || c.tax_method || 'exclusive').toLowerCase();
+    if (!TAX_METHODS.has(taxMethod)) {
+      return res.status(400).json({ error: `Invalid tax method "${b.tax_method}"` });
+    }
+    const code = b.code !== undefined ? String(b.code || '').trim() || c.code : c.code;
+    if (code && code !== c.code && (await isProductCodeTaken(pool, code, req.params.id))) {
+      return res.status(409).json({ error: `Product code "${code}" is already used by another product` });
+    }
+    const tracksStock = productType === 'standard';
+    const hasWarehousePrice = b.has_warehouse_price !== undefined
+      ? bool(b.has_warehouse_price, false)
+      : Boolean(c.has_warehouse_price);
+    const price = b.price !== undefined ? num(b.price) : num(c.price);
+    const cost = b.cost !== undefined ? num(b.cost) : num(c.cost);
     await pool.query(
-      `UPDATE products SET name=?, code=?, barcode=?, category_id=?, brand_id=?, unit_id=?, cost=?, price=?,
+      `UPDATE products SET name=?, code=?, barcode=?, category_id=?, brand_id=?, unit_id=?, sale_unit_id=?,
+        purchase_unit_id=?, cost=?, price=?, rent_price_hour=?, rent_price_day=?, rent_price_month=?,
+        alert_quantity=?, tax_id=?, tax_method=?, product_location=?, is_featured=?, has_warehouse_price=?,
         image_url=?, description=?, product_type=?, is_active=? WHERE id=?`,
       [
         b.name?.trim() || c.name,
-        b.code !== undefined ? b.code : c.code,
+        code,
         b.barcode !== undefined ? b.barcode : c.barcode,
         b.category_id !== undefined ? b.category_id : c.category_id,
         b.brand_id !== undefined ? b.brand_id : c.brand_id,
         b.unit_id !== undefined ? b.unit_id : c.unit_id,
-        b.cost !== undefined ? num(b.cost) : num(c.cost),
-        b.price !== undefined ? num(b.price) : num(c.price),
+        b.sale_unit_id !== undefined ? b.sale_unit_id || null : c.sale_unit_id,
+        b.purchase_unit_id !== undefined ? b.purchase_unit_id || null : c.purchase_unit_id,
+        cost,
+        price,
+        b.rent_price_hour !== undefined ? num(b.rent_price_hour) : num(c.rent_price_hour),
+        b.rent_price_day !== undefined ? num(b.rent_price_day) : num(c.rent_price_day),
+        b.rent_price_month !== undefined ? num(b.rent_price_month) : num(c.rent_price_month),
+        tracksStock ? (b.alert_quantity !== undefined ? num(b.alert_quantity) : num(c.alert_quantity)) : 0,
+        b.tax_id !== undefined ? b.tax_id || null : c.tax_id,
+        taxMethod,
+        b.product_location !== undefined ? b.product_location || null : c.product_location,
+        (b.is_featured !== undefined ? bool(b.is_featured, false) : Boolean(c.is_featured)) ? 1 : 0,
+        hasWarehousePrice ? 1 : 0,
         b.image_url !== undefined ? b.image_url : c.image_url,
         b.description !== undefined ? b.description : c.description,
-        b.product_type || c.product_type,
+        productType,
         (b.is_active !== undefined ? bool(b.is_active) : Boolean(c.is_active)) ? 1 : 0,
         req.params.id,
       ]
     );
-    const [rows] = await pool.query(`SELECT * FROM products WHERE id = ?`, [req.params.id]);
-    res.json({ data: rows[0] });
+    if (!tracksStock) {
+      await pool.query(`DELETE FROM product_warehouse WHERE product_id = ?`, [req.params.id]);
+    } else if (Array.isArray(b.stocks)) {
+      for (const s of b.stocks) {
+        if (!s.warehouse_id) continue;
+        await setWarehouseStock(
+          pool,
+          req.params.id,
+          s,
+          hasWarehousePrice && s.price != null ? num(s.price) : price,
+          hasWarehousePrice && s.cost != null ? num(s.cost) : cost
+        );
+      }
+    }
+    res.json({ data: await loadProduct(pool, req.params.id) });
   } catch (err) {
+    if (err.code === 'ER_DUP_ENTRY') {
+      return res.status(409).json({ error: 'Product code is already used by another product' });
+    }
     res.status(500).json({ error: err.message });
   }
 });

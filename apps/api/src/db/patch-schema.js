@@ -118,6 +118,18 @@ export const SCHEMA_PATCHES = [
   'ALTER TABLE erp_booking_products ADD COLUMN batch_no VARCHAR(64) DEFAULT NULL',
   'ALTER TABLE erp_booking_products ADD COLUMN booking_method VARCHAR(32) NOT NULL DEFAULT \'duration\'',
   'ALTER TABLE erp_booking_products ADD COLUMN `number` VARCHAR(64) DEFAULT NULL',
+  // Stocky-style product attributes (units, rent pricing, tax, stock alerts)
+  'ALTER TABLE products ADD COLUMN sale_unit_id CHAR(36) DEFAULT NULL',
+  'ALTER TABLE products ADD COLUMN purchase_unit_id CHAR(36) DEFAULT NULL',
+  'ALTER TABLE products ADD COLUMN rent_price_hour DECIMAL(15,2) NOT NULL DEFAULT 0',
+  'ALTER TABLE products ADD COLUMN rent_price_day DECIMAL(15,2) NOT NULL DEFAULT 0',
+  'ALTER TABLE products ADD COLUMN rent_price_month DECIMAL(15,2) NOT NULL DEFAULT 0',
+  'ALTER TABLE products ADD COLUMN alert_quantity DECIMAL(15,3) NOT NULL DEFAULT 0',
+  'ALTER TABLE products ADD COLUMN tax_id CHAR(36) DEFAULT NULL',
+  'ALTER TABLE products ADD COLUMN tax_method VARCHAR(16) NOT NULL DEFAULT \'exclusive\'',
+  'ALTER TABLE products ADD COLUMN product_location VARCHAR(255) DEFAULT NULL',
+  'ALTER TABLE products ADD COLUMN is_featured TINYINT(1) NOT NULL DEFAULT 0',
+  'ALTER TABLE products ADD COLUMN has_warehouse_price TINYINT(1) NOT NULL DEFAULT 0',
 ];
 
 export const CREATE_STATEMENTS = [

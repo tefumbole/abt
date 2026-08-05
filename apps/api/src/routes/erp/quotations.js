@@ -308,8 +308,10 @@ router.post('/:id/convert-sale', requireAuth, requireErpAdmin, async (req, res) 
 
 async function createSaleFromQuotation(req, b, quotationId) {
   const pool = getPool();
-  const { adjustStock, getStock } = await import('../../services/erp/stock.js');
+  const { adjustStock, getNonStockProductIds, getStock } = await import('../../services/erp/stock.js');
+  const nonStockIds = await getNonStockProductIds(pool, b.items.map((i) => i.product_id));
   for (const item of b.items) {
+    if (nonStockIds.has(item.product_id)) continue;
     const stock = await getStock(item.product_id, b.warehouse_id);
     if (stock < num(item.qty)) throw new Error(`Insufficient stock for product ${item.product_id}`);
   }
@@ -341,7 +343,9 @@ async function createSaleFromQuotation(req, b, quotationId) {
          VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
         [randomUUID(), id, item.product_id, num(item.qty), num(item.net_unit_price), num(item.discount), num(item.tax), line]
       );
-      await adjustStock(conn, { productId: item.product_id, warehouseId: b.warehouse_id, delta: -num(item.qty) });
+      if (!nonStockIds.has(item.product_id)) {
+        await adjustStock(conn, { productId: item.product_id, warehouseId: b.warehouse_id, delta: -num(item.qty) });
+      }
     }
     await conn.query(`UPDATE quotations SET status = 'approved', sale_id = ? WHERE id = ?`, [id, quotationId]);
     await conn.commit();

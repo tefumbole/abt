@@ -16,7 +16,9 @@ import {
   makeMoney, num, toDateTimeLocal, toMysqlDateTime,
 } from '@/lib/erpFormat';
 import {
-  BOOKING_METHODS, bookingGrandTotal, bookingLineSubtotal, bookingMethodLabel, hoursBetween,
+  BOOKING_METHODS, bookingGrandTotal, bookingLineSubtotal, bookingMethod, bookingMethodLabel,
+  defaultBookingMethod, durationFor, durationUnitLabel, hoursBetween,
+  normaliseBookingMethod, rentPriceFor,
 } from '@/lib/rentalFormat';
 import { getSystemSettings } from '@/services/settingsService';
 import {
@@ -62,16 +64,17 @@ function emptyForm() {
 }
 
 function newLine(product, from, to) {
+  const method = defaultBookingMethod(product);
   return {
     product_id: product.id,
     product_name: product.name || '',
     product_code: product.code || product.barcode || '',
     qty: 1,
     batch_no: product.batch_no || '',
-    booking_method: 'duration',
+    booking_method: method,
     number: '',
-    net_unit_price: num(product.price),
-    duration_hours: hoursBetween(from, to),
+    net_unit_price: rentPriceFor(product, method),
+    duration_hours: durationFor(method, from, to),
     discount: 0,
     tax: 0,
     from_datetime: from,
@@ -127,7 +130,7 @@ function hydrate(booking) {
       product_code: item.product_code || item.code || '',
       qty: num(item.qty, 1),
       batch_no: item.batch_no || '',
-      booking_method: item.booking_method || 'duration',
+      booking_method: normaliseBookingMethod(item.booking_method),
       number: item.number || '',
       net_unit_price: num(item.net_unit_price),
       duration_hours: num(item.duration_hours, 1),
@@ -278,6 +281,28 @@ export default function BookingForm({ bookingId = null, onSaved = () => {}, onCa
     setForm((prev) => ({ ...prev, items: prev.items.filter((_, i) => i !== index) }));
   };
 
+  /** Switching hour/day/month repricing the line from the product's rent card. */
+  const changeLineMethod = (index, method) => {
+    setForm((prev) => {
+      const line = prev.items[index];
+      if (!line) return prev;
+      const product = products.find((p) => String(p.id) === String(line.product_id));
+      return {
+        ...prev,
+        items: prev.items.map((item, i) => (i === index ? {
+          ...item,
+          booking_method: method,
+          net_unit_price: product ? rentPriceFor(product, method) : item.net_unit_price,
+          duration_hours: durationFor(
+            method,
+            item.from_datetime || prev.from_datetime,
+            item.to_datetime || prev.to_datetime
+          ),
+        } : item)),
+      };
+    });
+  };
+
   const selectedCustomer = useMemo(
     () => customers.find((c) => String(c.id) === String(form.customer_id)) || null,
     [customers, form.customer_id]
@@ -398,7 +423,7 @@ export default function BookingForm({ bookingId = null, onSaved = () => {}, onCa
         ...line,
         from_datetime: prev.from_datetime,
         to_datetime: prev.to_datetime,
-        duration_hours: hoursBetween(prev.from_datetime, prev.to_datetime),
+        duration_hours: durationFor(line.booking_method, prev.from_datetime, prev.to_datetime),
       })),
     }));
     toast.success(`Rental period applied to ${form.items.length} item(s)`);
@@ -489,10 +514,10 @@ export default function BookingForm({ bookingId = null, onSaved = () => {}, onCa
         product_id: line.product_id,
         qty: num(line.qty, 1),
         net_unit_price: num(line.net_unit_price),
-        duration_hours: line.booking_method === 'flat'
+        duration_hours: normaliseBookingMethod(line.booking_method) === 'flat'
           ? 1
           : Math.max(1, num(line.duration_hours, 1)),
-        booking_method: line.booking_method || 'duration',
+        booking_method: normaliseBookingMethod(line.booking_method),
         number: line.number || null,
         batch_no: line.batch_no || null,
         discount: num(line.discount),
@@ -775,8 +800,13 @@ export default function BookingForm({ bookingId = null, onSaved = () => {}, onCa
                     </span>
                   </span>
                   <span className="shrink-0 text-slate-600">
-                    {money(p.price)}
-                    <span className="ml-2 text-xs text-slate-400">stock {num(p.stock_qty)}</span>
+                    {money(rentPriceFor(p, defaultBookingMethod(p)))}
+                    <span className="ml-1 text-xs text-slate-400">
+                      /{bookingMethod(defaultBookingMethod(p)).unit}
+                    </span>
+                    {p.tracks_stock === false ? null : (
+                      <span className="ml-2 text-xs text-slate-400">stock {num(p.stock_qty)}</span>
+                    )}
                   </span>
                 </button>
               ))}
@@ -816,7 +846,7 @@ export default function BookingForm({ bookingId = null, onSaved = () => {}, onCa
                 </tr>
               )}
               {form.items.map((line, index) => {
-                const flat = line.booking_method === 'flat';
+                const flat = normaliseBookingMethod(line.booking_method) === 'flat';
                 return (
                   <tr key={`${line.product_id}-${index}`} className="border-t align-middle">
                     <td className="p-2">
@@ -843,8 +873,8 @@ export default function BookingForm({ bookingId = null, onSaved = () => {}, onCa
                     <td className="p-2">
                       <select
                         className={CELL_SELECT_CLASS}
-                        value={line.booking_method}
-                        onChange={(e) => updateLine(index, { booking_method: e.target.value })}
+                        value={normaliseBookingMethod(line.booking_method)}
+                        onChange={(e) => changeLineMethod(index, e.target.value)}
                       >
                         {BOOKING_METHODS.map((m) => (
                           <option key={m.value} value={m.value}>{m.label}</option>
@@ -878,10 +908,15 @@ export default function BookingForm({ bookingId = null, onSaved = () => {}, onCa
                         className={cn(CELL_INPUT_CLASS, flat && 'bg-slate-100 text-slate-400')}
                         title={flat
                           ? `${bookingMethodLabel('flat')} — duration is not applied`
-                          : 'Duration in hours'}
+                          : `Duration in ${durationUnitLabel(line.booking_method)}`}
                         value={line.duration_hours}
                         onChange={(e) => updateLine(index, { duration_hours: e.target.value })}
                       />
+                      {!flat && (
+                        <span className="mt-1 block text-[11px] text-slate-400">
+                          {durationUnitLabel(line.booking_method)}
+                        </span>
+                      )}
                     </td>
                     <td className="p-2">
                       <Input

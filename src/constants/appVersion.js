@@ -1,11 +1,11 @@
 /** Alpha Bridge ERP release identifier — update when creating a new restore point. */
-export const APP_VERSION = 'ABT_ERP_V.2.2.14';
+export const APP_VERSION = 'ABT_ERP_V.2.2.15';
 
 export const APP_VERSION_LABEL = 'Version';
 
 export const RESTORE_POINT = {
   id: APP_VERSION,
-  name: 'Alpha Bridge ERP v2.2.14',
+  name: 'Alpha Bridge ERP v2.2.15',
   created: '2026-08-05',
   gitTag: APP_VERSION,
 };
@@ -15,6 +15,17 @@ export const RESTORE_POINT = {
  * Keep in sync with notable production deploys.
  */
 export const DEPLOYMENT_HISTORY = [
+  {
+    version: 'ABT_ERP_V.2.2.15',
+    date: '2026-08-05',
+    title: 'Beyond-style Add Product with rent pricing',
+    notes: [
+      'Add Product matches Beyond: type, code generator, units, tax method, location, featured',
+      'Standard products keep stock; digital, donation and service products are stockless',
+      'Hour / day / month rent prices drive the booking module line pricing',
+      'Product image upload and rich-text product details',
+    ],
+  },
   {
     version: 'ABT_ERP_V.2.2.11',
     date: '2026-08-05',

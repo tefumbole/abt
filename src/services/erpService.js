@@ -65,6 +65,8 @@ export const deleteWarehouse = (id) => erpApi.del(`/warehouses/${id}`);
 
 export const listProducts = (warehouseId) =>
   erpApi.get(`/products${warehouseId ? `?warehouse_id=${warehouseId}` : ''}`);
+export const getProduct = (id) => erpApi.get(`/products/${id}`);
+export const nextProductCode = () => erpApi.getRaw('/products/next-code').then((r) => r.code);
 export const createProduct = (body) => erpApi.post('/products', body).then((r) => r.data);
 export const updateProduct = (id, body) => erpApi.put(`/products/${id}`, body).then((r) => r.data);
 export const deleteProduct = (id) => erpApi.del(`/products/${id}`);

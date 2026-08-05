@@ -102,13 +102,24 @@ function serialiseCcRecipients(value) {
 }
 
 /**
+ * Pricing methods, mirroring BOOKING_METHODS in src/lib/rentalFormat.js.
+ * `duration_hours` holds the billable count in the method's own unit.
+ */
+const BOOKING_METHODS = new Set(['hourly', 'daily', 'monthly', 'flat']);
+
+function bookingMethod(value) {
+  const candidate = value === 'duration' ? 'hourly' : String(value || '');
+  return BOOKING_METHODS.has(candidate) ? candidate : 'daily';
+}
+
+/**
  * Line total. Mirrors `bookingLineSubtotal` in src/lib/rentalFormat.js:
  * `flat` ignores the duration, every other method multiplies by it.
  */
 function lineSubtotal(item = {}) {
   const qty = num(item.qty, 1);
   const price = num(item.net_unit_price);
-  const duration = item.booking_method === 'flat' ? 1 : num(item.duration_hours, 1) || 1;
+  const duration = bookingMethod(item.booking_method) === 'flat' ? 1 : num(item.duration_hours, 1) || 1;
   return Math.max(0, qty * price * duration - num(item.discount) + num(item.tax));
 }
 
@@ -119,7 +130,7 @@ function bookingGrandTotal(items = [], order = {}) {
 }
 
 function itemRow(bookingId, item, fallbackFrom, fallbackTo) {
-  const method = item.booking_method ? String(item.booking_method) : 'duration';
+  const method = bookingMethod(item.booking_method);
   return [
     randomUUID(),
     bookingId,
@@ -381,7 +392,7 @@ router.get('/bookings/:id', requireAuth, requireErpAdmin, async (req, res) => {
           qty: num(i.qty),
           net_unit_price: num(i.net_unit_price),
           duration_hours: num(i.duration_hours, 1),
-          booking_method: i.booking_method || 'duration',
+          booking_method: bookingMethod(i.booking_method),
           number: i.number ?? null,
           batch_no: i.batch_no ?? null,
           discount: num(i.discount),

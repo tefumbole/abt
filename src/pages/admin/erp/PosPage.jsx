@@ -11,6 +11,7 @@ import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 import { amount, formatErpDate, makeMoney, num, payingMethodLabel } from '@/lib/erpFormat';
 import { buildReceiptHtml, loadErpCompany, RECEIPT_STYLES } from '@/lib/erpDocuments';
+import { productImageSrc } from '@/lib/erpImages';
 import { openPrintWindow } from '@/lib/erpExport';
 import { getSystemSettings } from '@/services/settingsService';
 import {
@@ -254,6 +255,10 @@ export default function PosPage() {
       list = list.filter((p) => String(p.category_id) === String(filterId));
     } else if (filterMode === 'brand' && filterId) {
       list = list.filter((p) => String(p.brand_id) === String(filterId));
+    } else if (filterMode === 'featured') {
+      // Falls back to the whole catalogue while nothing is flagged featured yet.
+      const featured = list.filter((p) => p.is_featured);
+      if (featured.length) list = featured;
     }
     const q = search.trim().toLowerCase();
     if (!q) return list;
@@ -264,11 +269,16 @@ export default function PosPage() {
     );
   }, [products, search, filterMode, filterId]);
 
-  /** `null` means the warehouse has no stock row for that product — never block on it. */
+  /**
+   * `null` means unlimited — either the warehouse has no stock row for that product,
+   * or the product is a stockless type (digital, donation, service).
+   */
   const stockById = useMemo(() => {
     const map = new Map();
     products.forEach((p) => {
-      map.set(p.id, p.stock_qty === null || p.stock_qty === undefined ? null : num(p.stock_qty));
+      const unlimited = p.tracks_stock === false
+        || p.stock_qty === null || p.stock_qty === undefined;
+      map.set(p.id, unlimited ? null : num(p.stock_qty));
     });
     return map;
   }, [products]);
@@ -1073,7 +1083,7 @@ export default function PosPage() {
                     >
                       <div className="h-20 flex items-center justify-center bg-white rounded-lg border mb-2 overflow-hidden">
                         {p.image_url ? (
-                          <img src={p.image_url} alt="" className="max-h-full max-w-full object-contain" />
+                          <img src={productImageSrc(p.image_url)} alt="" className="max-h-full max-w-full object-contain" />
                         ) : (
                           <Package className="h-8 w-8 text-slate-300" />
                         )}

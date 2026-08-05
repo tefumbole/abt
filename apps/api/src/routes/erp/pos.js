@@ -3,7 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { getPool } from '../../db/pool.js';
 import { requireAuth } from '../../middleware/auth.js';
 import { nextErpReference } from '../../services/erp/referenceNumbers.js';
-import { adjustStock, getStock } from '../../services/erp/stock.js';
+import { adjustStock, getNonStockProductIds, getStock } from '../../services/erp/stock.js';
 import { mysqlDateTime, num, requireErpAdmin } from './helpers.js';
 
 const router = Router();
@@ -248,7 +248,9 @@ router.post('/sale', requireAuth, requireErpAdmin, async (req, res) => {
     const items = Array.isArray(body.items) ? body.items : [];
     if (!body.warehouse_id) return res.status(400).json({ error: 'warehouse_id required' });
     if (!items.length) return res.status(400).json({ error: 'items required' });
+    const nonStockIds = await getNonStockProductIds(pool, items.map((i) => i.product_id));
     for (const item of items) {
+      if (nonStockIds.has(item.product_id)) continue;
       const stock = await getStock(item.product_id, body.warehouse_id);
       if (stock < num(item.qty)) {
         return res.status(400).json({ error: `Insufficient stock for product ${item.product_id}` });
@@ -292,7 +294,9 @@ router.post('/sale', requireAuth, requireErpAdmin, async (req, res) => {
          VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
         [randomUUID(), id, item.product_id, qty, price, num(item.discount), num(item.tax), line]
       );
-      await adjustStock(conn, { productId: item.product_id, warehouseId: body.warehouse_id, delta: -qty });
+      if (!nonStockIds.has(item.product_id)) {
+        await adjustStock(conn, { productId: item.product_id, warehouseId: body.warehouse_id, delta: -qty });
+      }
     }
     const payingMethod = body.paying_method
       || PAID_BY_METHODS[Number(body.paid_by_id)]

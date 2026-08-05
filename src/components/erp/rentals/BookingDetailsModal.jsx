@@ -10,7 +10,7 @@ import { cn } from '@/lib/utils';
 import { PAYMENT_STATUS_META, formatErpDate, makeMoney, num } from '@/lib/erpFormat';
 import {
   BOOKING_STATUS_META, REVIEW_STATUS_META, SIGNATURE_STATUS_META,
-  bookingLineSubtotal, bookingMethodLabel, statusMeta,
+  bookingLineSubtotal, bookingMethodLabel, durationUnitLabel, normaliseBookingMethod, statusMeta,
 } from '@/lib/rentalFormat';
 import { DOCUMENT_STYLES, buildDocumentHtml, loadErpCompany } from '@/lib/erpDocuments';
 import { downloadHtmlPdf, openPrintWindow } from '@/lib/erpExport';
@@ -62,9 +62,9 @@ export function bookingToDocument(booking = {}, dateFormat = 'd-m-Y') {
     items: (booking.items || []).map((line) => ({
       product_name: [
         line.product_name || '',
-        line.booking_method === 'flat'
+        normaliseBookingMethod(line.booking_method) === 'flat'
           ? bookingMethodLabel(line.booking_method)
-          : `${bookingMethodLabel(line.booking_method)} × ${num(line.duration_hours, 1) || 1}h`,
+          : `${bookingMethodLabel(line.booking_method)} × ${num(line.duration_hours, 1) || 1} ${durationUnitLabel(line.booking_method)}`,
       ].filter(Boolean).join(' — '),
       product_code: line.product_code,
       qty: line.qty,
@@ -305,7 +305,9 @@ export default function BookingDetailsModal({
                       <td className="p-2">{line.batch_no || '—'}</td>
                       <td className="p-2 text-right">{fmtMoney(line.net_unit_price)}</td>
                       <td className="p-2 text-right">
-                        {line.booking_method === 'flat' ? '—' : `${num(line.duration_hours, 1) || 1} h`}
+                        {normaliseBookingMethod(line.booking_method) === 'flat'
+                          ? '—'
+                          : `${num(line.duration_hours, 1) || 1} ${durationUnitLabel(line.booking_method)}`}
                       </td>
                       <td className="p-2 text-right">{fmtMoney(line.discount)}</td>
                       <td className="p-2 text-right">{fmtMoney(line.tax)}</td>

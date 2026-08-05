@@ -30,16 +30,65 @@ export const REVIEW_STATUS_META = {
 
 export const BOOKING_STATUSES = Object.keys(BOOKING_STATUS_META);
 
-/** How a line is priced: by elapsed duration, or a flat charge per unit. */
+/**
+ * How a line is priced. Each method maps to the matching rent price on the
+ * product (hour / day / month); `flat` is a one-off charge with no duration.
+ */
 export const BOOKING_METHODS = [
-  { value: 'duration', label: 'By duration' },
-  { value: 'flat', label: 'Flat rate' },
-  { value: 'daily', label: 'Per day' },
-  { value: 'hourly', label: 'Per hour' },
+  { value: 'hourly', label: 'Per hour', unit: 'hour', priceField: 'rent_price_hour', hours: 1 },
+  { value: 'daily', label: 'Per day', unit: 'day', priceField: 'rent_price_day', hours: 24 },
+  { value: 'monthly', label: 'Per month', unit: 'month', priceField: 'rent_price_month', hours: 24 * 30 },
+  { value: 'flat', label: 'Flat rate', unit: null, priceField: null, hours: null },
 ];
 
+/** Bookings created before hour/day/month pricing stored a generic `duration`. */
+const LEGACY_METHODS = { duration: 'hourly' };
+
+export function normaliseBookingMethod(value) {
+  const candidate = LEGACY_METHODS[value] || value;
+  return BOOKING_METHODS.some((m) => m.value === candidate) ? candidate : 'daily';
+}
+
+export function bookingMethod(value) {
+  const key = normaliseBookingMethod(value);
+  return BOOKING_METHODS.find((m) => m.value === key);
+}
+
 export function bookingMethodLabel(value) {
-  return BOOKING_METHODS.find((m) => m.value === value)?.label || 'By duration';
+  return bookingMethod(value).label;
+}
+
+/** Short unit for duration cells: `hour(s)`, `day(s)`, `month(s)` or `—` for flat. */
+export function durationUnitLabel(value) {
+  const { unit } = bookingMethod(value);
+  return unit ? `${unit}(s)` : '—';
+}
+
+export function isRentable(product = {}) {
+  if (product.is_rentable != null) return Boolean(product.is_rentable);
+  return ['rent_price_hour', 'rent_price_day', 'rent_price_month'].some((f) => num(product[f]) > 0);
+}
+
+/** The method a product is normally rented by, based on which rent price it carries. */
+export function defaultBookingMethod(product = {}) {
+  if (num(product.rent_price_day) > 0) return 'daily';
+  if (num(product.rent_price_hour) > 0) return 'hourly';
+  if (num(product.rent_price_month) > 0) return 'monthly';
+  return 'daily';
+}
+
+/** Rent price for a method, falling back to the product's sale price. */
+export function rentPriceFor(product = {}, method) {
+  const { priceField } = bookingMethod(method);
+  const rent = priceField ? num(product[priceField]) : 0;
+  return rent > 0 ? rent : num(product.price);
+}
+
+/** Billable units between two datetimes for the given method, rounded up, minimum 1. */
+export function durationFor(method, from, to) {
+  const { hours } = bookingMethod(method);
+  if (!hours) return 1;
+  return Math.max(1, Math.ceil(hoursBetween(from, to) / hours));
 }
 
 export function statusMeta(map, value, fallback) {
@@ -50,7 +99,9 @@ export function statusMeta(map, value, fallback) {
 export function bookingLineSubtotal(line = {}) {
   const qty = num(line.qty, 1);
   const price = num(line.net_unit_price);
-  const duration = line.booking_method === 'flat' ? 1 : num(line.duration_hours, 1) || 1;
+  const duration = normaliseBookingMethod(line.booking_method) === 'flat'
+    ? 1
+    : num(line.duration_hours, 1) || 1;
   return Math.max(0, qty * price * duration - num(line.discount) + num(line.tax));
 }
 

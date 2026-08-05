@@ -25,6 +25,18 @@ export async function adjustStock(connOrPool, { productId, warehouseId, delta, p
   return qty;
 }
 
+/** Ids among `productIds` that never hold stock (digital, donation, service). */
+export async function getNonStockProductIds(connOrPool, productIds) {
+  const ids = [...new Set((productIds || []).filter(Boolean))];
+  if (!ids.length) return new Set();
+  const db = connOrPool || getPool();
+  const [rows] = await db.query(
+    `SELECT id FROM products WHERE id IN (${ids.map(() => '?').join(',')}) AND product_type <> 'standard'`,
+    ids
+  );
+  return new Set(rows.map((r) => r.id));
+}
+
 export async function getStock(productId, warehouseId) {
   const pool = getPool();
   const [rows] = await pool.query(
