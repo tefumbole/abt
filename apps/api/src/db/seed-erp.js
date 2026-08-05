@@ -49,6 +49,19 @@ export async function seedErp(pool) {
     console.log('Seeded default ERP cash account');
   }
 
+  // Walk-in customer for POS (erp_customers only — not system users)
+  const [walkIn] = await pool.query(
+    `SELECT id FROM erp_customers WHERE name = 'Walk-in Customer' LIMIT 1`
+  );
+  if (!walkIn.length) {
+    await pool.query(
+      `INSERT INTO erp_customers (id, name, phone, email, company_name, is_active)
+       VALUES (?, 'Walk-in Customer', NULL, NULL, 'POS', 1)`,
+      [randomUUID()]
+    );
+    console.log('Seeded Walk-in Customer for POS');
+  }
+
   const [currencies] = await pool.query(`SELECT id FROM erp_currencies LIMIT 1`);
   if (!currencies.length) {
     let defaultCode = 'XAF';

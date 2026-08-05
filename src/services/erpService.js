@@ -73,7 +73,7 @@ export const createCustomerGroup = (body) => erpApi.post('/people/customer-group
 export const updateCustomerGroup = (id, body) => erpApi.put(`/people/customer-groups/${id}`, body).then((r) => r.data);
 export const deleteCustomerGroup = (id) => erpApi.del(`/people/customer-groups/${id}`);
 
-export const listCustomers = () => erpApi.get('/people/customers');
+export const listCustomers = (q = '') => erpApi.get(`/people/customers${q}`);
 export const createCustomer = (body) => erpApi.post('/people/customers', body).then((r) => r.data);
 export const updateCustomer = (id, body) => erpApi.put(`/people/customers/${id}`, body).then((r) => r.data);
 export const deleteCustomer = (id) => erpApi.del(`/people/customers/${id}`);

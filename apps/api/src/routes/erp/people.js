@@ -9,9 +9,13 @@ const router = Router();
 function makePartyCrud(table) {
   const r = Router();
 
-  r.get('/', requireAuth, requireErpAdmin, async (_req, res) => {
+  r.get('/', requireAuth, requireErpAdmin, async (req, res) => {
     try {
-      const [rows] = await getPool().query(`SELECT * FROM ${table} ORDER BY name ASC`);
+      const activeOnly = String(req.query.active || '') === '1' || String(req.query.active || '').toLowerCase() === 'true';
+      const sql = activeOnly
+        ? `SELECT * FROM ${table} WHERE is_active = 1 ORDER BY name ASC`
+        : `SELECT * FROM ${table} ORDER BY name ASC`;
+      const [rows] = await getPool().query(sql);
       res.json({ data: rows.map((row) => ({ ...row, is_active: Boolean(row.is_active), is_default: Boolean(row.is_default) })) });
     } catch (err) {
       res.status(500).json({ error: err.message });

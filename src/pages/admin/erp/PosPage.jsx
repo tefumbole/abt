@@ -83,18 +83,30 @@ export default function PosPage() {
       if (!billerId) {
         setBillerId(settings?.biller_id || bl.find((b) => b.is_default)?.id || bl[0]?.id || '');
       }
-      if (!customerId && settings?.customer_id) setCustomerId(settings.customer_id);
 
       if (!defWh) return;
       const [p, c, regs] = await Promise.all([
         listProducts(defWh),
-        listCustomers(),
+        // ERP customers only (erp_customers) — never system users
+        listCustomers('?active=1'),
         listRegisters(`?warehouse_id=${defWh}&status=open`),
       ]);
+      const customerRows = (c || []).filter((row) => row?.id && row?.name);
       setProducts(p || []);
-      setCustomers(c || []);
+      setCustomers(customerRows);
       setRegister((regs || [])[0] || null);
       if (!(regs || []).length) setShowRegisterModal(true);
+      // Prefer POS default customer, else Walk-in, else first customer
+      if (!customerId) {
+        const walkIn = customerRows.find((x) => /walk[- ]?in/i.test(x.name || ''));
+        const preferred = customerRows.find((x) => x.id === settings?.customer_id)
+          || walkIn
+          || customerRows[0];
+        if (preferred?.id) setCustomerId(preferred.id);
+      } else if (!customerRows.some((x) => x.id === customerId)) {
+        const walkIn = customerRows.find((x) => /walk[- ]?in/i.test(x.name || ''));
+        if (walkIn?.id) setCustomerId(walkIn.id);
+      }
     } catch (e) {
       toast.error(e.message);
     } finally {
@@ -168,8 +180,8 @@ export default function PosPage() {
     }
     if (!cart.length) return toast.error('Cart is empty');
     if (!warehouseId) return toast.error('Select a warehouse');
-    if (!customerId && ['credit', 'group_credit', 'deposit'].includes(method.key)) {
-      return toast.error('Select a customer for this payment method');
+    if (!customerId) {
+      return toast.error('Select a customer (add one with + if the list is empty)');
     }
     setPayModal(method);
     setPayingAmount(String(grandTotal.toFixed(2)));
@@ -235,8 +247,8 @@ export default function PosPage() {
       toast.success('Customer added');
       setShowQuickCustomer(false);
       setQuickCustomer({ name: '', phone: '', email: '' });
-      const list = await listCustomers();
-      setCustomers(list || []);
+      const list = await listCustomers('?active=1');
+      setCustomers((list || []).filter((x) => x?.id && x?.name));
       if (row?.id) setCustomerId(row.id);
     } catch (err) {
       toast.error(err.message);
@@ -310,25 +322,34 @@ export default function PosPage() {
             </select>
           </div>
 
-          <div className="p-3 flex gap-2 items-center border-b">
+          <div className="px-4 pt-4 pb-2 flex gap-2 items-center">
             <select
-              className="border rounded-md h-10 px-2 bg-white text-sm flex-1"
+              className="border rounded-md h-11 px-2 bg-white text-sm flex-1"
               value={customerId}
               onChange={(e) => setCustomerId(e.target.value)}
             >
               <option value="">Select customer</option>
-              {customers.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+              {customers.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}{c.phone ? ` (${c.phone})` : ''}
+                </option>
+              ))}
             </select>
-            <Button type="button" size="icon" className="bg-[#003D82]" onClick={() => setShowQuickCustomer(true)}>
+            <Button type="button" size="icon" className="bg-[#003D82] h-11 w-11" title="Add customer" onClick={() => setShowQuickCustomer(true)}>
               <Plus className="h-4 w-4" />
             </Button>
           </div>
+          {!customers.length && (
+            <p className="px-4 pb-2 text-xs text-amber-700">
+              No customers yet. Use + to add an ERP customer (system users are not customers).
+            </p>
+          )}
 
-          <div className="p-3 border-b">
+          <div className="px-4 py-4 border-y bg-slate-50/80">
             <div className="relative">
-              <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
               <Input
-                className="pl-9"
+                className="pl-9 h-12 text-base bg-white"
                 placeholder="Please type product code and select..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
@@ -336,16 +357,16 @@ export default function PosPage() {
             </div>
           </div>
 
-          <div className="flex-1 overflow-auto">
+          <div className="flex-1 overflow-auto px-2 py-3">
             <table className="w-full text-sm">
               <thead className="bg-slate-50 sticky top-0">
                 <tr className="text-left">
-                  <th className="p-2">Product</th>
-                  <th className="p-2 w-20">Batch</th>
-                  <th className="p-2 w-24">Price</th>
-                  <th className="p-2 w-28">Quantity</th>
-                  <th className="p-2 w-24">SubTotal</th>
-                  <th className="p-2 w-10" />
+                  <th className="p-3">Product</th>
+                  <th className="p-3 w-20">Batch</th>
+                  <th className="p-3 w-24">Price</th>
+                  <th className="p-3 w-28">Quantity</th>
+                  <th className="p-3 w-24">SubTotal</th>
+                  <th className="p-3 w-10" />
                 </tr>
               </thead>
               <tbody>
@@ -444,37 +465,37 @@ export default function PosPage() {
 
         {/* RIGHT: products */}
         <div className="bg-white rounded-xl border border-slate-200 shadow-sm flex flex-col min-h-[520px]">
-          <div className="bg-[#003D82] text-white px-3 py-2 flex flex-wrap gap-2 items-center justify-between">
-            <div className="flex gap-2">
+          <div className="bg-[#003D82] text-white px-2 py-1 flex flex-wrap gap-1.5 items-center justify-between min-h-0">
+            <div className="flex gap-1.5">
               <Button
                 size="sm"
-                className={cn(filterMode === 'category' ? 'bg-white text-[#003D82]' : 'bg-blue-500 hover:bg-blue-600 text-white')}
+                className={cn('h-7 px-2.5 text-xs', filterMode === 'category' ? 'bg-white text-[#003D82]' : 'bg-blue-500 hover:bg-blue-600 text-white')}
                 onClick={() => { setFilterMode('category'); setFilterId(categories[0]?.id || ''); }}
               >
                 Category
               </Button>
               <Button
                 size="sm"
-                className={cn(filterMode === 'brand' ? 'bg-white text-[#003D82]' : 'bg-blue-500 hover:bg-blue-600 text-white')}
+                className={cn('h-7 px-2.5 text-xs', filterMode === 'brand' ? 'bg-white text-[#003D82]' : 'bg-blue-500 hover:bg-blue-600 text-white')}
                 onClick={() => { setFilterMode('brand'); setFilterId(brands[0]?.id || ''); }}
               >
                 Brand
               </Button>
               <Button
                 size="sm"
-                className={cn(filterMode === 'featured' ? 'bg-red-500 text-white' : 'bg-red-400 hover:bg-red-500 text-white')}
+                className={cn('h-7 px-2.5 text-xs', filterMode === 'featured' ? 'bg-red-500 text-white' : 'bg-red-400 hover:bg-red-500 text-white')}
                 onClick={() => { setFilterMode('featured'); setFilterId(''); }}
               >
                 Featured
               </Button>
             </div>
-            <span className="text-xs text-blue-100">{register ? 'Register open' : 'No open register'}</span>
+            <span className="text-[10px] text-blue-100 leading-none">{register ? 'Register open' : 'No open register'}</span>
           </div>
 
           {(filterMode === 'category' || filterMode === 'brand') && (
-            <div className="p-2 border-b">
+            <div className="px-2 py-1.5 border-b">
               <select
-                className="w-full border rounded-md h-9 px-2 text-sm"
+                className="w-full border rounded-md h-8 px-2 text-sm"
                 value={filterId}
                 onChange={(e) => setFilterId(e.target.value)}
               >
@@ -486,7 +507,7 @@ export default function PosPage() {
             </div>
           )}
 
-          <div className="flex-1 overflow-auto p-2">
+          <div className="flex-1 overflow-auto p-3">
             {loading ? (
               <div className="p-12 flex justify-center"><Loader2 className="animate-spin text-[#003D82]" /></div>
             ) : (

@@ -15,7 +15,6 @@ import {
   Menu, 
   X, 
   Clock, 
-  ChevronDown, 
   Briefcase, 
   Settings, 
   CalendarDays, 
@@ -63,7 +62,6 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import LanguageSwitcher from '@/components/LanguageSwitcher';
 import { useSiteLabel } from '@/hooks/useSiteLabel';
 import { getAdminSiteContent } from '@/services/siteContentService';
@@ -81,7 +79,6 @@ const AdminLayout = () => {
   const location = useLocation();
   const tl = useSiteLabel();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [openMenus, setOpenMenus] = useState({});
   const [sideOrder, setSideOrder] = useState(null);
   const [settingsOrder, setSettingsOrder] = useState(null);
   const { hasPermission, hasStaffAccess, loading: permLoading } = usePermission();
@@ -402,49 +399,27 @@ const AdminLayout = () => {
       return { ...group, items };
     });
 
-    if (!Array.isArray(sideOrder) || sideOrder.length === 0) return groups;
-
-    // Apply Site Content Side Menu order as a true flat sequence.
+    // Flat unique list — no section headings (Dashboard, ERP / Commerce, etc.)
     const byKey = new Map();
     groups.forEach((group) => {
       (group.items || []).forEach((item) => {
         if (!item?.menuKey || byKey.has(item.menuKey)) return;
-        byKey.set(item.menuKey, { item, group });
+        byKey.set(item.menuKey, item);
       });
     });
 
-    const orderedKeys = [
-      ...sideOrder.filter((key) => byKey.has(key)),
-      ...[...byKey.keys()].filter((key) => !sideOrder.includes(key)),
-    ];
+    const orderedKeys = Array.isArray(sideOrder) && sideOrder.length
+      ? [
+          ...sideOrder.filter((key) => byKey.has(key)),
+          ...[...byKey.keys()].filter((key) => !sideOrder.includes(key)),
+        ]
+      : [...byKey.keys()];
 
-    // Keep section headers, but split a group when another section interrupts it.
-    const rebuilt = [];
-    let current = null;
-    orderedKeys.forEach((key) => {
-      const entry = byKey.get(key);
-      if (!entry) return;
-      const { item, group } = entry;
-      if (!current || current.label !== group.label) {
-        current = {
-          label: group.label,
-          collapsible: true,
-          permission: group.permission,
-          items: [],
-        };
-        rebuilt.push(current);
-      }
-      current.items.push(item);
-    });
-    return rebuilt;
+    return [{
+      label: 'Menu',
+      items: orderedKeys.map((key) => byKey.get(key)).filter(Boolean),
+    }];
   }, [sideOrder, settingsOrder]);
-
-  const toggleMenu = (label) => {
-    setOpenMenus(prev => ({
-      ...prev,
-      [label]: !prev[label]
-    }));
-  };
 
   const pathMatches = (path) => {
     const base = path.split('?')[0];
@@ -474,8 +449,6 @@ const AdminLayout = () => {
     const isActive = item.submenu
       ? item.submenu.some((sub) => pathMatches(sub.path))
       : (item.path ? activePaths.some((p) => location.pathname === p || location.pathname.startsWith(`${p}/`) || location.pathname + location.search === item.path) : false);
-
-    const isOpen = Boolean(openMenus[item.label]);
 
     if (item.submenu) {
       if (item.hideTopNav) {
@@ -557,32 +530,13 @@ const AdminLayout = () => {
     );
     if (!visibleItems.length) return null;
 
-    const groupKey = group.label;
-    const groupActive = visibleItems.some((item) =>
-      item.submenu
-        ? item.submenu.some((sub) => pathMatches(sub.path))
-        : item.path && pathMatches(item.path)
-    );
-    // Collapsed by default; keep the active section open unless user toggled it.
-    const isGroupOpen = openMenus[groupKey] !== undefined ? openMenus[groupKey] : groupActive;
-
+    // No section headings — show menu items directly
     return (
-      <Collapsible
-        open={isGroupOpen}
-        onOpenChange={(open) => setOpenMenus((prev) => ({ ...prev, [groupKey]: open }))}
-        className="w-full"
-      >
-        <CollapsibleTrigger className={cn(
-          'flex items-center justify-between w-full px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider text-gray-400 hover:text-white hover:bg-white/5',
-          groupActive && 'text-[#D4AF37]'
-        )}>
-          <span>{tl('menu', group.label)}</span>
-          <ChevronDown className={cn('w-4 h-4 transition-transform', isGroupOpen && 'rotate-180')} />
-        </CollapsibleTrigger>
-        <CollapsibleContent className="space-y-1 mt-1">
-          {visibleItems.map((item, i) => <MenuItem key={i} item={item} />)}
-        </CollapsibleContent>
-      </Collapsible>
+      <div className="space-y-1">
+        {visibleItems.map((item) => (
+          <MenuItem key={item.menuKey || item.label} item={item} />
+        ))}
+      </div>
     );
   };
 
@@ -618,7 +572,7 @@ const AdminLayout = () => {
           <p className="text-xs text-gray-300 mt-1 uppercase tracking-widest">Technologies Ltd</p>
         </div>
 
-        <nav className="flex-1 p-4 space-y-6 overflow-y-auto scrollbar-thin scrollbar-thumb-blue-800">
+        <nav className="flex-1 p-4 space-y-1 overflow-y-auto scrollbar-thin scrollbar-thumb-blue-800">
           {menuGroupsOrdered.map((group, idx) => (
             <MenuGroup key={idx} group={group} />
           ))}

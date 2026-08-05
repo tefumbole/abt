@@ -1,12 +1,12 @@
 /** Alpha Bridge ERP release identifier — update when creating a new restore point. */
-export const APP_VERSION = 'ABT_ERP_V.2.2.8';
+export const APP_VERSION = 'ABT_ERP_V.2.2.10';
 
 export const APP_VERSION_LABEL = 'Version';
 
 export const RESTORE_POINT = {
   id: APP_VERSION,
-  name: 'Alpha Bridge ERP v2.2.8',
-  created: '2026-08-04',
+  name: 'Alpha Bridge ERP v2.2.10',
+  created: '2026-08-05',
   gitTag: APP_VERSION,
 };
 
@@ -15,6 +15,16 @@ export const RESTORE_POINT = {
  * Keep in sync with notable production deploys.
  */
 export const DEPLOYMENT_HISTORY = [
+  {
+    version: 'ABT_ERP_V.2.2.10',
+    date: '2026-08-05',
+    title: 'Flat sidebar like Beyond + POS polish',
+    notes: [
+      'No sidebar section headers — menus listed directly',
+      'POS: more search/cart spacing, tighter Category/Brand/Featured bar',
+      'POS customers from erp_customers only (Walk-in Customer seeded)',
+    ],
+  },
   {
     version: 'ABT_ERP_V.2.2.8',
     date: '2026-08-04',
