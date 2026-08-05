@@ -51,6 +51,7 @@ import {
   Globe,
   Warehouse,
   Package,
+  PackagePlus,
   ShoppingCart,
   Truck,
   ArrowLeftRight,
@@ -59,6 +60,11 @@ import {
   Building2,
   FileSignature,
   Rocket,
+  Tags,
+  List,
+  PencilLine,
+  Printer,
+  ClipboardList,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -338,15 +344,14 @@ const AdminLayout = () => {
           icon: Package,
           permission: MENU_PERMISSIONS.erpCommerce,
           menuKey: 'erp-products',
-          hideTopNav: true,
           submenu: [
-            { label: 'Category', path: '/admin/erp/products?tab=category', color: 'navy' },
-            { label: 'Product List', path: '/admin/erp/products?tab=product-list', color: 'gold' },
-            { label: '+ Add Product', path: '/admin/erp/products?tab=add-product', color: 'purple' },
-            { label: 'Print Barcode', path: '/admin/erp/products?tab=barcode', color: 'pink' },
-            { label: 'Adjustment List', path: '/admin/erp/products?tab=adjustment-list', color: 'green' },
-            { label: 'Add Adjustment', path: '/admin/erp/products?tab=add-adjustment', color: 'orange' },
-            { label: 'Stock Count', path: '/admin/erp/products?tab=stock-count', color: 'cyan' },
+            { label: 'Category', path: '/admin/erp/products?tab=category', color: 'navy', icon: Tags },
+            { label: 'Product List', path: '/admin/erp/products?tab=product-list', color: 'gold', icon: List },
+            { label: 'Add Product', path: '/admin/erp/products?tab=add-product', color: 'purple', icon: PackagePlus },
+            { label: 'Print Barcode', path: '/admin/erp/products?tab=barcode', color: 'pink', icon: Printer },
+            { label: 'Adjustment List', path: '/admin/erp/products?tab=adjustment-list', color: 'green', icon: ClipboardList },
+            { label: 'Add Adjustment', path: '/admin/erp/products?tab=add-adjustment', color: 'orange', icon: PencilLine },
+            { label: 'Stock Count', path: '/admin/erp/products?tab=stock-count', color: 'cyan', icon: List },
           ],
         },
         { label: 'Purchases', path: '/admin/erp/purchases', icon: Truck, permission: MENU_PERMISSIONS.erpCommerce, menuKey: 'erp-purchases' },
@@ -421,17 +426,34 @@ const AdminLayout = () => {
     }];
   }, [sideOrder, settingsOrder]);
 
-  const pathMatches = (path) => {
+  /** Exact match for top tabs (including ?tab=). */
+  const tabMatches = (path) => {
+    const base = path.split('?')[0];
+    const full = `${location.pathname}${location.search}`;
+    if (full === path) return true;
+    // Default Category / User List when URL has no query
+    if (
+      location.pathname === base
+      && !location.search
+      && (path.includes('tab=category') || path.includes('tab=user-list'))
+    ) {
+      return true;
+    }
+    return false;
+  };
+
+  /** Broader match for highlighting sidebar parent links. */
+  const sectionMatches = (path) => {
     const base = path.split('?')[0];
     return location.pathname === base
       || location.pathname.startsWith(`${base}/`)
-      || location.pathname + location.search === path;
+      || tabMatches(path);
   };
 
   const findActiveSection = () => {
     for (const group of menuGroupsOrdered) {
       for (const item of group.items || []) {
-        if (item.submenu?.some((sub) => pathMatches(sub.path))) {
+        if (item.submenu?.some((sub) => sectionMatches(sub.path))) {
           return item;
         }
       }
@@ -447,46 +469,10 @@ const AdminLayout = () => {
     const pathMatch = item.path?.split('?')[0];
     const activePaths = item.activePaths || (pathMatch ? [pathMatch] : []);
     const isActive = item.submenu
-      ? item.submenu.some((sub) => pathMatches(sub.path))
+      ? item.submenu.some((sub) => sectionMatches(sub.path))
       : (item.path ? activePaths.some((p) => location.pathname === p || location.pathname.startsWith(`${p}/`) || location.pathname + location.search === item.path) : false);
 
     if (item.submenu) {
-      if (item.hideTopNav) {
-        const current = location.pathname + location.search;
-        const onProductsRoot = location.pathname === '/admin/erp/products' && !location.search;
-        return (
-          <div className="space-y-1">
-            <div className={cn(
-              'flex items-center gap-3 px-4 py-2 text-xs font-bold uppercase tracking-wide',
-              isActive ? 'text-[#D4AF37]' : 'text-gray-300'
-            )}>
-              <item.icon className="w-4 h-4 text-[#D4AF37]" />
-              <span>{tl('menu', item.label)}</span>
-            </div>
-            <div className="ml-3 space-y-0.5 border-l border-white/15 pl-2">
-              {item.submenu.map((sub) => {
-                const subActive = current === sub.path
-                  || (onProductsRoot && sub.path.includes('tab=category'));
-                return (
-                  <Link
-                    key={sub.path}
-                    to={sub.path}
-                    onClick={() => setSidebarOpen(false)}
-                    className={cn(
-                      'block px-3 py-2 rounded-lg text-sm transition-colors',
-                      subActive
-                        ? 'bg-[#D4AF37] text-[#003D82] font-semibold'
-                        : 'text-gray-200 hover:bg-white/10 hover:text-white'
-                    )}
-                  >
-                    {tl('menu', sub.label)}
-                  </Link>
-                );
-              })}
-            </div>
-          </div>
-        );
-      }
       const firstSub = item.submenu[0];
       return (
         <Link
@@ -511,12 +497,12 @@ const AdminLayout = () => {
         onClick={() => setSidebarOpen(false)}
         className={cn(
           "flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 group relative overflow-hidden",
-          location.pathname === item.path
+          isActive
             ? "bg-[#D4AF37] text-[#003D82] font-bold shadow-md" 
             : "text-gray-100 hover:bg-white/10 hover:text-white"
         )}
       >
-        <item.icon className={cn("w-5 h-5 transition-transform group-hover:scale-110", location.pathname === item.path ? "text-[#003D82]" : "text-[#D4AF37]")} />
+        <item.icon className={cn("w-5 h-5 transition-transform group-hover:scale-110", isActive ? "text-[#003D82]" : "text-[#D4AF37]")} />
         <span className="relative z-10">{tl('menu', item.label)}</span>
       </Link>
     );
@@ -648,16 +634,16 @@ const AdminLayout = () => {
           </Link>
           <LanguageSwitcher variant="admin" />
         </div>
-        {activeSection && !activeSection.hideTopNav && (
+        {activeSection && (
           activeSection.label === 'Human Resources' ? (
             <HrTopNav />
           ) : activeSection.label === 'HR Letters' ? (
             <HrLettersTopNav />
           ) : (
           <div className="mb-6 overflow-x-auto scrollbar-thin">
-            <nav className="flex flex-wrap gap-2 min-w-max rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
+            <nav className="flex flex-wrap gap-2 min-w-max">
               {activeSection.submenu.map((sub, index) => {
-                const active = pathMatches(sub.path);
+                const active = tabMatches(sub.path);
                 const theme = getTabTheme(sub.color || index);
                 return (
                   <Link
