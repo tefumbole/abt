@@ -25,8 +25,9 @@ function quotationReference() {
 async function loadQuotation(id) {
   const pool = getPool();
   const [rows] = await pool.query(
-    `SELECT q.*, c.name AS customer_name, c.phone AS customer_phone, w.name AS warehouse_name,
-            b.name AS biller_name, s.name AS supplier_name
+    `SELECT q.*, c.name AS customer_name, c.phone AS customer_phone, c.email AS customer_email,
+            c.address AS customer_address, c.company_name AS customer_company,
+            w.name AS warehouse_name, b.name AS biller_name, s.name AS supplier_name
      FROM quotations q
      LEFT JOIN erp_customers c ON c.id = q.customer_id
      LEFT JOIN warehouses w ON w.id = q.warehouse_id
@@ -37,7 +38,7 @@ async function loadQuotation(id) {
   );
   if (!rows.length) return null;
   const [items] = await pool.query(
-    `SELECT pq.*, p.name AS product_name FROM product_quotations pq
+    `SELECT pq.*, p.name AS product_name, p.code AS product_code FROM product_quotations pq
      LEFT JOIN products p ON p.id = pq.product_id WHERE pq.quotation_id = ?`,
     [id]
   );
@@ -143,6 +144,63 @@ router.post('/', requireAuth, requireErpAdmin, async (req, res) => {
     }
     await conn.commit();
     res.status(201).json({ data: { id, reference, status, approval_token: token, grand_total: grand } });
+  } catch (err) {
+    await conn.rollback();
+    res.status(500).json({ error: err.message });
+  } finally {
+    conn.release();
+  }
+});
+
+router.put('/:id', requireAuth, requireErpAdmin, async (req, res) => {
+  const pool = getPool();
+  const conn = await pool.getConnection();
+  try {
+    const b = req.body || {};
+    const items = Array.isArray(b.items) ? b.items : [];
+    const [ex] = await pool.query(`SELECT * FROM quotations WHERE id = ?`, [req.params.id]);
+    if (!ex.length) return res.status(404).json({ error: 'Not found' });
+    if (!items.length) return res.status(400).json({ error: 'items required' });
+    const current = ex[0];
+
+    await conn.beginTransaction();
+    await conn.query(`DELETE FROM product_quotations WHERE quotation_id = ?`, [req.params.id]);
+    let subtotal = 0;
+    for (const item of items) {
+      const line = num(item.qty) * num(item.net_unit_price) - num(item.discount) + num(item.tax);
+      subtotal += line;
+      await conn.query(
+        `INSERT INTO product_quotations (id, quotation_id, product_id, qty, net_unit_price, discount, tax, subtotal)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        [randomUUID(), req.params.id, item.product_id, num(item.qty), num(item.net_unit_price), num(item.discount), num(item.tax), line]
+      );
+    }
+    const discount = b.discount !== undefined ? num(b.discount) : num(current.discount);
+    const shipping = b.shipping !== undefined ? num(b.shipping) : num(current.shipping);
+    const tax = b.tax !== undefined ? num(b.tax) : num(current.tax);
+    const grand = subtotal - discount + shipping + tax;
+
+    await conn.query(
+      `UPDATE quotations SET warehouse_id = ?, customer_id = ?, biller_id = ?, supplier_id = ?, status = ?,
+        grand_total = ?, discount = ?, shipping = ?, tax = ?, note = ?, cc_phones = ?
+       WHERE id = ?`,
+      [
+        b.warehouse_id || current.warehouse_id,
+        b.customer_id !== undefined ? b.customer_id || null : current.customer_id,
+        b.biller_id !== undefined ? b.biller_id || null : current.biller_id,
+        b.supplier_id !== undefined ? b.supplier_id || null : current.supplier_id,
+        b.status || current.status,
+        grand,
+        discount,
+        shipping,
+        tax,
+        b.note !== undefined ? b.note || null : current.note,
+        b.cc_phones !== undefined ? b.cc_phones || null : current.cc_phones,
+        req.params.id,
+      ]
+    );
+    await conn.commit();
+    res.json({ data: { id: req.params.id, reference: current.reference, grand_total: grand } });
   } catch (err) {
     await conn.rollback();
     res.status(500).json({ error: err.message });

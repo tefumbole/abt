@@ -33,10 +33,24 @@ async function apiJson(path, options = {}) {
 
 export const erpApi = {
   get: (path) => apiJson(`/erp${path}`).then((r) => r.data),
+  /** Full envelope — for endpoints returning meta alongside `data` (totals, counts, paging). */
+  getRaw: (path) => apiJson(`/erp${path}`),
   post: (path, body) => apiJson(`/erp${path}`, { method: 'POST', body: JSON.stringify(body) }),
   put: (path, body) => apiJson(`/erp${path}`, { method: 'PUT', body: JSON.stringify(body) }),
+  patch: (path, body) => apiJson(`/erp${path}`, { method: 'PATCH', body: JSON.stringify(body) }),
   del: (path) => apiJson(`/erp${path}`, { method: 'DELETE' }),
 };
+
+/** Serialises a filter object into a query string, dropping empty values. */
+export function toQuery(params = {}) {
+  const search = new URLSearchParams();
+  Object.entries(params).forEach(([key, value]) => {
+    if (value === undefined || value === null || value === '' || value === 'all') return;
+    search.set(key, String(value));
+  });
+  const qs = search.toString();
+  return qs ? `?${qs}` : '';
+}
 
 export const listCurrencies = () => erpApi.get('/currencies');
 export const createCurrency = (body) => erpApi.post('/currencies', body).then((r) => r.data);
@@ -60,6 +74,8 @@ export const updateCategory = (id, body) => erpApi.put(`/products/categories/${i
 export const deleteCategory = (id) => erpApi.del(`/products/categories/${id}`);
 export const listBrands = () => erpApi.get('/products/brands');
 export const createBrand = (body) => erpApi.post('/products/brands', body).then((r) => r.data);
+export const updateBrand = (id, body) => erpApi.put(`/products/brands/${id}`, body).then((r) => r.data);
+export const deleteBrand = (id) => erpApi.del(`/products/brands/${id}`);
 export const listUnits = () => erpApi.get('/products/units');
 export const createUnit = (body) => erpApi.post('/products/units', body).then((r) => r.data);
 export const updateUnit = (id, body) => erpApi.put(`/products/units/${id}`, body).then((r) => r.data);
@@ -89,7 +105,25 @@ export const deleteBiller = (id) => erpApi.del(`/people/billers/${id}`);
 export const listPurchases = (q = '') => erpApi.get(`/purchases${q}`);
 export const createPurchase = (body) => erpApi.post('/purchases', body).then((r) => r.data);
 export const listSales = (q = '') => erpApi.get(`/sales${q}`);
+/** Paged list: `{ data, total, page, per_page, totals, counts }`. */
+export const querySales = (params = {}) => erpApi.getRaw(`/sales${toQuery(params)}`);
+export const getSale = (id) => erpApi.get(`/sales/${id}`);
 export const createSale = (body) => erpApi.post('/sales', body).then((r) => r.data);
+export const updateSale = (id, body) => erpApi.put(`/sales/${id}`, body).then((r) => r.data);
+export const deleteSale = (id) => erpApi.del(`/sales/${id}`);
+export const listSalePayments = (id) => erpApi.get(`/sales/${id}/payments`);
+export const createSalePayment = (id, body) => erpApi.post(`/sales/${id}/payments`, body).then((r) => r.data);
+export const deleteSalePayment = (saleId, paymentId) => erpApi.del(`/sales/${saleId}/payments/${paymentId}`);
+
+/** Generic ERP key/value settings (POS extras, reward points, mail). */
+export const getErpSettings = () => erpApi.get('/settings');
+export const saveErpSettings = (body) => erpApi.put('/settings', body).then((r) => r.data);
+
+export const listTaxes = () => erpApi.get('/taxes');
+export const createTax = (body) => erpApi.post('/taxes', body).then((r) => r.data);
+export const updateTax = (id, body) => erpApi.put(`/taxes/${id}`, body).then((r) => r.data);
+export const deleteTax = (id) => erpApi.del(`/taxes/${id}`);
+export const setDefaultTax = (id) => erpApi.post(`/taxes/${id}/set-default`, {}).then((r) => r.data);
 export const listQuotations = async (q = '') => {
   const API_BASE = import.meta.env.VITE_API_URL || '/api';
   const res = await fetch(`${API_BASE}/erp/quotations${q}`, {
@@ -101,6 +135,7 @@ export const listQuotations = async (q = '') => {
 };
 export const getQuotation = (id) => erpApi.get(`/quotations/${id}`);
 export const createQuotation = (body) => erpApi.post('/quotations', body).then((r) => r.data);
+export const updateQuotation = (id, body) => erpApi.put(`/quotations/${id}`, body).then((r) => r.data);
 export const deleteQuotation = (id) => erpApi.del(`/quotations/${id}`);
 export const setQuotationStatus = (id, status) =>
   fetch(`${import.meta.env.VITE_API_URL || '/api'}/erp/quotations/${id}/status`, {
@@ -123,7 +158,10 @@ export const savePosSettings = (body) => erpApi.put('/pos/settings', body).then(
 export const listRegisters = (q = '') => erpApi.get(`/pos/registers${q}`);
 export const openRegister = (body) => erpApi.post('/pos/registers/open', body).then((r) => r.data);
 export const closeRegister = (id) => erpApi.post(`/pos/registers/${id}/close`, {}).then((r) => r.data);
+/** Cash-drawer report: opening float, sales count and per-method totals. */
+export const getRegisterSummary = (id) => erpApi.get(`/pos/registers/${id}/summary`);
 export const createPosSale = (body) => erpApi.post('/pos/sale', body).then((r) => r.data);
+export const listRecentPosSales = (params = {}) => erpApi.get(`/pos/recent-sales${toQuery(params)}`);
 
 export const listTransfers = () => erpApi.get('/support/transfers');
 export const createTransfer = (body) => erpApi.post('/support/transfers', body).then((r) => r.data);
@@ -144,8 +182,23 @@ export const createMoneyTransfer = (body) => erpApi.post('/support/money-transfe
 export const getBalanceSheet = () => erpApi.get('/support/balance-sheet');
 
 export const listBookings = (q = '') => erpApi.get(`/heavy/bookings${q}`);
-export const createBooking = (body) => erpApi.post('/heavy/bookings', body).then((r) => r.data);
-export const sendBookingSignLink = (id, body = {}) => erpApi.post(`/heavy/bookings/${id}/send-sign-link`, body);
+export const createBooking = (body) => erpApi.post('/rentals/bookings', body).then((r) => r.data);
+export const sendBookingSignLink = (id, body = {}) => erpApi.post(`/rentals/bookings/${id}/send-sign-link`, body);
+
+/* --- Rental module (Beyond-style booking pipeline) --- */
+
+/** Paged booking list. Returns the full envelope: data, total, counts, totals. */
+export const queryBookings = (filters = {}) => erpApi.getRaw(`/rentals/bookings${toQuery(filters)}`);
+export const getBookingCounts = () => erpApi.get('/rentals/bookings/counts');
+export const getBooking = (id) => erpApi.get(`/rentals/bookings/${id}`);
+export const updateBooking = (id, body) => erpApi.put(`/rentals/bookings/${id}`, body).then((r) => r.data);
+export const deleteBooking = (id) => erpApi.del(`/rentals/bookings/${id}`);
+export const setBookingStatus = (id, booking_status) =>
+  erpApi.post(`/rentals/bookings/${id}/status`, { booking_status }).then((r) => r.data);
+export const reviewBooking = (id, body) => erpApi.post(`/rentals/bookings/${id}/review`, body).then((r) => r.data);
+export const sendBookingReminder = (id, body = {}) => erpApi.post(`/rentals/bookings/${id}/reminder`, body);
+export const listBookedProducts = (filters = {}) => erpApi.get(`/rentals/booked-products${toQuery(filters)}`);
+export const listBookingCalendar = (filters = {}) => erpApi.get(`/rentals/calendar${toQuery(filters)}`);
 export const listContracts = (q = '') => erpApi.get(`/heavy/contracts${q}`);
 export const createContract = (body) => erpApi.post('/heavy/contracts', body).then((r) => r.data);
 export const updateContract = (id, body) => erpApi.put(`/heavy/contracts/${id}`, body).then((r) => r.data);

@@ -27,8 +27,10 @@ export const MENU_PERMISSIONS = {
   erpContracts: 'menu.erp_contracts',
 };
 
+/** `permission` may be a single key or a list of keys (any one grants access). */
 export function itemVisible(hasPermission, permission) {
   if (!permission) return true;
+  if (Array.isArray(permission)) return permission.some((key) => hasPermission(key));
   return hasPermission(permission);
 }
 
@@ -54,6 +56,7 @@ const ADMIN_ROUTE_RULES = [
   ['/admin/hr/letters', ['view_hr', 'hr.letters.view', 'menu.hr']],
   ['/admin/letters', ['letters.send.view', 'letters.templates.view']],
   ['/admin/communication', ['letters.send.view', 'announcements.compose.view']],
+  ['/admin/erp/people', ['menu.erp_commerce', 'menu.users', 'users.view', 'users.create', 'users.edit']],
   ['/admin/erp', ['menu.erp_commerce', 'erp.warehouses.view', 'erp.products.view', 'erp.sales.view', 'erp.pos.view']],
   ['/admin/releases', ['system.settings.view', 'menu.system', 'dashboard.view']],
 ];

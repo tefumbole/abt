@@ -454,6 +454,16 @@ export const ERP_CREATE_STATEMENTS = [
     signature_token CHAR(64) DEFAULT NULL,
     signature_status VARCHAR(32) NOT NULL DEFAULT 'none',
     signed_at DATETIME DEFAULT NULL,
+    review_status VARCHAR(32) NOT NULL DEFAULT 'none',
+    review_note TEXT DEFAULT NULL,
+    reviewed_at DATETIME DEFAULT NULL,
+    reviewed_by CHAR(36) DEFAULT NULL,
+    reminder_sent_at DATETIME DEFAULT NULL,
+    cc_recipients TEXT DEFAULT NULL,
+    order_tax DECIMAL(15,2) NOT NULL DEFAULT 0,
+    order_discount DECIMAL(15,2) NOT NULL DEFAULT 0,
+    shipping DECIMAL(15,2) NOT NULL DEFAULT 0,
+    source VARCHAR(16) NOT NULL DEFAULT 'admin',
     created_by CHAR(36) DEFAULT NULL,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -473,6 +483,9 @@ export const ERP_CREATE_STATEMENTS = [
     subtotal DECIMAL(15,2) NOT NULL DEFAULT 0,
     from_datetime DATETIME DEFAULT NULL,
     to_datetime DATETIME DEFAULT NULL,
+    batch_no VARCHAR(64) DEFAULT NULL,
+    booking_method VARCHAR(32) NOT NULL DEFAULT 'duration',
+    \`number\` VARCHAR(64) DEFAULT NULL,
     INDEX idx_bp_booking (booking_id)
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
 
@@ -563,6 +576,23 @@ export const ERP_CREATE_STATEMENTS = [
     purchase_date DATE DEFAULT NULL,
     note TEXT DEFAULT NULL,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
+
+  `CREATE TABLE IF NOT EXISTS erp_taxes (
+    id CHAR(36) NOT NULL PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    rate DECIMAL(8,2) NOT NULL DEFAULT 0,
+    is_active TINYINT(1) NOT NULL DEFAULT 1,
+    is_default TINYINT(1) NOT NULL DEFAULT 0,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_erp_taxes_default (is_default)
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
+
+  `CREATE TABLE IF NOT EXISTS erp_settings (
+    setting_key VARCHAR(64) NOT NULL PRIMARY KEY,
+    setting_value LONGTEXT DEFAULT NULL,
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
 

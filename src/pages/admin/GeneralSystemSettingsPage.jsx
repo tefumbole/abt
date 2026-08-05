@@ -3,7 +3,6 @@ import { Helmet } from 'react-helmet';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { getProfile, updateProfile } from '@/services/profileService';
-import { getSystemSettings, updateSystemSettings } from '@/services/settingsService';
 import { fetchEnvFiles, saveEnvFiles } from '@/services/systemEnvService';
 import LicenseAgreementTab from '@/components/admin/LicenseAgreementTab';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -26,6 +25,9 @@ import {
   UnitsSettingsPanel,
   WarehousesSettingsPanel,
 } from '@/pages/admin/settings/SettingsMasterPanels';
+import TaxesSettingsPanel from '@/pages/admin/settings/TaxesSettingsPanel';
+import RewardSettingsPanel from '@/pages/admin/settings/RewardSettingsPanel';
+import MailSettingsPanel from '@/pages/admin/settings/MailSettingsPanel';
 import RolesPermissionsPage from '@/pages/admin/RolesPermissionsPage';
 import AdminActivityLogsPage from '@/pages/admin/AdminActivityLogsPage';
 import AdminBackupRestorePage from '@/pages/admin/AdminBackupRestorePage';
@@ -62,23 +64,17 @@ const GeneralSystemSettingsPage = () => {
   const [loading, setLoading] = useState(false);
   const [savingEnv, setSavingEnv] = useState(false);
   const [savingProfile, setSavingProfile] = useState(false);
-  const [savingTax, setSavingTax] = useState(false);
   const [profile, setProfile] = useState(null);
   const [formData, setFormData] = useState({ full_name: '', phone: '', email: '' });
-  const [taxRate, setTaxRate] = useState('0');
   const [envFiles, setEnvFiles] = useState({ frontend: '', api: '' });
 
   useEffect(() => {
-    if (!['profile', 'env', 'tax'].includes(tab)) return;
+    if (!['profile', 'env'].includes(tab)) return;
     (async () => {
       try {
         setLoading(true);
         if (tab === 'env') {
           setEnvFiles(await fetchEnvFiles());
-        }
-        if (tab === 'tax') {
-          const sys = await getSystemSettings();
-          setTaxRate(sys?.tax_rate != null ? String(sys.tax_rate) : '0');
         }
         if (tab === 'profile' && user?.id) {
           const prof = await getProfile(user.id);
@@ -128,18 +124,6 @@ const GeneralSystemSettingsPage = () => {
     }
   };
 
-  const saveTax = async () => {
-    setSavingTax(true);
-    try {
-      await updateSystemSettings({ tax_rate: Number(taxRate) || 0 });
-      toast({ title: 'Tax saved', description: 'Default tax rate updated.' });
-    } catch (err) {
-      toast({ variant: 'destructive', title: 'Save failed', description: err.message });
-    } finally {
-      setSavingTax(false);
-    }
-  };
-
   const activeLabel = SETTINGS_NAV_TABS.find((t) => t.id === tab)?.label || 'Settings';
 
   return (
@@ -181,46 +165,9 @@ const GeneralSystemSettingsPage = () => {
         {tab === 'brands' && <BrandsSettingsPanel />}
         {tab === 'units' && <UnitsSettingsPanel />}
         {tab === 'currency' && <CurrencySettingsPanel />}
-        {tab === 'tax' && (
-          <Card className="max-w-md">
-            <CardHeader>
-              <CardTitle className="text-[#003D82]">Tax</CardTitle>
-              <CardDescription>Default tax rate (%) applied to sales when no line tax is set.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {loading ? (
-                <Loader2 className="w-6 h-6 animate-spin text-[#003D82]" />
-              ) : (
-                <>
-                  <div className="space-y-2">
-                    <Label htmlFor="tax_rate">Tax rate (%)</Label>
-                    <Input id="tax_rate" type="number" step="0.01" value={taxRate} onChange={(e) => setTaxRate(e.target.value)} />
-                  </div>
-                  <Button onClick={saveTax} disabled={savingTax} className="bg-[#003D82]">
-                    {savingTax ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />}
-                    Save tax
-                  </Button>
-                </>
-              )}
-            </CardContent>
-          </Card>
-        )}
-        {tab === 'mail' && (
-          <StubPanel
-            title="Mail Setting"
-            description="Outbound mail is configured via API environment variables (SMTP / provider keys)."
-          >
-            <Button type="button" variant="outline" onClick={() => setTab('env')}>
-              Open .env Settings
-            </Button>
-          </StubPanel>
-        )}
-        {tab === 'reward' && (
-          <StubPanel
-            title="Reward Point Setting"
-            description="Reward points are not enabled in Alpha Bridge. This tab is reserved for future use."
-          />
-        )}
+        {tab === 'tax' && <TaxesSettingsPanel />}
+        {tab === 'mail' && <MailSettingsPanel onOpenEnv={() => setTab('env')} />}
+        {tab === 'reward' && <RewardSettingsPanel />}
         {tab === 'pos' && <PosSettingsPanel />}
         {tab === 'transactions' && (
           <StubPanel

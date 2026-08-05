@@ -24,7 +24,6 @@ import {
   PieChart, 
   Mail, 
   FileCheck, 
-  Database, 
   BookOpen, 
   Award, 
   TrendingUp,
@@ -49,7 +48,6 @@ import {
   UserCog,
   Image as ImageIcon,
   Globe,
-  Warehouse,
   Package,
   PackagePlus,
   ShoppingCart,
@@ -72,6 +70,21 @@ import LanguageSwitcher from '@/components/LanguageSwitcher';
 import { useSiteLabel } from '@/hooks/useSiteLabel';
 import { getAdminSiteContent } from '@/services/siteContentService';
 import { APP_VERSION } from '@/constants/appVersion';
+
+/** Saved sidebar orders may still hold keys from before the People merge. */
+const LEGACY_MENU_KEYS = {
+  users: 'people',
+  members: 'people',
+  'erp-people': 'people',
+  'erp-deliveries': 'erp-sales',
+};
+
+/** Landing tab for sections whose first tab is not the query-less URL. */
+const DEFAULT_SECTION_TAB = {
+  '/admin/erp/products': 'category',
+  '/admin/erp/people': 'user-list',
+  '/admin/erp/rentals': 'booking-create',
+};
 
 function orderIndex(order, key) {
   if (!Array.isArray(order) || !key) return 9999;
@@ -277,28 +290,22 @@ const AdminLayout = () => {
     {
       label: 'People & Access',
       items: [
-        { 
-          label: 'Users', 
+        {
+          label: 'People',
           icon: Users,
-          permission: MENU_PERMISSIONS.users,
-          menuKey: 'users',
+          permission: [MENU_PERMISSIONS.users, MENU_PERMISSIONS.members, MENU_PERMISSIONS.erpCommerce],
+          menuKey: 'people',
           submenu: [
-            { label: 'All Users', path: '/admin/users' },
-            { label: 'Add Customer', path: '/admin/users?action=customer', icon: UserPlus },
-            { label: 'Customer List', path: '/admin/users?filter=customer' },
-            { label: 'Add Student', path: '/admin/students?action=new', icon: UserPlus },
-            { label: 'Student List', path: '/admin/students' },
-            { label: 'ShareHolder', path: '/admin/shareholders/list', icon: PieChart },
-          ]
-        },
-        { 
-          label: 'Members (Team)', 
-          icon: Users,
-          permission: MENU_PERMISSIONS.members,
-          menuKey: 'members',
-          submenu: [
-            { label: 'Member List', path: '/admin/members', color: 'navy' },
-            { label: 'Add Member', path: '/admin/members?action=new', color: 'green' },
+            { label: 'User List', path: '/admin/erp/people?tab=user-list', icon: Users, color: 'navy', permission: [MENU_PERMISSIONS.users, MENU_PERMISSIONS.erpCommerce] },
+            { label: 'Add User', path: '/admin/erp/people?tab=add-user', icon: UserPlus, color: 'gold', permission: [MENU_PERMISSIONS.users, MENU_PERMISSIONS.erpCommerce] },
+            { label: 'Customer List', path: '/admin/erp/people?tab=customer-list', color: 'purple', permission: [MENU_PERMISSIONS.users, MENU_PERMISSIONS.erpCommerce] },
+            { label: 'Add Customer', path: '/admin/erp/people?tab=add-customer', icon: UserPlus, color: 'pink', permission: [MENU_PERMISSIONS.users, MENU_PERMISSIONS.erpCommerce] },
+            { label: 'Supplier List', path: '/admin/erp/people?tab=supplier-list', color: 'rose', permission: MENU_PERMISSIONS.erpCommerce },
+            { label: 'Add Supplier', path: '/admin/erp/people?tab=add-supplier', icon: UserPlus, color: 'indigo', permission: MENU_PERMISSIONS.erpCommerce },
+            { label: 'Member List', path: '/admin/members', color: 'green', permission: MENU_PERMISSIONS.members },
+            { label: 'Add Member', path: '/admin/members?action=new', icon: UserPlus, color: 'teal', permission: MENU_PERMISSIONS.members },
+            { label: 'Student List', path: '/admin/students', color: 'orange', permission: MENU_PERMISSIONS.users },
+            { label: 'Add Student', path: '/admin/students?action=new', icon: UserPlus, color: 'cyan', permission: MENU_PERMISSIONS.users },
           ]
         },
         { 
@@ -316,29 +323,12 @@ const AdminLayout = () => {
             { label: 'Settings', path: '/admin/shareholders/settings', color: 'slate' }
           ]
         },
-        {
-          label: 'ERP People',
-          icon: Users,
-          permission: MENU_PERMISSIONS.erpCommerce,
-          menuKey: 'erp-people',
-          submenu: [
-            { label: 'User List', path: '/admin/erp/people?tab=user-list', color: 'navy' },
-            { label: 'Add User', path: '/admin/erp/people?tab=add-user', color: 'gold' },
-            { label: 'Customer List', path: '/admin/erp/people?tab=customer-list', color: 'purple' },
-            { label: 'Add Customer', path: '/admin/erp/people?tab=add-customer', color: 'pink' },
-            { label: 'Biller List', path: '/admin/erp/people?tab=biller-list', color: 'orange' },
-            { label: 'Add Biller', path: '/admin/erp/people?tab=add-biller', color: 'cyan' },
-            { label: 'Supplier List', path: '/admin/erp/people?tab=supplier-list', color: 'rose' },
-            { label: 'Add Supplier', path: '/admin/erp/people?tab=add-supplier', color: 'indigo' },
-          ],
-        },
       ]
     },
     {
       label: 'ERP / Commerce',
       permission: MENU_PERMISSIONS.erpCommerce,
       items: [
-        { label: 'Warehouses', path: '/admin/erp/warehouses', icon: Warehouse, permission: MENU_PERMISSIONS.erpCommerce, menuKey: 'erp-warehouses' },
         {
           label: 'Products & Stock',
           icon: Package,
@@ -355,9 +345,28 @@ const AdminLayout = () => {
           ],
         },
         { label: 'Purchases', path: '/admin/erp/purchases', icon: Truck, permission: MENU_PERMISSIONS.erpCommerce, menuKey: 'erp-purchases' },
-        { label: 'Sales', path: '/admin/erp/sales', icon: ShoppingCart, permission: MENU_PERMISSIONS.erpCommerce, menuKey: 'erp-sales' },
-        { label: 'Quotations', path: '/admin/erp/quotations', icon: FileText, permission: MENU_PERMISSIONS.erpCommerce, menuKey: 'erp-quotations' },
-        { label: 'Deliveries', path: '/admin/erp/deliveries', icon: Truck, permission: MENU_PERMISSIONS.erpCommerce, menuKey: 'erp-deliveries' },
+        {
+          label: 'Sale',
+          icon: ShoppingCart,
+          permission: MENU_PERMISSIONS.erpCommerce,
+          menuKey: 'erp-sales',
+          submenu: [
+            { label: 'Sale List', path: '/admin/erp/sales', color: 'navy', icon: List },
+            { label: 'POS', path: '/admin/erp/pos', color: 'gold', icon: ShoppingCart },
+            { label: 'Add Sale', path: '/admin/erp/sales?tab=add', color: 'purple', icon: PlusCircle },
+            { label: 'Delivery List', path: '/admin/erp/deliveries', color: 'teal', icon: Truck },
+          ],
+        },
+        {
+          label: 'Quotation',
+          icon: FileText,
+          permission: MENU_PERMISSIONS.erpCommerce,
+          menuKey: 'erp-quotations',
+          submenu: [
+            { label: 'Quotation List', path: '/admin/erp/quotations', color: 'navy', icon: List },
+            { label: 'Add Quotation', path: '/admin/erp/quotations?tab=add', color: 'gold', icon: FileText },
+          ],
+        },
         { label: 'Transfers', path: '/admin/erp/transfers', icon: ArrowLeftRight, permission: MENU_PERMISSIONS.erpCommerce, menuKey: 'erp-transfers' },
         { label: 'Returns', path: '/admin/erp/returns', icon: ArrowLeftRight, permission: MENU_PERMISSIONS.erpCommerce, menuKey: 'erp-returns' },
         { label: 'Expenses', path: '/admin/erp/expenses', icon: Receipt, permission: MENU_PERMISSIONS.erpCommerce, menuKey: 'erp-expenses' },
@@ -369,7 +378,23 @@ const AdminLayout = () => {
       label: 'ERP Rentals',
       permission: MENU_PERMISSIONS.erpRentals,
       items: [
-        { label: 'Bookings', path: '/admin/erp/rentals', icon: CalendarDays, permission: MENU_PERMISSIONS.erpRentals, menuKey: 'erp-rentals' },
+        {
+          label: 'Rental Module',
+          icon: CalendarDays,
+          permission: MENU_PERMISSIONS.erpRentals,
+          menuKey: 'erp-rentals',
+          submenu: [
+            { label: 'Booking Create', path: '/admin/erp/rentals?tab=booking-create', color: 'navy', icon: PlusCircle },
+            { label: 'Booking List', path: '/admin/erp/rentals?tab=booking-list', color: 'gold', icon: List },
+            { label: 'Booking Request', path: '/admin/erp/rentals?tab=booking-request', color: 'purple', icon: Inbox },
+            { label: 'Booked Products', path: '/admin/erp/rentals?tab=booked-products', color: 'pink', icon: Package },
+            { label: 'Booking Reminder', path: '/admin/erp/rentals?tab=booking-reminder', color: 'green', icon: CalendarClock },
+            { label: 'Awaiting Signature', path: '/admin/erp/rentals?tab=awaiting-signature', color: 'orange', icon: PenLine },
+            { label: 'Pending Review', path: '/admin/erp/rentals?tab=pending-review', color: 'cyan', icon: ClipboardCheck },
+            { label: 'Signed Contracts', path: '/admin/erp/rentals?tab=signed-contracts', color: 'teal', icon: FileSignature },
+            { label: 'Booking Calendar', path: '/admin/erp/rentals?tab=booking-calendar', color: 'rose', icon: CalendarDays },
+          ],
+        },
       ],
     },
     {
@@ -387,7 +412,6 @@ const AdminLayout = () => {
       permission: MENU_PERMISSIONS.system,
       items: [
         { label: 'Site Content', path: '/admin/site-content', icon: Globe, permission: MENU_PERMISSIONS.siteContent, menuKey: 'site-content' },
-        { label: 'Backup & Restore', path: '/admin/backup-restore', icon: Database, menuKey: 'backup' },
         { label: 'Settings', path: '/admin/general-settings', icon: Settings, menuKey: 'general-settings' },
       ]
     }
@@ -413,10 +437,14 @@ const AdminLayout = () => {
       });
     });
 
-    const orderedKeys = Array.isArray(sideOrder) && sideOrder.length
+    const savedOrder = Array.isArray(sideOrder)
+      ? [...new Set(sideOrder.map((key) => LEGACY_MENU_KEYS[key] || key))]
+      : null;
+
+    const orderedKeys = savedOrder && savedOrder.length
       ? [
-          ...sideOrder.filter((key) => byKey.has(key)),
-          ...[...byKey.keys()].filter((key) => !sideOrder.includes(key)),
+          ...savedOrder.filter((key) => byKey.has(key)),
+          ...[...byKey.keys()].filter((key) => !savedOrder.includes(key)),
         ]
       : [...byKey.keys()];
 
@@ -426,20 +454,21 @@ const AdminLayout = () => {
     }];
   }, [sideOrder, settingsOrder]);
 
-  /** Exact match for top tabs (including ?tab=). */
+  /** Match for top tabs (including ?tab=). */
   const tabMatches = (path) => {
-    const base = path.split('?')[0];
+    const [base, query = ''] = path.split('?');
     const full = `${location.pathname}${location.search}`;
     if (full === path) return true;
-    // Default Category / User List when URL has no query
-    if (
-      location.pathname === base
-      && !location.search
-      && (path.includes('tab=category') || path.includes('tab=user-list'))
-    ) {
-      return true;
-    }
-    return false;
+    if (location.pathname !== base) return false;
+
+    const wanted = new URLSearchParams(query);
+    // Links carrying anything other than ?tab= (e.g. ?action=new) need an exact match.
+    for (const key of wanted.keys()) if (key !== 'tab') return false;
+    const current = new URLSearchParams(location.search);
+    for (const key of current.keys()) if (key !== 'tab' && key !== 'id') return false;
+
+    return (current.get('tab') || DEFAULT_SECTION_TAB[base] || 'list')
+      === (wanted.get('tab') || 'list');
   };
 
   /** Broader match for highlighting sidebar parent links. */
@@ -450,10 +479,13 @@ const AdminLayout = () => {
       || tabMatches(path);
   };
 
+  const visibleSubmenu = (item) =>
+    (item?.submenu || []).filter((sub) => itemVisible(hasPermission, sub.permission));
+
   const findActiveSection = () => {
     for (const group of menuGroupsOrdered) {
       for (const item of group.items || []) {
-        if (item.submenu?.some((sub) => sectionMatches(sub.path))) {
+        if (visibleSubmenu(item).some((sub) => sectionMatches(sub.path))) {
           return item;
         }
       }
@@ -466,14 +498,17 @@ const AdminLayout = () => {
   const MenuItem = ({ item }) => {
     if (item.permission && !itemVisible(hasPermission, item.permission)) return null;
 
+    const subs = visibleSubmenu(item);
+    if (item.submenu && !subs.length) return null;
+
     const pathMatch = item.path?.split('?')[0];
     const activePaths = item.activePaths || (pathMatch ? [pathMatch] : []);
     const isActive = item.submenu
-      ? item.submenu.some((sub) => sectionMatches(sub.path))
+      ? subs.some((sub) => sectionMatches(sub.path))
       : (item.path ? activePaths.some((p) => location.pathname === p || location.pathname.startsWith(`${p}/`) || location.pathname + location.search === item.path) : false);
 
     if (item.submenu) {
-      const firstSub = item.submenu[0];
+      const firstSub = subs[0];
       return (
         <Link
           to={firstSub.path}
@@ -641,8 +676,11 @@ const AdminLayout = () => {
             <HrLettersTopNav />
           ) : (
           <div className="mb-6 overflow-x-auto scrollbar-thin">
+            <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.15em] text-slate-400">
+              {tl('menu', activeSection.label)}
+            </p>
             <nav className="flex flex-wrap gap-2 min-w-max">
-              {activeSection.submenu.map((sub, index) => {
+              {visibleSubmenu(activeSection).map((sub, index) => {
                 const active = tabMatches(sub.path);
                 const theme = getTabTheme(sub.color || index);
                 return (

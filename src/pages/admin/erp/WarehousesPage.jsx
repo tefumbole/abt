@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { createWarehouse, deleteWarehouse, listWarehouses, updateWarehouse } from '@/services/erpService';
-import ErpShell, { COMMERCE_TABS } from './ErpShell';
+import ErpShell from './ErpShell';
 
 const EMPTY = { name: '', phone: '', email: '', address: '', is_active: true, is_default: false };
 
@@ -47,7 +47,7 @@ export default function WarehousesPage() {
   };
 
   return (
-    <ErpShell title="ERP Commerce" subtitle="Warehouses" tabs={COMMERCE_TABS}>
+    <ErpShell title="ERP Commerce" subtitle="Warehouses">
       <form onSubmit={submit} className="rounded-xl border bg-white p-4 grid gap-3 md:grid-cols-2">
         <div>
           <Label>Name</Label>

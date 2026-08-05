@@ -141,8 +141,9 @@ import {
   TransfersPage, ReturnsPage, ExpensesPage, PaymentsPage, AccountingPage,
 } from '@/pages/admin/erp/SupportPages';
 import {
-  RentalsPage, ContractsPage, ErpLettersPage, FixedAssetsPage, LeadersPage,
+  ContractsPage, ErpLettersPage, FixedAssetsPage, LeadersPage,
 } from '@/pages/admin/erp/HeavyPages';
+import RentalsPage from '@/pages/admin/erp/RentalsPage';
 import PublicQuotationPage from '@/pages/erp/PublicQuotationPage';
 import PublicDeliveryPage from '@/pages/erp/PublicDeliveryPage';
 import PublicBookingPage from '@/pages/erp/PublicBookingPage';

@@ -128,8 +128,12 @@ router.post('/booking/:token/sign', async (req, res) => {
   try {
     const [rows] = await getPool().query(`SELECT * FROM erp_bookings WHERE signature_token = ?`, [req.params.token]);
     if (!rows.length) return res.status(404).json({ error: 'Invalid link' });
+    // A fresh signature queues the booking for staff review.
     await getPool().query(
-      `UPDATE erp_bookings SET signature_status = 'signed', signed_at = NOW(), booking_status = 'confirmed' WHERE id = ?`,
+      `UPDATE erp_bookings
+         SET signature_status = 'signed', signed_at = NOW(), booking_status = 'confirmed',
+             review_status = 'pending'
+       WHERE id = ?`,
       [rows[0].id]
     );
     res.json({ ok: true });

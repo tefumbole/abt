@@ -102,6 +102,22 @@ export const SCHEMA_PATCHES = [
   // Public team display order (drag-and-drop in admin)
   'ALTER TABLE members ADD COLUMN sort_order INT NOT NULL DEFAULT 0',
   'CREATE INDEX idx_members_sort_order ON members (sort_order)',
+  // Rental booking pipeline (review queue, reminders, order-level charges)
+  'ALTER TABLE erp_bookings ADD COLUMN review_status VARCHAR(32) NOT NULL DEFAULT \'none\'',
+  'ALTER TABLE erp_bookings ADD COLUMN review_note TEXT DEFAULT NULL',
+  'ALTER TABLE erp_bookings ADD COLUMN reviewed_at DATETIME DEFAULT NULL',
+  'ALTER TABLE erp_bookings ADD COLUMN reviewed_by CHAR(36) DEFAULT NULL',
+  'ALTER TABLE erp_bookings ADD COLUMN reminder_sent_at DATETIME DEFAULT NULL',
+  'ALTER TABLE erp_bookings ADD COLUMN cc_recipients TEXT DEFAULT NULL',
+  'ALTER TABLE erp_bookings ADD COLUMN order_tax DECIMAL(15,2) NOT NULL DEFAULT 0',
+  'ALTER TABLE erp_bookings ADD COLUMN order_discount DECIMAL(15,2) NOT NULL DEFAULT 0',
+  'ALTER TABLE erp_bookings ADD COLUMN shipping DECIMAL(15,2) NOT NULL DEFAULT 0',
+  'ALTER TABLE erp_bookings ADD COLUMN source VARCHAR(16) NOT NULL DEFAULT \'admin\'',
+  'CREATE INDEX idx_erp_bookings_review ON erp_bookings (review_status)',
+  'CREATE INDEX idx_erp_bookings_range ON erp_bookings (from_datetime, to_datetime)',
+  'ALTER TABLE erp_booking_products ADD COLUMN batch_no VARCHAR(64) DEFAULT NULL',
+  'ALTER TABLE erp_booking_products ADD COLUMN booking_method VARCHAR(32) NOT NULL DEFAULT \'duration\'',
+  'ALTER TABLE erp_booking_products ADD COLUMN `number` VARCHAR(64) DEFAULT NULL',
 ];
 
 export const CREATE_STATEMENTS = [

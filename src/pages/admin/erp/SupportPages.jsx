@@ -10,7 +10,7 @@ import {
   listAccounts, listExpenseCategories, listExpenses, listErpPayments, listMoneyTransfers,
   listProducts, listPurchaseReturns, listSaleReturns, listTransfers, listWarehouses,
 } from '@/services/erpService';
-import ErpShell, { COMMERCE_TABS } from './ErpShell';
+import ErpShell from './ErpShell';
 
 export function TransfersPage() {
   const [rows, setRows] = useState([]);
@@ -30,7 +30,7 @@ export function TransfersPage() {
   useEffect(() => { load(); }, []);
 
   return (
-    <ErpShell title="ERP Commerce" subtitle="Stock transfers" tabs={COMMERCE_TABS}>
+    <ErpShell title="ERP Commerce" subtitle="Stock transfers">
       <form className="rounded-xl border bg-white p-4 grid md:grid-cols-2 gap-3 mb-4" onSubmit={async (e) => {
         e.preventDefault();
         try {
@@ -86,7 +86,7 @@ export function ReturnsPage() {
   useEffect(() => { load(); }, [tab]);
 
   return (
-    <ErpShell title="ERP Commerce" subtitle="Returns" tabs={COMMERCE_TABS}>
+    <ErpShell title="ERP Commerce" subtitle="Returns">
       <div className="flex gap-2 mb-4">
         <Button size="sm" variant={tab === 'sale' ? 'default' : 'outline'} onClick={() => setTab('sale')}>Sale returns</Button>
         <Button size="sm" variant={tab === 'purchase' ? 'default' : 'outline'} onClick={() => setTab('purchase')}>Purchase returns</Button>
@@ -145,7 +145,7 @@ export function ExpensesPage() {
   useEffect(() => { load(); }, []);
 
   return (
-    <ErpShell title="ERP Commerce" subtitle="Expenses" tabs={COMMERCE_TABS}>
+    <ErpShell title="ERP Commerce" subtitle="Expenses">
       <form className="flex gap-2 mb-3" onSubmit={async (e) => {
         e.preventDefault();
         try { await createExpenseCategory({ name: form.catName }); toast.success('Category added'); setForm({ ...form, catName: '' }); load(); }
@@ -199,7 +199,7 @@ export function PaymentsPage() {
   useEffect(() => { load(); }, []);
 
   return (
-    <ErpShell title="ERP Commerce" subtitle="Payments ledger" tabs={COMMERCE_TABS}>
+    <ErpShell title="ERP Commerce" subtitle="Payments ledger">
       <form className="rounded-xl border bg-white p-4 grid md:grid-cols-3 gap-3 mb-4" onSubmit={async (e) => {
         e.preventDefault();
         try {
@@ -245,7 +245,7 @@ export function AccountingPage() {
   useEffect(() => { load(); }, []);
 
   return (
-    <ErpShell title="ERP Commerce" subtitle="Accounting" tabs={COMMERCE_TABS}>
+    <ErpShell title="ERP Commerce" subtitle="Accounting">
       {sheet && (
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
           {[

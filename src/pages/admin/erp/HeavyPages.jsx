@@ -6,124 +6,11 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import {
-  createBooking, createContract, createErpLetter, createFixedAsset, createLeader,
-  deleteLeader, disposeFixedAsset, listBookings, listContracts, listCustomers,
-  listErpLetters, listFixedAssets, listLeaders, listProducts, listWarehouses,
-  sendBookingSignLink, updateContract, updateLeader,
+  createContract, createErpLetter, createFixedAsset, createLeader,
+  deleteLeader, disposeFixedAsset, listContracts, listCustomers,
+  listErpLetters, listFixedAssets, listLeaders, updateContract, updateLeader,
 } from '@/services/erpService';
 import ErpShell from './ErpShell';
-
-const RENTAL_TABS = [
-  { label: 'Bookings', path: '/admin/erp/rentals' },
-];
-const CONTRACT_TABS = [
-  { label: 'Contracts', path: '/admin/erp/contracts' },
-];
-const ASSET_TABS = [
-  { label: 'Fixed Assets', path: '/admin/erp/assets' },
-  { label: 'Leaders', path: '/admin/erp/leaders' },
-  { label: 'ERP Letters', path: '/admin/erp/letters' },
-];
-
-export function RentalsPage() {
-  const [rows, setRows] = useState([]);
-  const [warehouses, setWarehouses] = useState([]);
-  const [customers, setCustomers] = useState([]);
-  const [products, setProducts] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [form, setForm] = useState({
-    warehouse_id: '', customer_id: '', product_id: '', qty: 1, net_unit_price: 0, duration_hours: 1,
-    from_datetime: '', to_datetime: '', contract_type: 'standard',
-  });
-
-  const load = async () => {
-    setLoading(true);
-    try {
-      const [b, w, c, p] = await Promise.all([listBookings(), listWarehouses(), listCustomers(), listProducts()]);
-      setRows(b); setWarehouses(w); setCustomers(c); setProducts(p);
-      if (w[0] && !form.warehouse_id) setForm((f) => ({ ...f, warehouse_id: w[0].id }));
-    } catch (e) { toast.error(e.message); } finally { setLoading(false); }
-  };
-  useEffect(() => { load(); }, []);
-
-  return (
-    <ErpShell title="ERP Rentals" subtitle="Bookings & WhatsApp signing" tabs={RENTAL_TABS}>
-      <form className="rounded-xl border bg-white p-4 grid md:grid-cols-3 gap-3 mb-4" onSubmit={async (e) => {
-        e.preventDefault();
-        try {
-          await createBooking({
-            warehouse_id: form.warehouse_id,
-            customer_id: form.customer_id || null,
-            from_datetime: form.from_datetime,
-            to_datetime: form.to_datetime,
-            contract_type: form.contract_type,
-            items: [{
-              product_id: form.product_id,
-              qty: Number(form.qty),
-              net_unit_price: Number(form.net_unit_price),
-              duration_hours: Number(form.duration_hours),
-            }],
-          });
-          toast.success('Booking created'); load();
-        } catch (err) { toast.error(err.message); }
-      }}>
-        <div><Label>Warehouse</Label>
-          <select className="w-full border rounded-md h-10 px-2" value={form.warehouse_id} onChange={(e) => setForm({ ...form, warehouse_id: e.target.value })}>
-            {warehouses.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
-          </select>
-        </div>
-        <div><Label>Customer</Label>
-          <select className="w-full border rounded-md h-10 px-2" value={form.customer_id} onChange={(e) => setForm({ ...form, customer_id: e.target.value })}>
-            <option value="">—</option>
-            {customers.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-          </select>
-        </div>
-        <div><Label>Product</Label>
-          <select className="w-full border rounded-md h-10 px-2" value={form.product_id} onChange={(e) => {
-            const p = products.find((x) => x.id === e.target.value);
-            setForm({ ...form, product_id: e.target.value, net_unit_price: p?.price || 0 });
-          }} required>
-            <option value="">Select…</option>
-            {products.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-          </select>
-        </div>
-        <div><Label>From</Label><Input type="datetime-local" value={form.from_datetime} onChange={(e) => setForm({ ...form, from_datetime: e.target.value })} required /></div>
-        <div><Label>To</Label><Input type="datetime-local" value={form.to_datetime} onChange={(e) => setForm({ ...form, to_datetime: e.target.value })} required /></div>
-        <div><Label>Duration (hrs)</Label><Input type="number" value={form.duration_hours} onChange={(e) => setForm({ ...form, duration_hours: e.target.value })} /></div>
-        <div className="md:col-span-3"><Button type="submit">Create booking</Button></div>
-      </form>
-      <div className="rounded-xl border bg-white overflow-x-auto">
-        {loading ? <div className="p-8 flex justify-center"><Loader2 className="animate-spin" /></div> : (
-          <table className="w-full text-sm">
-            <thead className="bg-slate-50 text-left"><tr>
-              <th className="p-3">Ref</th><th className="p-3">Customer</th><th className="p-3">Status</th>
-              <th className="p-3">Total</th><th className="p-3">Sign</th><th className="p-3" />
-            </tr></thead>
-            <tbody>
-              {rows.map((r) => (
-                <tr key={r.id} className="border-t">
-                  <td className="p-3">{r.reference}</td>
-                  <td className="p-3">{r.customer_name || '—'}</td>
-                  <td className="p-3">{r.booking_status}</td>
-                  <td className="p-3">{Number(r.grand_total).toFixed(2)}</td>
-                  <td className="p-3">{r.signature_status}</td>
-                  <td className="p-3">
-                    <Button size="sm" variant="outline" onClick={async () => {
-                      try {
-                        const res = await sendBookingSignLink(r.id);
-                        toast.success(res.link || 'Sent');
-                      } catch (e) { toast.error(e.message); }
-                    }}>WA sign</Button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </div>
-    </ErpShell>
-  );
-}
 
 export function ContractsPage() {
   const [rows, setRows] = useState([]);
@@ -141,7 +28,7 @@ export function ContractsPage() {
   useEffect(() => { load(); }, []);
 
   return (
-    <ErpShell title="ERP Contracts" subtitle="General contract pipeline" tabs={CONTRACT_TABS}>
+    <ErpShell title="ERP Contracts" subtitle="General contract pipeline">
       <form className="rounded-xl border bg-white p-4 space-y-3 mb-4" onSubmit={async (e) => {
         e.preventDefault();
         try {
@@ -206,7 +93,7 @@ export function ErpLettersPage() {
   useEffect(() => { load(); }, []);
 
   return (
-    <ErpShell title="ERP Letters" subtitle="General letters (separate from HR Letters)" tabs={ASSET_TABS}>
+    <ErpShell title="ERP Letters" subtitle="General letters (separate from HR Letters)">
       <form className="rounded-xl border bg-white p-4 space-y-3 mb-4" onSubmit={async (e) => {
         e.preventDefault();
         try { await createErpLetter(form); toast.success('Letter saved'); load(); }
@@ -255,7 +142,7 @@ export function FixedAssetsPage() {
   useEffect(() => { load(); }, []);
 
   return (
-    <ErpShell title="Fixed Assets" subtitle="Asset register" tabs={ASSET_TABS}>
+    <ErpShell title="Fixed Assets" subtitle="Asset register">
       <form className="rounded-xl border bg-white p-4 grid md:grid-cols-2 gap-3 mb-4" onSubmit={async (e) => {
         e.preventDefault();
         try {
@@ -318,7 +205,7 @@ export function LeadersPage() {
   useEffect(() => { load(); }, []);
 
   return (
-    <ErpShell title="Leaders" subtitle="Optional leaders list (can link to Members)" tabs={ASSET_TABS}>
+    <ErpShell title="Leaders" subtitle="Optional leaders list (can link to Members)">
       <form className="rounded-xl border bg-white p-4 grid md:grid-cols-2 gap-3 mb-4" onSubmit={async (e) => {
         e.preventDefault();
         try {

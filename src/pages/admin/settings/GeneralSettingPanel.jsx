@@ -46,7 +46,6 @@ const EMPTY_FORM = {
   default_biller_id: '',
   default_unit_id: '',
   default_category_id: '',
-  tax_rate: '0',
   logo_url: '',
   logo_file_path: '',
   pdf_header_url: '',
@@ -107,7 +106,6 @@ export default function GeneralSettingPanel() {
         default_biller_id: defaultBl,
         default_unit_id: sys?.default_unit_id || (un || []).find((u) => u.is_default)?.id || (un || [])[0]?.id || '',
         default_category_id: sys?.default_category_id || (cats || [])[0]?.id || '',
-        tax_rate: sys?.tax_rate != null ? String(sys.tax_rate) : '0',
         logo_url: sys?.logo_url || '',
         logo_file_path: sys?.logo_file_path || '',
         pdf_header_url: sys?.pdf_header_url || '',
@@ -149,7 +147,6 @@ export default function GeneralSettingPanel() {
         default_biller_id: form.default_biller_id || null,
         default_unit_id: form.default_unit_id || null,
         default_category_id: form.default_category_id || null,
-        tax_rate: Number(form.tax_rate) || 0,
       });
       if (form.default_unit_id) {
         await setDefaultUnit(form.default_unit_id).catch(() => {});

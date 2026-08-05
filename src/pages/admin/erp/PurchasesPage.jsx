@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { createPurchase, listProducts, listPurchases, listSuppliers, listWarehouses } from '@/services/erpService';
-import ErpShell, { COMMERCE_TABS } from './ErpShell';
+import ErpShell from './ErpShell';
 
 export default function PurchasesPage() {
   const [rows, setRows] = useState([]);
@@ -54,7 +54,7 @@ export default function PurchasesPage() {
   };
 
   return (
-    <ErpShell title="ERP Commerce" subtitle="Purchases" tabs={COMMERCE_TABS}>
+    <ErpShell title="ERP Commerce" subtitle="Purchases">
       <form onSubmit={submit} className="rounded-xl border bg-white p-4 grid md:grid-cols-3 gap-3 mb-4">
         <div>
           <Label>Warehouse</Label>

@@ -32,18 +32,3 @@ export default function ErpShell({ title, subtitle, tabs = [], children }) {
     </div>
   );
 }
-
-export const COMMERCE_TABS = [
-  { label: 'Warehouses', path: '/admin/erp/warehouses' },
-  { label: 'Products', path: '/admin/erp/products' },
-  { label: 'People', path: '/admin/erp/people' },
-  { label: 'Purchases', path: '/admin/erp/purchases' },
-  { label: 'Sales', path: '/admin/erp/sales' },
-  { label: 'Quotations', path: '/admin/erp/quotations' },
-  { label: 'Deliveries', path: '/admin/erp/deliveries' },
-  { label: 'Transfers', path: '/admin/erp/transfers' },
-  { label: 'Returns', path: '/admin/erp/returns' },
-  { label: 'Expenses', path: '/admin/erp/expenses' },
-  { label: 'Payments', path: '/admin/erp/payments' },
-  { label: 'Accounting', path: '/admin/erp/accounting' },
-];

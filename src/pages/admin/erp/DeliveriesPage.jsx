@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { createDelivery, listDeliveries, listSales, sendDeliverySignLink } from '@/services/erpService';
-import ErpShell, { COMMERCE_TABS } from './ErpShell';
+import ErpShell from './ErpShell';
 
 export default function DeliveriesPage() {
   const [rows, setRows] = useState([]);
@@ -31,7 +31,7 @@ export default function DeliveriesPage() {
   useEffect(() => { load(); }, [filter]);
 
   return (
-    <ErpShell title="ERP Commerce" subtitle="Deliveries & e-signature" tabs={COMMERCE_TABS}>
+    <ErpShell title="ERP Commerce" subtitle="Deliveries & e-signature">
       <div className="flex gap-2 mb-4">
         {['', 'pending', 'signed'].map((f) => (
           <Button key={f || 'all'} size="sm" variant={filter === f ? 'default' : 'outline'} onClick={() => setFilter(f)}>
