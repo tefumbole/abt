@@ -395,12 +395,19 @@ export default function ProductsPage() {
       )}
 
       {!loading && tab === 'product-list' && (
+        <div className="space-y-3">
+        <div className="flex justify-end">
+          <Button className="bg-[#003D82]" onClick={() => setTab('add-product')}>
+            <Plus className="h-4 w-4 mr-1" /> Add Product
+          </Button>
+        </div>
         <div className="rounded-xl border bg-white overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-slate-50 text-left">
               <tr>
                 <th className="p-3">Name</th>
                 <th className="p-3">Code</th>
+                <th className="p-3">Brand</th>
                 <th className="p-3">Category</th>
                 <th className="p-3">Price</th>
                 <th className="p-3">Cost</th>
@@ -411,13 +418,49 @@ export default function ProductsPage() {
             <tbody>
               {products.map((p) => (
                 <tr key={p.id} className="border-t">
-                  <td className="p-3 font-medium">{p.name}</td>
+                  <td className="p-3 font-medium">
+                    <Input
+                      defaultValue={p.name}
+                      className="h-8"
+                      onBlur={async (e) => {
+                        if (e.target.value === p.name) return;
+                        try { await updateProduct(p.id, { name: e.target.value }); toast.success('Name saved'); reload(); }
+                        catch (err) { toast.error(err.message); }
+                      }}
+                    />
+                  </td>
                   <td className="p-3">{p.code || '—'}</td>
+                  <td className="p-3">{p.brand_name || '—'}</td>
                   <td className="p-3">{p.category_name || '—'}</td>
-                  <td className="p-3">{Number(p.price).toFixed(2)}</td>
+                  <td className="p-3">
+                    <Input
+                      type="number"
+                      defaultValue={p.price}
+                      className="h-8 w-28"
+                      onBlur={async (e) => {
+                        try { await updateProduct(p.id, { price: e.target.value }); toast.success('Price saved'); }
+                        catch (err) { toast.error(err.message); }
+                      }}
+                    />
+                  </td>
                   <td className="p-3">{Number(p.cost).toFixed(2)}</td>
                   <td className="p-3">
-                    {p.tracks_stock === false ? '—' : Number(p.stock_qty || 0)}
+                    {p.tracks_stock === false ? '—' : (
+                      <Input
+                        type="number"
+                        defaultValue={p.stock_qty || 0}
+                        className="h-8 w-24"
+                        onBlur={async (e) => {
+                          try {
+                            await updateProduct(p.id, {
+                              stocks: [{ warehouse_id: warehouseId, qty: Number(e.target.value) }],
+                            });
+                            toast.success('Qty saved');
+                            reload();
+                          } catch (err) { toast.error(err.message); }
+                        }}
+                      />
+                    )}
                   </td>
                   <td className="p-3 text-right">
                     <DropdownMenu>
@@ -454,10 +497,11 @@ export default function ProductsPage() {
                 </tr>
               ))}
               {!products.length && (
-                <tr><td colSpan={7} className="p-8 text-center text-slate-500">No products yet</td></tr>
+                <tr><td colSpan={8} className="p-8 text-center text-slate-500">No products yet</td></tr>
               )}
             </tbody>
           </table>
+        </div>
         </div>
       )}
 

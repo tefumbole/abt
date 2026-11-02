@@ -227,7 +227,8 @@ const AdminLayout = () => {
             { label: 'Categories', path: '/admin/timesheet-categories' } 
           ]
         },
-        { label: 'Payments', path: '/admin/payments', icon: CreditCard, permission: MENU_PERMISSIONS.operations, menuKey: 'payments' }, 
+        { label: 'Payments', path: '/admin/payments', icon: CreditCard, permission: MENU_PERMISSIONS.operations, menuKey: 'payments' },
+        { label: 'Master Class Payments', path: '/admin/master-class-payments', icon: CreditCard, permission: MENU_PERMISSIONS.operations, menuKey: 'master-class-payments' }, 
       ]
     },
     {
@@ -370,7 +371,7 @@ const AdminLayout = () => {
         { label: 'Transfers', path: '/admin/erp/transfers', icon: ArrowLeftRight, permission: MENU_PERMISSIONS.erpCommerce, menuKey: 'erp-transfers' },
         { label: 'Returns', path: '/admin/erp/returns', icon: ArrowLeftRight, permission: MENU_PERMISSIONS.erpCommerce, menuKey: 'erp-returns' },
         { label: 'Expenses', path: '/admin/erp/expenses', icon: Receipt, permission: MENU_PERMISSIONS.erpCommerce, menuKey: 'erp-expenses' },
-        { label: 'Payments', path: '/admin/erp/payments', icon: Wallet, permission: MENU_PERMISSIONS.erpCommerce, menuKey: 'erp-payments' },
+        { label: 'Payments', path: '/admin/payments', icon: Wallet, permission: MENU_PERMISSIONS.erpCommerce, menuKey: 'erp-payments' },
         { label: 'Accounting', path: '/admin/erp/accounting', icon: Landmark, permission: MENU_PERMISSIONS.erpCommerce, menuKey: 'erp-accounting' },
         { label: 'Reports Hub', path: '/admin/erp/reports', icon: LineChart, permission: MENU_PERMISSIONS.erpCommerce, menuKey: 'reports' },
       ],

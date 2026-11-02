@@ -22,6 +22,7 @@ import activityLogsRoutes from './routes/activityLogs.js';
 import galleryRoutes from './routes/gallery.js';
 import siteContentRoutes from './routes/siteContent.js';
 import erpRoutes from './routes/erp/index.js';
+import paymentsRoutes from './routes/payments.js';
 import { APP_VERSION } from './constants/appVersion.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -93,6 +94,7 @@ app.use('/activity-logs', activityLogsRoutes);
 app.use('/gallery', galleryRoutes);
 app.use('/site-content', siteContentRoutes);
 app.use('/erp', erpRoutes);
+app.use('/payments', paymentsRoutes);
 
 app.use((err, _req, res, next) => {
   if (err?.code === 'LIMIT_FILE_SIZE') {

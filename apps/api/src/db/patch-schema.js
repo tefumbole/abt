@@ -2,6 +2,7 @@
  * Idempotent ALTER patches for databases created from an older schema.sql.
  */
 import { ERP_CREATE_STATEMENTS } from './erpSchema.js';
+import { COMMERCE_SCHEMA_PATCHES, COMMERCE_CREATE_STATEMENTS } from './commerce-schema.js';
 
 export const SCHEMA_PATCHES = [
   'ALTER TABLE profiles ADD COLUMN status VARCHAR(50) DEFAULT \'active\'',
@@ -138,6 +139,7 @@ export const SCHEMA_PATCHES = [
   // Rental goods-receipt leftovers
   'ALTER TABLE erp_bookings ADD COLUMN goods_received_at DATETIME DEFAULT NULL',
   'ALTER TABLE erp_bookings ADD COLUMN goods_receipt_note TEXT DEFAULT NULL',
+  ...COMMERCE_SCHEMA_PATCHES,
 ];
 
 export const CREATE_STATEMENTS = [
@@ -573,6 +575,7 @@ export const CREATE_STATEMENTS = [
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
 
   ...ERP_CREATE_STATEMENTS,
+  ...COMMERCE_CREATE_STATEMENTS,
 ];
 
 export const DATA_PATCHES = [];

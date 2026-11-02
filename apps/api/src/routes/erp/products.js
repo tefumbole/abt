@@ -8,7 +8,7 @@ import { bool, num, requireErpAdmin } from './helpers.js';
 
 const router = Router();
 
-const PRODUCT_TYPES = new Set(['standard', 'digital', 'donation', 'service']);
+const PRODUCT_TYPES = new Set(['standard', 'digital', 'combo', 'donation', 'service']);
 const TAX_METHODS = new Set(['exclusive', 'inclusive']);
 
 const PRODUCT_SELECT = `SELECT p.*,
@@ -487,6 +487,25 @@ router.post('/', requireAuth, requireErpAdmin, async (req, res) => {
     const code = b.code?.trim() || (await generateProductCode(pool));
     if (await isProductCodeTaken(pool, code)) {
       return res.status(409).json({ error: `Product code "${code}" is already used by another product` });
+    }
+    const [nameDup] = await pool.query(
+      'SELECT id FROM products WHERE is_active = 1 AND name = ? LIMIT 1',
+      [b.name.trim()]
+    );
+    if (nameDup.length) {
+      return res.status(409).json({ error: 'An active product with this name already exists' });
+    }
+    if (productType === 'donation' || productType === 'service') {
+      const unitCode = productType === 'donation' ? 'donation' : 'service';
+      const catName = productType === 'donation' ? 'donation' : 'SERVICES';
+      const [u] = await pool.query('SELECT id FROM erp_units WHERE code = ? LIMIT 1', [unitCode]);
+      const [c] = await pool.query('SELECT id FROM erp_categories WHERE name = ? LIMIT 1', [catName]);
+      if (u[0]) b.unit_id = b.sale_unit_id = b.purchase_unit_id = u[0].id;
+      if (c[0]) b.category_id = c[0].id;
+    }
+    if (productType === 'combo' || productType === 'digital') {
+      b.cost = 0;
+      b.unit_id = b.sale_unit_id = b.purchase_unit_id = null;
     }
     const tracksStock = productType === 'standard';
     const hasWarehousePrice = bool(b.has_warehouse_price, false);

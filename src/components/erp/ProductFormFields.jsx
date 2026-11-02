@@ -20,6 +20,7 @@ const ROW_CLASS = 'grid gap-4 md:grid-cols-3';
 export const PRODUCT_TYPES = [
   { value: 'standard', label: 'Standard' },
   { value: 'digital', label: 'Digital' },
+  { value: 'combo', label: 'Combo' },
   { value: 'donation', label: 'Donation' },
   { value: 'service', label: 'Service' },
 ];

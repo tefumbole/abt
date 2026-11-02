@@ -35,9 +35,9 @@ const QUICK_METHODS = [
   { key: 'cash', method: 'cash', paidById: 1, label: 'Cash', className: 'bg-teal-600 hover:bg-teal-700 text-white' },
   { key: 'credit', method: 'credit', paidById: 10, label: 'Credit', className: 'bg-purple-600 hover:bg-purple-700 text-white' },
   { key: 'group_credit', method: 'group_credit', paidById: 11, label: 'Group Credit', className: 'bg-green-600 hover:bg-green-700 text-white' },
-  { key: 'orange_money', method: 'momo_orange', paidById: 8, label: 'Orange Money', className: 'bg-[#da7828] hover:bg-[#c06820] text-white' },
-  { key: 'mtn_momo', method: 'momo_mtn', paidById: 8, label: 'MTN momo', className: 'bg-[#fd7272] hover:bg-[#e85a5a] text-white' },
+  { key: 'momo', method: 'momo_orange', paidById: 8, label: 'MOMO / OM', className: 'bg-[#da7828] hover:bg-[#c06820] text-white' },
   { key: 'deposit', method: 'deposit', paidById: 6, label: 'Deposit', className: 'bg-[#7b2d3b] hover:bg-[#642430] text-white' },
+  { key: 'pay_later', method: 'pay_later', paidById: 9, label: 'Pay Later', className: 'bg-slate-700 hover:bg-slate-800 text-white' },
 ];
 
 const PAID_BY_ID = {

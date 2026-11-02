@@ -138,8 +138,9 @@ import QuotationsPage from '@/pages/admin/erp/QuotationsPage';
 import DeliveriesPage from '@/pages/admin/erp/DeliveriesPage';
 import PosPage from '@/pages/admin/erp/PosPage';
 import {
-  TransfersPage, ReturnsPage, ExpensesPage, PaymentsPage, AccountingPage,
+  TransfersPage, ReturnsPage, ExpensesPage, PaymentsPage as ErpLedgerPaymentsPage, AccountingPage,
 } from '@/pages/admin/erp/SupportPages';
+import CommercePaymentsPage from '@/pages/admin/commerce/PaymentsPage';
 import ReportsPage from '@/pages/admin/erp/ReportsPage';
 import {
   ContractsPage, ErpLettersPage, FixedAssetsPage, LeadersPage,
@@ -884,7 +885,35 @@ const AppContent = () => {
           />
 
           <Route
+            path="sale"
+            element={
+              <ProtectedRoute requireAdmin={true}>
+                <PosPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="products"
+            element={
+              <ProtectedRoute requireAdmin={true}>
+                <ProductsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="products/create"
+            element={<Navigate to="/admin/erp/products?tab=add-product" replace />}
+          />
+          <Route
             path="payments"
+            element={
+              <ProtectedRoute requireAdmin={true}>
+                <CommercePaymentsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="master-class-payments"
             element={
               <ProtectedRoute requireAdmin={true}>
                 <AdminPaymentsPage />
@@ -1030,7 +1059,8 @@ const AppContent = () => {
           <Route path="erp/transfers" element={<ProtectedRoute requireAdmin={true}><TransfersPage /></ProtectedRoute>} />
           <Route path="erp/returns" element={<ProtectedRoute requireAdmin={true}><ReturnsPage /></ProtectedRoute>} />
           <Route path="erp/expenses" element={<ProtectedRoute requireAdmin={true}><ExpensesPage /></ProtectedRoute>} />
-          <Route path="erp/payments" element={<ProtectedRoute requireAdmin={true}><PaymentsPage /></ProtectedRoute>} />
+          <Route path="erp/payments" element={<ProtectedRoute requireAdmin={true}><CommercePaymentsPage /></ProtectedRoute>} />
+          <Route path="erp/payments/ledger" element={<ProtectedRoute requireAdmin={true}><ErpLedgerPaymentsPage /></ProtectedRoute>} />
           <Route path="erp/accounting" element={<ProtectedRoute requireAdmin={true}><AccountingPage /></ProtectedRoute>} />
           <Route path="erp/reports" element={<ProtectedRoute requireAdmin={true}><ReportsPage /></ProtectedRoute>} />
           <Route path="erp/rentals" element={<ProtectedRoute requireAdmin={true}><RentalsPage /></ProtectedRoute>} />
