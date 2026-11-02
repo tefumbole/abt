@@ -353,7 +353,6 @@ const AdminLayout = () => {
           menuKey: 'erp-sales',
           submenu: [
             { label: 'Sale List', path: '/admin/erp/sales', color: 'navy', icon: List },
-            { label: 'POS', path: '/admin/erp/pos', color: 'gold', icon: ShoppingCart },
             { label: 'Add Sale', path: '/admin/erp/sales?tab=add', color: 'purple', icon: PlusCircle },
             { label: 'Delivery List', path: '/admin/erp/deliveries', color: 'teal', icon: Truck },
           ],
@@ -671,7 +670,7 @@ const AdminLayout = () => {
           </Link>
           <LanguageSwitcher variant="admin" />
         </div>
-        {activeSection && (
+        {activeSection && !location.pathname.startsWith('/admin/erp/pos') && (
           activeSection.label === 'Human Resources' ? (
             <HrTopNav />
           ) : activeSection.label === 'HR Letters' ? (

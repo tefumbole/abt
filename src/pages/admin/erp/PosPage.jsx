@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  Clock, Fullscreen, HelpCircle, Loader2, Lock, Minus, Package, PauseCircle,
-  Plus, Printer, Receipt, ScanLine, Search, Settings2, Trash2, X,
+  Clock, Fullscreen, HelpCircle, Loader2, Lock, Minus, Package,
+  Plus, Printer, ScanLine, Search, Settings2, Trash2, X,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
-import { amount, formatErpDate, makeMoney, num, payingMethodLabel } from '@/lib/erpFormat';
+import { amount, makeMoney, num, payingMethodLabel } from '@/lib/erpFormat';
 import { buildReceiptHtml, loadErpCompany, RECEIPT_STYLES } from '@/lib/erpDocuments';
 import { productImageSrc } from '@/lib/erpImages';
 import { openPrintWindow } from '@/lib/erpExport';
@@ -22,24 +22,19 @@ import {
 } from '@/services/erpService';
 import PaymentModal, { paymentTotals } from '@/components/erp/pos/PaymentModal';
 import SaleCompleteModal from '@/components/erp/pos/SaleCompleteModal';
-import HeldSalesModal from '@/components/erp/pos/HeldSalesModal';
-import RecentSalesModal from '@/components/erp/pos/RecentSalesModal';
 import RegisterCloseModal from '@/components/erp/pos/RegisterCloseModal';
-import { addHold, readHolds, removeHold } from '@/components/erp/pos/posHolds';
 import {
-  buildCartReceiptDoc, buildRegisterReportHtml, buildSaleReceiptDoc, lineSubtotal,
+  buildCartReceiptDoc, buildRegisterReportHtml, lineSubtotal,
 } from '@/components/erp/pos/posDocs';
 
 /** Beyond Tech quick-pay buttons → erp paying_method + legacy paid_by_id. */
 const QUICK_METHODS = [
-  { key: 'je', method: 'je', paidById: 3, label: 'JE', className: 'bg-[#0b3f90] hover:bg-[#072f6b] text-white' },
   { key: 'cash', method: 'cash', paidById: 1, label: 'Cash', className: 'bg-teal-600 hover:bg-teal-700 text-white' },
-  { key: 'credit', method: 'credit', paidById: 10, label: 'Credit', className: 'bg-purple-600 hover:bg-purple-700 text-white' },
-  { key: 'group_credit', method: 'group_credit', paidById: 11, label: 'Group Credit', className: 'bg-green-600 hover:bg-green-700 text-white' },
   { key: 'momo', method: 'momo_mtn', paidById: 8, label: 'MoMo', className: 'bg-[#da7828] hover:bg-[#c06820] text-white' },
   { key: 'deposit', method: 'deposit', paidById: 6, label: 'Deposit', className: 'bg-[#7b2d3b] hover:bg-[#642430] text-white' },
   { key: 'pay_later', method: 'pay_later', paidById: 9, label: 'Pay Later', className: 'bg-slate-700 hover:bg-slate-800 text-white' },
 ];
+const POS_PAY_METHODS = QUICK_METHODS.map((m) => ({ value: m.method, label: m.label }));
 
 const PAID_BY_ID = {
   cash: 1, je: 3, deposit: 6, momo_orange: 8, momo_mtn: 8, pay_later: 9, credit: 10, group_credit: 11,
@@ -70,7 +65,6 @@ const GRID_COLS = {
 const SHORTCUTS = [
   ['F2', 'Focus product search'],
   ['F4', 'Open payment'],
-  ['F8', 'Hold current sale'],
   ['Esc', 'Close the open dialog'],
   ['Ctrl + Delete', 'Cancel sale'],
 ];
@@ -147,12 +141,6 @@ export default function PosPage() {
   const [company, setCompany] = useState({});
   const [saleComplete, setSaleComplete] = useState(null);
   const [lastReceipt, setLastReceipt] = useState(null);
-  const [holds, setHolds] = useState([]);
-  const [showHolds, setShowHolds] = useState(false);
-  const [showRecent, setShowRecent] = useState(false);
-  const [recentSales, setRecentSales] = useState([]);
-  const [recentLoading, setRecentLoading] = useState(false);
-  const [reprintingId, setReprintingId] = useState(null);
   const [todayStats, setTodayStats] = useState({ count: 0, total: 0 });
   const [closeReport, setCloseReport] = useState(null); // { loading, summary }
   const [closingRegister, setClosingRegister] = useState(false);
@@ -162,7 +150,6 @@ export default function PosPage() {
   const searchRef = useRef(null);
 
   const money = useMemo(() => makeMoney(sysSettings), [sysSettings]);
-  const dateFormat = sysSettings.date_format || 'd-m-Y';
 
   const focusSearch = useCallback(() => {
     window.requestAnimationFrame(() => searchRef.current?.focus());
@@ -202,7 +189,6 @@ export default function PosPage() {
         clearCart();
         if (posSettings.auto_print_receipt) printReceipt(doc);
         load(warehouseId);
-        if (showRecent) loadRecentSales();
       } catch (err) {
         toast.error(err.message);
       } finally {
@@ -317,7 +303,6 @@ export default function PosPage() {
 
   useEffect(() => {
     load();
-    setHolds(readHolds());
     focusSearch();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -448,71 +433,6 @@ export default function PosPage() {
     setSearch('');
   };
 
-  /* ------------------------------------------------------------------- holds */
-
-  const holdSale = () => {
-    if (!cart.length) {
-      toast.error('Cart is empty');
-      return;
-    }
-    const customerName = customers.find((c) => c.id === customerId)?.name || 'Walk-in';
-    const fallback = `${customerName} · ${formatErpDate(new Date(), dateFormat, { withTime: true })}`;
-    const label = window.prompt('Label for this held sale', fallback);
-    if (label === null) return;
-    setHolds(addHold({
-      label: label.trim() || fallback,
-      payload: {
-        items: cart,
-        customer_id: customerId,
-        biller_id: billerId,
-        warehouse_id: warehouseId,
-        discount: num(discount),
-        tax: num(tax),
-        shipping: num(shipping),
-        reference,
-        note,
-      },
-    }));
-    clearCart();
-    toast.success('Sale held');
-    focusSearch();
-  };
-
-  const resumeHold = (hold) => {
-    if (cart.length && !window.confirm('Replace the current cart with this held sale?')) return;
-    const payload = hold.payload || {};
-    setCart((payload.items || []).map((line) => ({
-      product_id: line.product_id,
-      name: line.name,
-      code: line.code || '',
-      qty: num(line.qty, 1),
-      price: num(line.price),
-      discount: num(line.discount),
-      tax: num(line.tax),
-      taxEdited: line.taxEdited === true,
-    })));
-    setCustomerId(payload.customer_id || customerId);
-    setBillerId(payload.biller_id || billerId);
-    setReference(payload.reference || '');
-    setNote(payload.note || '');
-    setDiscount(num(payload.discount));
-    setTax(num(payload.tax));
-    setShipping(num(payload.shipping));
-    setHolds(removeHold(hold.id));
-    setShowHolds(false);
-    if (payload.warehouse_id && payload.warehouse_id !== warehouseId) {
-      setWarehouseId(payload.warehouse_id);
-      load(payload.warehouse_id);
-    }
-    toast.success('Held sale resumed');
-    focusSearch();
-  };
-
-  const deleteHold = (id) => {
-    setHolds(removeHold(id));
-    toast.message('Held sale deleted');
-  };
-
   /* ---------------------------------------------------------------- receipts */
 
   const warehouseName = warehouses.find((w) => String(w.id) === String(warehouseId))?.name || '';
@@ -557,9 +477,10 @@ export default function PosPage() {
   };
 
   const openDefaultPay = () => {
-    const fallback = posSettings.default_paying_method;
-    const entry = QUICK_METHODS.find((m) => m.method === fallback)
-      || { key: fallback, method: fallback, label: payingMethodLabel(fallback) };
+    const fallback = QUICK_METHODS.some((m) => m.method === posSettings.default_paying_method)
+      ? posSettings.default_paying_method
+      : 'cash';
+    const entry = QUICK_METHODS.find((m) => m.method === fallback) || QUICK_METHODS[0];
     openPay(entry);
   };
 
@@ -669,44 +590,10 @@ export default function PosPage() {
       setPayModal(null);
       if (posSettings.auto_print_receipt) printReceipt(doc);
       load(warehouseId);
-      if (showRecent) loadRecentSales();
     } catch (e) {
       toast.error(e.message);
     } finally {
       setPaying(false);
-    }
-  };
-
-  /* ----------------------------------------------------------- recent sales */
-
-  const loadRecentSales = async () => {
-    setRecentLoading(true);
-    try {
-      setRecentSales(unwrap(await listRecentPosSales({ warehouse_id: warehouseId || undefined, limit: 15 })));
-    } catch (e) {
-      toast.error(e.message);
-      setRecentSales([]);
-    } finally {
-      setRecentLoading(false);
-    }
-  };
-
-  const openRecent = () => {
-    setShowRecent(true);
-    loadRecentSales();
-  };
-
-  const reprintSale = async (row) => {
-    setReprintingId(row.id);
-    try {
-      const res = await getSale(row.id);
-      const doc = buildSaleReceiptDoc(res?.data || res || {}, { warehouseName });
-      setLastReceipt(doc);
-      printReceipt(doc);
-    } catch (e) {
-      toast.error(e.message);
-    } finally {
-      setReprintingId(null);
     }
   };
 
@@ -763,8 +650,6 @@ export default function PosPage() {
     if (showQuickCustomer) return setShowQuickCustomer(false);
     if (payModal) return setPayModal(null);
     if (saleComplete) return setSaleComplete(null);
-    if (showHolds) return setShowHolds(false);
-    if (showRecent) return setShowRecent(false);
     if (closeReport) return setCloseReport(null);
     if (showRegisterModal) return setShowRegisterModal(false);
     return undefined;
@@ -773,11 +658,10 @@ export default function PosPage() {
   const shortcutRef = useRef({});
   shortcutRef.current = {
     enabled: posSettings.enable_keyboard_shortcuts,
-    modalOpen: Boolean(payModal || saleComplete || showHolds || showRecent || closeReport
+    modalOpen: Boolean(payModal || saleComplete || closeReport
       || showRegisterModal || showQuickCustomer),
     focusSearch,
     openDefaultPay,
-    holdSale,
     cancelSale,
     closeTopModal,
   };
@@ -800,10 +684,6 @@ export default function PosPage() {
         if (handlers.modalOpen) return;
         event.preventDefault();
         handlers.openDefaultPay?.();
-      } else if (event.key === 'F8') {
-        if (handlers.modalOpen) return;
-        event.preventDefault();
-        handlers.holdSale?.();
       } else if ((event.ctrlKey || event.metaKey) && event.key === 'Delete') {
         if (handlers.modalOpen) return;
         event.preventDefault();
@@ -862,12 +742,6 @@ export default function PosPage() {
           </span>
         </div>
         <div className="flex flex-wrap items-center gap-1.5">
-          <Button size="sm" variant="ghost" className="text-white hover:bg-white/10 h-8 px-2" onClick={openRecent}>
-            <Receipt className="h-4 w-4 mr-1" /> Recent sales
-          </Button>
-          <Button size="sm" variant="ghost" className="text-white hover:bg-white/10 h-8 px-2" onClick={() => setShowHolds(true)}>
-            <PauseCircle className="h-4 w-4 mr-1" /> Held ({holds.length})
-          </Button>
           <Button
             size="sm"
             variant="ghost"
@@ -1012,7 +886,6 @@ export default function PosPage() {
                   <tr key={i.product_id} className="border-t">
                     <td className="p-2">
                       <div className="font-medium">{i.name}</div>
-                      <div className="text-xs text-slate-500">{i.code || '—'}</div>
                     </td>
                     <td className="p-2">
                       <Input
@@ -1106,13 +979,6 @@ export default function PosPage() {
             ))}
             <button
               type="button"
-              onClick={holdSale}
-              className="rounded-xl py-3 px-2 text-sm font-bold shadow-sm bg-slate-600 hover:bg-slate-700 text-white"
-            >
-              Hold
-            </button>
-            <button
-              type="button"
               onClick={cancelSale}
               className="rounded-xl py-3 px-2 text-sm font-bold shadow-sm bg-red-600 hover:bg-red-700 text-white col-span-2 sm:col-span-4"
             >
@@ -1192,13 +1058,7 @@ export default function PosPage() {
                         )}
                       </div>
                       <div className="text-xs font-semibold text-slate-800 line-clamp-2 min-h-[2.5em]">{p.name}</div>
-                      <div className="text-[11px] text-slate-500 mt-0.5">{p.code || String(p.id).slice(0, 8)}</div>
                       <div className="text-sm font-bold text-[#003D82] mt-1">{money(p.price)}</div>
-                      {posSettings.show_stock ? (
-                        <div className={cn('text-[11px]', soldOut ? 'text-red-600 font-semibold' : 'text-slate-500')}>
-                          {soldOut ? 'Out of stock' : `Stock ${stock === null || stock === undefined ? '—' : amount(stock, 0)}`}
-                        </div>
-                      ) : null}
                     </button>
                   );
                 })}
@@ -1223,6 +1083,7 @@ export default function PosPage() {
           paying={paying}
           onClose={() => setPayModal(null)}
           onSubmit={confirmPay}
+          methods={POS_PAY_METHODS}
         />
       )}
 
@@ -1248,30 +1109,6 @@ export default function PosPage() {
           money={money}
           onPrint={() => printReceipt(saleComplete.doc)}
           onNewSale={() => { setSaleComplete(null); focusSearch(); }}
-        />
-      )}
-
-      {showHolds && (
-        <HeldSalesModal
-          holds={holds}
-          money={money}
-          dateFormat={dateFormat}
-          onResume={resumeHold}
-          onDelete={deleteHold}
-          onClose={() => setShowHolds(false)}
-        />
-      )}
-
-      {showRecent && (
-        <RecentSalesModal
-          sales={recentSales}
-          loading={recentLoading}
-          money={money}
-          dateFormat={dateFormat}
-          reprintingId={reprintingId}
-          onReprint={reprintSale}
-          onRefresh={loadRecentSales}
-          onClose={() => setShowRecent(false)}
         />
       )}
 

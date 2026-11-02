@@ -28,8 +28,10 @@ export default function PaymentModal({
   paying,
   onClose,
   onSubmit,
+  methods = PAYING_METHODS,
 }) {
   const { tendered, remaining, change } = paymentTotals(rows, grandTotal);
+  const methodOptions = methods.length ? methods : PAYING_METHODS;
 
   const patchRow = (index, patch) => {
     onRowsChange(rows.map((row, i) => (i === index ? { ...row, ...patch } : row)));
@@ -38,7 +40,7 @@ export default function PaymentModal({
   const addRow = () => {
     if (rows.length >= MAX_PAYMENT_ROWS) return;
     const used = new Set(rows.map((r) => r.method));
-    const nextMethod = PAYING_METHODS.find((m) => !used.has(m.value))?.value || 'cash';
+    const nextMethod = methodOptions.find((m) => !used.has(m.value))?.value || 'cash';
     onRowsChange([...rows, {
       id: `row-${Date.now()}`,
       method: nextMethod,
@@ -71,7 +73,7 @@ export default function PaymentModal({
                   value={row.method}
                   onChange={(e) => patchRow(index, { method: e.target.value })}
                 >
-                  {PAYING_METHODS.map((m) => <option key={m.value} value={m.value}>{m.label}</option>)}
+                  {methodOptions.map((m) => <option key={m.value} value={m.value}>{m.label}</option>)}
                 </select>
               </div>
               <div className="w-36 space-y-1">
