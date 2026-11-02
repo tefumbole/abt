@@ -2,8 +2,10 @@ import { Router } from 'express';
 import { randomUUID } from 'node:crypto';
 import { getPool } from '../../db/pool.js';
 import { requireAuth } from '../../middleware/auth.js';
+import { COMPANY_NAME as BRAND } from '../../constants/branding.js';
 import { nextErpReference } from '../../services/erp/referenceNumbers.js';
 import { adjustStock, getNonStockProductIds, getStock } from '../../services/erp/stock.js';
+import { startDeposit } from '../../services/pawapayPayments.js';
 import { mysqlDateTime, num, requireErpAdmin } from './helpers.js';
 
 const router = Router();
@@ -272,8 +274,20 @@ router.post('/sale', requireAuth, requireErpAdmin, async (req, res) => {
       subtotal += num(item.qty) * num(item.net_unit_price) - num(item.discount) + num(item.tax);
     }
     const grand = subtotal - num(body.discount) + num(body.shipping) + num(body.tax);
-    const paid = num(body.paid_amount, grand);
-    const payment_status = paid <= 0 ? 'pending' : paid >= grand ? 'paid' : 'partial';
+    const payingMethod = body.paying_method
+      || PAID_BY_METHODS[Number(body.paid_by_id)]
+      || 'cash';
+    const isMomo = payingMethod === 'momo_orange' || payingMethod === 'momo_mtn' || Number(body.paid_by_id) === 8;
+    let customerPhone = String(body.customer_phone || '').trim();
+    if (!customerPhone && body.customer_id) {
+      const [cust] = await pool.query('SELECT phone FROM erp_customers WHERE id = ? LIMIT 1', [body.customer_id]);
+      customerPhone = cust[0]?.phone || '';
+    }
+    if (isMomo && (!customerPhone || grand < 100)) {
+      return res.status(400).json({ error: 'MoMo sales need a customer phone and at least 100 RWF' });
+    }
+    const paid = isMomo ? 0 : num(body.paid_amount, grand);
+    const payment_status = isMomo || paid <= 0 ? 'pending' : paid >= grand ? 'paid' : 'partial';
     const sale_date = mysqlDateTime(body.sale_date);
     await conn.query(
       `INSERT INTO sales (id, reference, warehouse_id, customer_id, biller_id, sale_status, payment_status,
@@ -298,10 +312,7 @@ router.post('/sale', requireAuth, requireErpAdmin, async (req, res) => {
         await adjustStock(conn, { productId: item.product_id, warehouseId: body.warehouse_id, delta: -qty });
       }
     }
-    const payingMethod = body.paying_method
-      || PAID_BY_METHODS[Number(body.paid_by_id)]
-      || 'cash';
-    if (paid > 0 || ['pay_later', 'credit', 'group_credit'].includes(payingMethod)) {
+    if (!isMomo && (paid > 0 || ['pay_later', 'credit', 'group_credit'].includes(payingMethod))) {
       await conn.query(
         `INSERT INTO erp_payments (id, reference, payable_type, payable_id, amount, paying_method, note, created_by)
          VALUES (?, ?, 'sale', ?, ?, ?, ?, ?)`,
@@ -313,9 +324,48 @@ router.post('/sale', requireAuth, requireErpAdmin, async (req, res) => {
         ]
       );
     }
+    if (customerPhone) {
+      await conn.query(
+        'UPDATE sales SET customer_phone = ?, paid_by_id = ? WHERE id = ?',
+        [customerPhone, body.paid_by_id != null ? String(body.paid_by_id) : null, id]
+      ).catch(() => {});
+    }
     await conn.commit();
+
+    let momo = null;
+    if (isMomo) {
+      const started = await startDeposit({
+        purpose: 'sale',
+        purposeId: id,
+        amount: grand,
+        phone: customerPhone,
+        description: `${BRAND} ${reference}`,
+        userId: req.user?.sub || req.user?.id || null,
+      });
+      momo = {
+        ok: started.ok,
+        deposit_id: started.deposit?.deposit_id || null,
+        status: started.deposit?.status || 'pending',
+        message: started.message || null,
+      };
+      if (started.ok && started.deposit?.deposit_id) {
+        await pool.query(
+          'UPDATE sales SET campay_reference = ?, pawapay_deposit_id = ? WHERE id = ?',
+          [started.deposit.deposit_id, started.deposit.deposit_id, id]
+        ).catch(() => {});
+      }
+    }
+
     res.status(201).json({
-      data: { id, reference, grand_total: grand, payment_status, sale_date, paid_amount: paid },
+      data: {
+        id,
+        reference,
+        grand_total: grand,
+        payment_status: momo?.status === 'completed' ? 'paid' : payment_status,
+        sale_date,
+        paid_amount: momo?.status === 'completed' ? grand : paid,
+        momo,
+      },
     });
   } catch (err) {
     await conn.rollback();

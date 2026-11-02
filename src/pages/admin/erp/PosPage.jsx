@@ -14,6 +14,7 @@ import { buildReceiptHtml, loadErpCompany, RECEIPT_STYLES } from '@/lib/erpDocum
 import { productImageSrc } from '@/lib/erpImages';
 import { openPrintWindow } from '@/lib/erpExport';
 import { getSystemSettings } from '@/services/settingsService';
+import { paymentService } from '@/services/commerceService';
 import {
   closeRegister, createCustomer, createPosSale, getPosSettings, getRegisterSummary, getSale,
   listBillers, listBrands, listCategories, listCustomers, listProducts, listRecentPosSales,
@@ -35,7 +36,7 @@ const QUICK_METHODS = [
   { key: 'cash', method: 'cash', paidById: 1, label: 'Cash', className: 'bg-teal-600 hover:bg-teal-700 text-white' },
   { key: 'credit', method: 'credit', paidById: 10, label: 'Credit', className: 'bg-purple-600 hover:bg-purple-700 text-white' },
   { key: 'group_credit', method: 'group_credit', paidById: 11, label: 'Group Credit', className: 'bg-green-600 hover:bg-green-700 text-white' },
-  { key: 'momo', method: 'momo_orange', paidById: 8, label: 'MOMO / OM', className: 'bg-[#da7828] hover:bg-[#c06820] text-white' },
+  { key: 'momo', method: 'momo_mtn', paidById: 8, label: 'MoMo', className: 'bg-[#da7828] hover:bg-[#c06820] text-white' },
   { key: 'deposit', method: 'deposit', paidById: 6, label: 'Deposit', className: 'bg-[#7b2d3b] hover:bg-[#642430] text-white' },
   { key: 'pay_later', method: 'pay_later', paidById: 9, label: 'Pay Later', className: 'bg-slate-700 hover:bg-slate-800 text-white' },
 ];
@@ -156,6 +157,7 @@ export default function PosPage() {
   const [closeReport, setCloseReport] = useState(null); // { loading, summary }
   const [closingRegister, setClosingRegister] = useState(false);
   const [showShortcuts, setShowShortcuts] = useState(false);
+  const [momoWait, setMomoWait] = useState(null);
 
   const searchRef = useRef(null);
 
@@ -165,6 +167,77 @@ export default function PosPage() {
   const focusSearch = useCallback(() => {
     window.requestAnimationFrame(() => searchRef.current?.focus());
   }, []);
+
+  useEffect(() => {
+    if (!momoWait?.depositId) return undefined;
+    let stopped = false;
+    const finishPaid = async () => {
+      try {
+        const fresh = await getSale(momoWait.saleId);
+        const sale = fresh?.data || fresh || {};
+        const doc = buildCartReceiptDoc({
+          sale: { ...sale, reference: momoWait.reference, grand_total: momoWait.grandTotal, paid_amount: momoWait.grandTotal },
+          items: momoWait.cart,
+          warehouseName,
+          customer: momoWait.customer,
+          cashier: billers.find((b) => String(b.id) === String(billerId))?.name || '',
+          discount: momoWait.discount,
+          tax: momoWait.tax,
+          shipping: momoWait.shipping,
+          grandTotal: momoWait.grandTotal,
+          paidAmount: momoWait.grandTotal,
+          changeAmount: 0,
+          payingMethod: momoWait.method,
+        });
+        setLastReceipt(doc);
+        setSaleComplete({
+          reference: doc.reference,
+          grand_total: doc.grand_total,
+          paid_amount: doc.paid_amount,
+          change_amount: 0,
+          method_label: payingMethodLabel(momoWait.method),
+          payment_status_label: 'Fully paid',
+          doc,
+        });
+        clearCart();
+        if (posSettings.auto_print_receipt) printReceipt(doc);
+        load(warehouseId);
+        if (showRecent) loadRecentSales();
+      } catch (err) {
+        toast.error(err.message);
+      } finally {
+        setMomoWait(null);
+      }
+    };
+    const tick = async () => {
+      try {
+        const status = await paymentService.pawapayStatus(momoWait.depositId);
+        if (stopped) return;
+        if (status.status === 'completed') {
+          toast.success('PawaPay confirmed the payment');
+          await finishPaid();
+          return;
+        }
+        if (status.status === 'failed') {
+          toast.error(status.message || 'Customer declined the MoMo prompt. Sale is unpaid.');
+          setMomoWait(null);
+        }
+      } catch {
+        // keep waiting — network blips should not cancel the prompt
+      }
+    };
+    tick();
+    const timer = setInterval(tick, 3000);
+    const timeout = setTimeout(() => {
+      if (stopped) return;
+      toast.message('Still waiting for PawaPay. You can leave this open or check Payments later.');
+    }, 90_000);
+    return () => {
+      stopped = true;
+      clearInterval(timer);
+      clearTimeout(timeout);
+    };
+  }, [momoWait?.depositId]);
 
   const refreshTodayStats = useCallback(async (wid) => {
     try {
@@ -502,8 +575,14 @@ export default function PosPage() {
     const primary = funded.length
       ? funded.reduce((best, row) => (num(row.amount) > num(best.amount) ? row : best))
       : { method: payModal.method };
+    const isMomo = primary.method === 'momo_mtn' || primary.method === 'momo_orange';
+    const customer = customers.find((c) => c.id === customerId) || {};
+    if (isMomo && !String(customer.phone || '').trim()) {
+      toast.error('MoMo needs the customer phone (078… or 079…)');
+      return;
+    }
     // Over-tender is change owed, not an over-payment: never record more than the total.
-    const paid = Math.min(tendered, grandTotal);
+    const paid = isMomo ? 0 : Math.min(tendered, grandTotal);
     const breakdown = funded.length > 1
       ? `Split: ${funded.map((row) => `${payingMethodLabel(row.method)} ${amount(row.amount)}`).join(' | ')}`
       : '';
@@ -524,6 +603,7 @@ export default function PosPage() {
         paying_amount: tendered,
         paid_by_id: PAID_BY_ID[primary.method] ?? payModal.paidById ?? null,
         paying_method: primary.method,
+        customer_phone: customer.phone || undefined,
         cash_register_id: register?.id || null,
         items: cart.map((line) => ({
           product_id: line.product_id,
@@ -534,6 +614,29 @@ export default function PosPage() {
         })),
       });
       const sale = res?.data || res || {};
+      if (isMomo) {
+        if (!sale.momo?.ok) {
+          toast.error(sale.momo?.message || 'Could not start PawaPay. Sale is saved as unpaid.');
+          setPayModal(null);
+          return;
+        }
+        setPayModal(null);
+        setMomoWait({
+          depositId: sale.momo.deposit_id,
+          saleId: sale.id,
+          reference: sale.reference,
+          grandTotal,
+          customer,
+          change,
+          method: primary.method,
+          cart: [...cart],
+          discount,
+          tax,
+          shipping,
+        });
+        clearCart();
+        return;
+      }
       const doc = buildCartReceiptDoc({
         sale,
         items: cart,
@@ -1121,6 +1224,22 @@ export default function PosPage() {
           onClose={() => setPayModal(null)}
           onSubmit={confirmPay}
         />
+      )}
+
+      {momoWait && (
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6 space-y-3">
+            <h2 className="text-xl font-semibold text-[#003D82]">Waiting for MoMo</h2>
+            <p className="text-sm text-gray-600">
+              Ask the customer to approve {money(momoWait.grandTotal)} on {momoWait.customer?.phone || 'their phone'}.
+              {momoWait.reference ? ` Sale ${momoWait.reference} stays unpaid until PawaPay confirms.` : ''}
+            </p>
+            <div className="flex items-center gap-2 text-[#003D82]">
+              <Loader2 className="w-5 h-5 animate-spin" /> Checking PawaPay…
+            </div>
+            <Button variant="outline" onClick={() => setMomoWait(null)}>Hide and keep waiting</Button>
+          </div>
+        </div>
       )}
 
       {saleComplete && (

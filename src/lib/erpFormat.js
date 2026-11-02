@@ -113,7 +113,7 @@ export const PAYING_METHODS = [
   { value: 'cheque', label: 'Cheque' },
   { value: 'bank_transfer', label: 'Bank Transfer' },
   { value: 'momo_mtn', label: 'MTN MoMo' },
-  { value: 'momo_orange', label: 'Orange Money' },
+  { value: 'momo_orange', label: 'MoMo' },
   { value: 'je', label: 'Journal Entry' },
   { value: 'deposit', label: 'Deposit' },
   { value: 'credit', label: 'Credit' },

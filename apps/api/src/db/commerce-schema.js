@@ -1,6 +1,7 @@
 /**
- * Additive commerce tables for POS, products, and Campay payments.
+ * Additive commerce tables for POS, products, and PawaPay (Rwanda) payments.
  * Uses Alpha's existing UUID products / sales / erp_* lookups.
+ * campay_* table names are historical storage only — the live provider is PawaPay.
  */
 import { randomUUID } from 'node:crypto';
 
@@ -26,6 +27,8 @@ export const COMMERCE_SCHEMA_PATCHES = [
   'ALTER TABLE sales ADD COLUMN customer_phone VARCHAR(50) NULL',
   'ALTER TABLE sales ADD COLUMN customer_name VARCHAR(255) NULL',
   'ALTER TABLE sales ADD COLUMN campay_reference VARCHAR(64) NULL',
+  'ALTER TABLE sales ADD COLUMN pawapay_deposit_id VARCHAR(64) NULL',
+  'ALTER TABLE deposits ADD COLUMN pawapay_deposit_id VARCHAR(64) NULL',
   'ALTER TABLE product_sales ADD COLUMN warehouse_id CHAR(36) NULL',
 ];
 
@@ -43,6 +46,7 @@ export const COMMERCE_CREATE_STATEMENTS = [
     status TINYINT NOT NULL DEFAULT 0,
     note TEXT DEFAULT NULL,
     campay_reference VARCHAR(64) DEFAULT NULL,
+    pawapay_deposit_id VARCHAR(64) DEFAULT NULL,
     payment_link TEXT DEFAULT NULL,
     failure_reason TEXT DEFAULT NULL,
     created_by CHAR(36) DEFAULT NULL,
@@ -95,6 +99,28 @@ export const COMMERCE_CREATE_STATEMENTS = [
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     UNIQUE KEY uq_public_donation_token (token),
     INDEX idx_public_donations_ref (campay_reference)
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
+  `CREATE TABLE IF NOT EXISTS pawapay_deposits (
+    id CHAR(36) NOT NULL PRIMARY KEY DEFAULT (UUID()),
+    deposit_id VARCHAR(64) NOT NULL,
+    purpose VARCHAR(32) NOT NULL,
+    purpose_id CHAR(36) NOT NULL,
+    extra_ids TEXT DEFAULT NULL,
+    amount DECIMAL(15,2) NOT NULL DEFAULT 0,
+    currency VARCHAR(8) NOT NULL DEFAULT 'RWF',
+    phone VARCHAR(32) DEFAULT NULL,
+    provider VARCHAR(64) DEFAULT NULL,
+    paying_method VARCHAR(64) DEFAULT NULL,
+    status VARCHAR(24) NOT NULL DEFAULT 'pending',
+    raw_status VARCHAR(64) DEFAULT NULL,
+    redirect_url VARCHAR(500) DEFAULT NULL,
+    applied_at DATETIME DEFAULT NULL,
+    user_id CHAR(36) DEFAULT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_pawapay_deposit_id (deposit_id),
+    INDEX idx_pawapay_purpose (purpose, purpose_id),
+    INDEX idx_pawapay_status (status)
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
   `CREATE TABLE IF NOT EXISTS product_variants (
     id CHAR(36) NOT NULL PRIMARY KEY DEFAULT (UUID()),

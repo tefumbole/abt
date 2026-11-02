@@ -6,19 +6,56 @@ import { sendTextMessage, formatPhoneNumber } from '../services/wasenderWhatsApp
 import { COMPANY_NAME as BRAND } from '../constants/branding.js';
 import { cacheGet, cachePut } from '../services/commerceCache.js';
 import {
-  campayConfigured,
-  collect,
-  collectionPaid,
-  formatXaf,
+  formatRwf,
   getBalance,
-  getHistory,
-  getTransaction,
   momoNumber,
-  payoutDelivered,
-} from '../services/campayClient.js';
+  pawapayConfigured,
+} from '../services/pawapayClient.js';
+import { handleCallback, refreshAndApply, startDeposit } from '../services/pawapayPayments.js';
 
 const router = Router();
+
+async function pawapayCallback(req, res) {
+  try {
+    const payload = req.body && typeof req.body === 'object' && !Array.isArray(req.body) && Object.keys(req.body).length
+      ? req.body
+      : {};
+    await handleCallback(payload);
+    res.json({ status: 'ok' });
+  } catch (err) {
+    console.error('PawaPay callback error', err.message);
+    res.status(200).json({ status: 'ok' });
+  }
+}
+
+router.post('/pawapay/deposits/callback', pawapayCallback);
+router.post('/pawapay/checkouts/callback', pawapayCallback);
+router.post('/pawapay/payouts/callback', pawapayCallback);
+router.post('/pawapay/refunds/callback', pawapayCallback);
+router.post('/pawapay/callback', pawapayCallback);
+
 router.use(requireAuth);
+
+router.get('/pawapay/:depositId/status', async (req, res) => {
+  try {
+    const row = await refreshAndApply(req.params.depositId);
+    if (!row) return res.status(404).json({ status: 'missing' });
+    const confirmed = row.status === 'completed' && row.applied_at;
+    res.json({
+      status: confirmed ? 'completed' : (row.status === 'failed' ? 'failed' : 'pending'),
+      raw: row.raw_status,
+      purpose: row.purpose,
+      purpose_id: row.purpose_id,
+      message: confirmed
+        ? 'Payment received.'
+        : row.status === 'failed'
+          ? 'Payment was not approved. No money was taken.'
+          : 'Waiting for the customer to approve on the phone.',
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 
 const FINANCE_ROLES = new Set(['super_admin', 'admin', 'administrator']);
 
@@ -48,23 +85,23 @@ function statusLabel(value) {
 }
 
 router.get('/wallet', async (_req, res) => {
-  const cached = cacheGet('btw.campay.wallet_label');
+  const cached = cacheGet('abt.pawapay.wallet_label');
   res.json({
     total: cached || '',
-    configured: campayConfigured(),
+    configured: pawapayConfigured(),
   });
 });
 
 router.get('/wallet/live', async (_req, res) => {
   try {
-    const cached = cacheGet('btw.campay.wallet_label');
-    if (cached) return res.json({ total: cached, configured: campayConfigured(), cached: true });
-    if (!campayConfigured()) return res.json({ total: '', configured: false });
+    const cached = cacheGet('abt.pawapay.wallet_label');
+    if (cached) return res.json({ total: cached, configured: pawapayConfigured(), cached: true });
+    if (!pawapayConfigured()) return res.json({ total: '', configured: false });
     const { total } = await getBalance();
-    cachePut('btw.campay.wallet_label', total, 90_000);
+    cachePut('abt.pawapay.wallet_label', total, 90_000);
     res.json({ total, configured: true, cached: false });
   } catch (err) {
-    res.json({ total: cacheGet('btw.campay.wallet_label') || '', error: err.message, configured: campayConfigured() });
+    res.json({ total: cacheGet('abt.pawapay.wallet_label') || '', error: err.message, configured: pawapayConfigured() });
   }
 });
 
@@ -138,11 +175,11 @@ router.post('/awaiting/request', requireFinance, async (req, res) => {
       const due = dueOf(sale);
       const phone = sale.customer_phone || sale.lookup_phone;
       if (!phone || due < 100) {
-        errors.push(`${sale.reference}: needs a phone and at least 100 XAF still due`);
+        errors.push(`${sale.reference}: needs a phone and at least 100 RWF still due`);
         continue;
       }
       const link = `${appUrl}/pay/${sale.id}`;
-      const text = `${BRAND}\nPayment request for ${sale.reference}\nAmount due: ${formatXaf(due)}\nPay here: ${link}`;
+      const text = `${BRAND}\nPayment request for ${sale.reference}\nAmount due: ${formatRwf(due)}\nPay here: ${link}`;
       const result = await sendTextMessage(formatPhoneNumber(phone), text);
       if (result?.success === false || result?.error) {
         errors.push(`${sale.reference}: ${result.error || 'WhatsApp failed'}`);
@@ -279,7 +316,7 @@ router.post('/withdrawals', requireFinance, async (req, res) => {
     for (const line of lines) {
       const amount = Math.round(Number(line.amount));
       if (amount < 100 || amount > 1_000_000) {
-        return res.status(400).json({ error: 'Each amount must be between 100 and 1 000 000 XAF' });
+        return res.status(400).json({ error: 'Each amount must be between 100 and 1 000 000 RWF' });
       }
       await pool.query(
         `INSERT INTO campay_payouts
@@ -343,7 +380,7 @@ router.get('/deposits', async (_req, res) => {
         paid: Number(d.amount || 0),
         received: Number(d.amount_received ?? d.amount ?? 0),
         charges: Number(d.charges || 0),
-        method: 'Campay',
+        method: 'PawaPay',
         tone: d.status === 1 ? 'ok' : d.status === 0 ? 'wait' : 'no',
         real_deposit: true,
       })),
@@ -355,14 +392,14 @@ router.get('/deposits', async (_req, res) => {
           paid: Number(d.amount || 0),
           received: Number(d.amount || 0),
           charges: 0,
-          method: 'Campay',
+          method: 'PawaPay',
           tone: 'ok',
           real_deposit: false,
         })),
     ].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
     res.json({
       data: rows,
-      wallet: cacheGet('btw.campay.wallet_label') || '',
+      wallet: cacheGet('abt.pawapay.wallet_label') || '',
     });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -373,11 +410,11 @@ router.get('/deposits/live', async (_req, res) => {
   const cached = cacheGet('btw.deposit.live');
   if (cached) return res.json(cached);
   try {
-    let total = cacheGet('btw.campay.wallet_label') || '';
-    if (!total && campayConfigured()) {
+    let total = cacheGet('abt.pawapay.wallet_label') || '';
+    if (!total && pawapayConfigured()) {
       const bal = await getBalance();
       total = bal.total;
-      cachePut('btw.campay.wallet_label', total, 90_000);
+      cachePut('abt.pawapay.wallet_label', total, 90_000);
     }
     const [rows] = await getPool().query(
       'SELECT id, status FROM deposits WHERE payment_method = 3 ORDER BY created_at DESC LIMIT 80'
@@ -393,7 +430,7 @@ router.get('/deposits/live', async (_req, res) => {
     cachePut('btw.deposit.live', payload, 20_000);
     res.json(payload);
   } catch (err) {
-    res.json({ total: cacheGet('btw.campay.wallet_label') || '', rows: [], error: err.message });
+    res.json({ total: cacheGet('abt.pawapay.wallet_label') || '', rows: [], error: err.message });
   }
 });
 
@@ -406,24 +443,58 @@ router.post('/deposits', requireFinance, async (req, res) => {
     const pool = getPool();
     const id = randomUUID();
     let status = method === 1 ? 1 : 0;
-    let campayReference = null;
+    let pawapayDepositId = null;
     if (method === 3) {
-      if (amount < 100) return res.status(400).json({ error: 'MoMo deposits must be at least 100 XAF' });
-      if (!req.body.phone) return res.status(400).json({ error: 'A phone number is required for Campay' });
-      const result = await collect({
+      if (amount < 100) return res.status(400).json({ error: 'MoMo deposits must be at least 100 RWF' });
+      if (!req.body.phone) return res.status(400).json({ error: 'A phone number is required for PawaPay' });
+      await pool.query(
+        `INSERT INTO deposits
+          (id, customer_id, customer_name, phone, account_id, amount, amount_received, charges,
+           payment_method, status, note, created_by)
+         VALUES (?, ?, ?, ?, ?, ?, NULL, 0, ?, 0, ?, ?)`,
+        [
+          id,
+          req.body.customer_id || null,
+          req.body.customer_name || null,
+          req.body.phone || null,
+          req.body.account_id || null,
+          amount,
+          method,
+          req.body.note || null,
+          req.user?.id || null,
+        ]
+      );
+      const started = await startDeposit({
+        purpose: 'deposit',
+        purposeId: id,
         amount,
         phone: req.body.phone,
         description: req.body.note || `${BRAND} deposit`,
-        external_reference: id,
+        userId: req.user?.id || null,
       });
-      campayReference = result.reference || result.ussd_code || null;
-      if (collectionPaid(result, amount, req.body.phone)) status = 1;
+      if (!started.ok) {
+        await pool.query('DELETE FROM deposits WHERE id = ?', [id]);
+        return res.status(400).json({ error: started.message });
+      }
+      pawapayDepositId = started.deposit?.deposit_id || null;
+      if (started.deposit?.status === 'completed') status = 1;
+      await pool.query(
+        'UPDATE deposits SET campay_reference = ?, pawapay_deposit_id = ?, status = ? WHERE id = ?',
+        [pawapayDepositId, pawapayDepositId, status, id]
+      );
+      return res.json({
+        success: true,
+        id,
+        status,
+        deposit_id: pawapayDepositId,
+        configured: pawapayConfigured(),
+      });
     }
     await pool.query(
       `INSERT INTO deposits
         (id, customer_id, customer_name, phone, account_id, amount, amount_received, charges,
-         payment_method, status, note, campay_reference, created_by)
-       VALUES (?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?, ?)`,
+         payment_method, status, note, created_by)
+       VALUES (?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?)`,
       [
         id,
         req.body.customer_id || null,
@@ -435,11 +506,10 @@ router.post('/deposits', requireFinance, async (req, res) => {
         method,
         status,
         req.body.note || null,
-        campayReference,
         req.user?.id || null,
       ]
     );
-    res.json({ success: true, id, status, stub: !campayConfigured() && method === 3 });
+    res.json({ success: true, id, status, configured: pawapayConfigured() });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -467,49 +537,9 @@ router.get('/lookups', async (_req, res) => {
   }
 });
 
-// Historical Campay collection import is cache-gated and never sends WhatsApp.
+// PawaPay confirms via callback / GET — no Campay-style history scrape.
 router.post('/deposits/import-history', requireFinance, async (_req, res) => {
-  try {
-    if (cacheGet('btw.campay.imported')) {
-      return res.json({ imported: 0, skipped: true });
-    }
-    if (!campayConfigured()) return res.json({ imported: 0, configured: false });
-    const history = await getHistory(45);
-    cachePut('btw.campay.imported', true, 15 * 60_000);
-    const pool = getPool();
-    let imported = 0;
-    for (const item of history) {
-      const ref = item.reference || item.external_reference;
-      if (!ref || String(item.status).toUpperCase() !== 'SUCCESSFUL') continue;
-      const [exists] = await pool.query(
-        'SELECT id FROM deposits WHERE campay_reference = ? LIMIT 1',
-        [ref]
-      );
-      if (exists.length) continue;
-      const [don] = await pool.query(
-        'SELECT id FROM public_donations WHERE campay_reference = ? LIMIT 1',
-        [ref]
-      );
-      if (don.length) continue;
-      await pool.query(
-        `INSERT INTO deposits (id, customer_name, phone, amount, amount_received, charges, payment_method, status, note, campay_reference)
-         VALUES (?, ?, ?, ?, ?, 0, 3, 1, ?, ?)`,
-        [
-          randomUUID(),
-          item.operator || item.name || 'Campay collection',
-          item.phone_number || null,
-          Number(item.amount || 0),
-          Number(item.amount || 0),
-          'Imported Campay collection',
-          ref,
-        ]
-      );
-      imported += 1;
-    }
-    res.json({ imported });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
+  res.json({ imported: 0, configured: pawapayConfigured(), provider: 'pawapay' });
 });
 
 router.get('/me', (req, res) => {

@@ -54,6 +54,7 @@ export const paymentService = {
   depositsLive: () => api('/payments/deposits/live'),
   createDeposit: (body) => api('/payments/deposits', { method: 'POST', body: JSON.stringify(body) }),
   deleteDeposits: (ids) => api('/payments/deposits/delete', { method: 'POST', body: JSON.stringify({ ids }) }),
+  pawapayStatus: (depositId) => api(`/payments/pawapay/${encodeURIComponent(depositId)}/status`),
 };
 
 export const posService = {
@@ -66,9 +67,14 @@ export const posService = {
   recent: () => api('/pos/recent'),
 };
 
-export function formatXaf(n) {
+export function formatRwf(n) {
   const num = Math.round(Number(n) || 0);
-  return `${num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ')} XAF`;
+  return `${num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ')} RWF`;
+}
+
+/** @deprecated Alpha is Rwanda — use formatRwf. */
+export function formatXaf(n) {
+  return formatRwf(n);
 }
 
 export function money(n) {

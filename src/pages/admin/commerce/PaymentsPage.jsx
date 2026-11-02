@@ -48,7 +48,7 @@ export default function PaymentsPage() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-3xl font-bold text-[#003D82]">Payments</h1>
-          <p className="text-gray-500">Awaiting sales, Campay deposits, and withdrawals.</p>
+          <p className="text-gray-500">Awaiting sales, PawaPay deposits, and withdrawals.</p>
         </div>
         {wallet && (
           <div className="flex items-center gap-2 rounded-full bg-[#003D82] text-white px-4 py-2 text-sm">
@@ -177,7 +177,7 @@ function MomoTab({ toast }) {
                 <TableCell>{r.note || '—'}</TableCell>
               </TableRow>
             ))}
-            {!rows.length && <TableRow><TableCell colSpan={6} className="text-center text-gray-500 py-8">No Campay movements yet.</TableCell></TableRow>}
+            {!rows.length && <TableRow><TableCell colSpan={6} className="text-center text-gray-500 py-8">No PawaPay movements yet.</TableCell></TableRow>}
           </TableBody>
         </Table>
       </CardContent>
@@ -289,7 +289,7 @@ function WithdrawalsTab({ toast }) {
                 try {
                   await paymentService.createWithdrawal({ note, lines });
                   setOpen(false); setLines([]); setNote(''); load();
-                  toast({ title: 'Withdrawal saved as pending. Approve and Pay is hidden until you choose to send it from Campay later.' });
+                  toast({ title: 'Withdrawal saved as pending. Approve and Pay stays hidden until you send it from PawaPay later.' });
                 } catch (err) { toast({ title: err.message, variant: 'destructive' }); }
               }}>Save request</Button>
             </DialogFooter>
@@ -351,7 +351,7 @@ function DepositsTab({ toast, finance }) {
                 <TableCell>{r.note || '—'}</TableCell>
               </TableRow>
             ))}
-            {!rows.length && <TableRow><TableCell colSpan={9} className="text-center text-gray-500 py-8">No Campay deposits.</TableCell></TableRow>}
+            {!rows.length && <TableRow><TableCell colSpan={9} className="text-center text-gray-500 py-8">No PawaPay deposits.</TableCell></TableRow>}
           </TableBody>
         </Table>
         {finance && selected.length > 0 && (
@@ -388,8 +388,13 @@ function DepositsTab({ toast, finance }) {
             <DialogFooter>
               <Button className="bg-[#003D82]" onClick={async () => {
                 try {
-                  await paymentService.createDeposit(form);
+                  const created = await paymentService.createDeposit(form);
                   setOpen(false); load();
+                  toast({
+                    title: created.status === 1
+                      ? 'PawaPay confirmed the deposit'
+                      : 'Ask the customer to approve on their phone. This stays pending until PawaPay confirms.',
+                  });
                 } catch (err) { toast({ title: err.message, variant: 'destructive' }); }
               }}>Save</Button>
             </DialogFooter>
