@@ -27,6 +27,7 @@ async function letterApi(path, options = {}) {
 }
 
 export const hrLetterService = {
+  listPeople: (q) => letterApi(`/people${q ? `?q=${encodeURIComponent(q)}` : ''}`),
   listTemplates: (letterType) =>
     letterApi(`/templates${letterType ? `?letter_type=${letterType}` : ''}`),
   createTemplate: (body) => letterApi('/templates', { method: 'POST', body: JSON.stringify(body) }),

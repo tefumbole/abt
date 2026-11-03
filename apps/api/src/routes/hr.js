@@ -207,7 +207,7 @@ router.get('/staff', requireHrAccess, async (req, res) => {
     const pool = getPool();
     const { status, category_id, q } = req.query;
     let sql = `SELECT sp.*, sc.name AS category_name FROM hr_staff_profiles sp
-               JOIN hr_staff_categories sc ON sc.id = sp.category_id WHERE 1=1`;
+               LEFT JOIN hr_staff_categories sc ON sc.id = sp.category_id WHERE 1=1`;
     const params = [];
     if (status) { sql += ` AND sp.status = ?`; params.push(status); }
     if (category_id) { sql += ` AND sp.category_id = ?`; params.push(category_id); }

@@ -48,13 +48,98 @@ function personalize(template, staff, extras = {}) {
 }
 
 async function loadStaff(pool, id) {
+  if (!id) return null;
   const [rows] = await pool.query(
     `SELECT sp.*, sc.name AS category_name FROM hr_staff_profiles sp
-     JOIN hr_staff_categories sc ON sc.id = sp.category_id WHERE sp.id = ? LIMIT 1`,
+     LEFT JOIN hr_staff_categories sc ON sc.id = sp.category_id WHERE sp.id = ? LIMIT 1`,
     [id]
   );
   return rows[0] || null;
 }
+
+async function loadUser(pool, id) {
+  if (!id) return null;
+  const [rows] = await pool.query(
+    `SELECT u.id, u.email, u.phone,
+            COALESCE(p.full_name, p.username, u.name, u.email) AS full_name
+     FROM users u
+     LEFT JOIN profiles p ON p.id = u.id
+     WHERE u.id = ? LIMIT 1`,
+    [id]
+  );
+  return rows[0] || null;
+}
+
+function asStaffShape(row, source) {
+  if (!row) return null;
+  if (source === 'user') {
+    const name = String(row.full_name || row.email || 'User').trim();
+    const [first, ...rest] = name.split(/\s+/);
+    return {
+      id: row.id,
+      first_name: first || name,
+      last_name: rest.join(' '),
+      staff_code: '',
+      phone: row.phone || '',
+      email: row.email || '',
+      position: '',
+      source: 'user',
+    };
+  }
+  return { ...row, source: 'staff' };
+}
+
+async function resolveRecipient(pool, body = {}) {
+  const staff = await loadStaff(pool, body.staff_profile_id);
+  if (staff) return asStaffShape(staff, 'staff');
+  const user = await loadUser(pool, body.user_id || body.staff_profile_id);
+  if (user) return asStaffShape(user, 'user');
+  return null;
+}
+
+router.get('/people', requireHrAccess, async (req, res) => {
+  try {
+    const pool = getPool();
+    const q = String(req.query.q || '').trim().toLowerCase();
+    const [staffRows] = await pool.query(
+      `SELECT sp.id, sp.first_name, sp.last_name, sp.staff_code, sp.phone, sp.email, sp.status,
+              sc.name AS category_name
+       FROM hr_staff_profiles sp
+       LEFT JOIN hr_staff_categories sc ON sc.id = sp.category_id
+       ORDER BY sp.first_name ASC, sp.last_name ASC LIMIT 500`
+    );
+    const [userRows] = await pool.query(
+      `SELECT u.id, u.email, COALESCE(u.phone, p.phone) AS phone,
+              COALESCE(p.full_name, p.username, u.name, u.email) AS full_name
+       FROM users u
+       LEFT JOIN profiles p ON p.id = u.id
+       ORDER BY full_name ASC LIMIT 500`
+    );
+    const staffIds = new Set(staffRows.map((r) => r.id));
+    const people = [
+      ...staffRows.map((r) => ({
+        id: r.id,
+        kind: 'staff',
+        label: `${r.first_name || ''} ${r.last_name || ''}`.trim() || r.staff_code || r.email,
+        hint: [r.staff_code, r.phone, r.category_name].filter(Boolean).join(' · '),
+        phone: r.phone || '',
+      })),
+      ...userRows.filter((r) => !staffIds.has(r.id)).map((r) => ({
+        id: r.id,
+        kind: 'user',
+        label: r.full_name || r.email,
+        hint: [r.phone, r.email].filter(Boolean).join(' · '),
+        phone: r.phone || '',
+      })),
+    ].filter((p) => {
+      if (!q) return true;
+      return `${p.label} ${p.hint}`.toLowerCase().includes(q);
+    });
+    res.json({ success: true, data: people });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 
 router.get('/templates', requireHrAccess, async (req, res) => {
   let sql = `SELECT * FROM hr_letter_templates WHERE is_active = 1`;
@@ -100,9 +185,9 @@ router.delete('/templates/:id', requireHrAccess, async (req, res) => {
 
 router.post('/preview', requireHrAccess, async (req, res) => {
   const pool = getPool();
-  const { template_id, staff_profile_id, extras = {}, subject, body } = req.body || {};
-  const staff = await loadStaff(pool, staff_profile_id);
-  if (!staff) return res.status(404).json({ error: 'Staff not found' });
+  const { template_id, extras = {}, subject, body } = req.body || {};
+  const staff = await resolveRecipient(pool, req.body || {});
+  if (!staff) return res.status(404).json({ error: 'Select a staff member or user' });
 
   let result = { subject: subject || '', body: body || '' };
   if (template_id && (!subject || !body)) {
@@ -119,8 +204,8 @@ router.post('/preview', requireHrAccess, async (req, res) => {
 router.post('/send', requireHrAccess, async (req, res) => {
   const pool = getPool();
   const b = req.body || {};
-  const staff = await loadStaff(pool, b.staff_profile_id);
-  if (!staff) return res.status(404).json({ error: 'Staff not found' });
+  const staff = await resolveRecipient(pool, b);
+  if (!staff) return res.status(404).json({ error: 'Select a staff member or user' });
 
   let subject = b.subject;
   let body = b.body;
@@ -142,10 +227,13 @@ router.post('/send', requireHrAccess, async (req, res) => {
 
   const id = randomUUID();
   const ref = `HRL-${randomBytes(4).toString('hex').toUpperCase()}`;
+  const staffId = staff.source === 'staff' ? staff.id : null;
+  const userId = staff.source === 'user' ? staff.id : (b.user_id || null);
+  const recipientName = `${staff.first_name || ''} ${staff.last_name || ''}`.trim();
   await pool.query(
-    `INSERT INTO hr_letters (id, template_id, staff_profile_id, letter_type, subject, body, reference_code, status, created_by)
-     VALUES (?, ?, ?, ?, ?, ?, ?, 'draft', ?)`,
-    [id, b.template_id || null, b.staff_profile_id, letterType, subject, body, ref, req.user.sub]
+    `INSERT INTO hr_letters (id, template_id, staff_profile_id, letter_type, subject, body, reference_code, status, created_by, recipient_name, recipient_phone, recipient_user_id)
+     VALUES (?, ?, ?, ?, ?, ?, ?, 'draft', ?, ?, ?, ?)`,
+    [id, b.template_id || null, staffId, letterType, subject, body, ref, req.user.sub, recipientName || null, staff.phone || null, userId]
   );
 
   let whatsappSent = false;
@@ -178,9 +266,12 @@ router.post('/send', requireHrAccess, async (req, res) => {
 });
 
 router.get('/history', requireHrAccess, async (req, res) => {
-  let sql = `SELECT l.*, sp.first_name, sp.last_name, sp.staff_code
+  let sql = `SELECT l.*,
+                COALESCE(sp.first_name, SUBSTRING_INDEX(l.recipient_name, ' ', 1)) AS first_name,
+                COALESCE(sp.last_name, TRIM(SUBSTRING(l.recipient_name, LOCATE(' ', l.recipient_name)))) AS last_name,
+                sp.staff_code
              FROM hr_letters l
-             JOIN hr_staff_profiles sp ON sp.id = l.staff_profile_id WHERE 1=1`;
+             LEFT JOIN hr_staff_profiles sp ON sp.id = l.staff_profile_id WHERE 1=1`;
   const params = [];
   if (req.query.letter_type) {
     sql += ` AND l.letter_type = ?`;

@@ -1,13 +1,15 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
   ChevronDown, FileSpreadsheet, FileText, Image as ImageIcon,
-  Loader2, Plus, Printer, Search, Eye, X,
+  Loader2, Plus, Printer, Search, Eye, X, UploadCloud,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { getStoragePublicUrl } from '@/utils/storageUrl';
+import { cn } from '@/lib/utils';
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
@@ -26,6 +28,39 @@ const TAB_IDS = [
 
 function money(n, currency = 'XAF') {
   return `${currency} ${Number(n || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
+}
+
+function categoryImageSrc(value) {
+  if (!value) return null;
+  if (/^(https?:|data:|blob:|\/)/i.test(value)) return value;
+  return getStoragePublicUrl('categories', value);
+}
+
+function authHeaders() {
+  try {
+    const raw = localStorage.getItem('alpha_supabase_auth');
+    const parsed = raw ? JSON.parse(raw) : null;
+    const token = parsed?.access_token;
+    return token ? { Authorization: `Bearer ${token}` } : {};
+  } catch {
+    return {};
+  }
+}
+
+async function uploadCategoryImage(file) {
+  const ext = (file.name?.split('.').pop() || 'jpg').replace(/[^a-z0-9]/gi, '') || 'jpg';
+  const filePath = `category_${Date.now()}_${Math.random().toString(16).slice(2)}.${ext}`;
+  const form = new FormData();
+  form.append('file', file);
+  form.append('path', filePath);
+  const res = await fetch(`/api/upload/categories?path=${encodeURIComponent(filePath)}`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: form,
+  });
+  const json = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(json.error || 'Upload failed');
+  return json.path || filePath;
 }
 
 export default function ProductsPage() {
@@ -56,6 +91,9 @@ export default function ProductsPage() {
   const [showImportCategory, setShowImportCategory] = useState(false);
   const [editCategory, setEditCategory] = useState(null);
   const [catForm, setCatForm] = useState({ name: '', parent_id: '', image_url: '' });
+  const [catUploading, setCatUploading] = useState(false);
+  const [catDragging, setCatDragging] = useState(false);
+  const catFileRef = useRef(null);
   const [importText, setImportText] = useState('name,parent_category\n');
   const [editProduct, setEditProduct] = useState(null);
   const [savingProduct, setSavingProduct] = useState(false);
@@ -166,6 +204,39 @@ export default function ProductsPage() {
     });
     setShowAddCategory(true);
   };
+
+  const handleCategoryFile = async (file) => {
+    if (!file) return;
+    if (!String(file.type || '').startsWith('image/')) {
+      toast.error('Please choose an image file');
+      return;
+    }
+    setCatUploading(true);
+    try {
+      const path = await uploadCategoryImage(file);
+      setCatForm((prev) => ({ ...prev, image_url: path }));
+      toast.success('Image added');
+    } catch (err) {
+      toast.error(err.message || 'Image upload failed');
+    } finally {
+      setCatUploading(false);
+      if (catFileRef.current) catFileRef.current.value = '';
+    }
+  };
+
+  useEffect(() => {
+    if (!showAddCategory) return undefined;
+    const onPaste = (event) => {
+      const item = [...(event.clipboardData?.items || [])].find((entry) => entry.type.startsWith('image/'));
+      const file = item?.getAsFile();
+      if (file) {
+        event.preventDefault();
+        handleCategoryFile(file);
+      }
+    };
+    window.addEventListener('paste', onPaste);
+    return () => window.removeEventListener('paste', onPaste);
+  }, [showAddCategory]);
 
   const saveCategory = async (e) => {
     e.preventDefault();
@@ -331,7 +402,7 @@ export default function ProductsPage() {
                     <td className="p-3">
                       <div className="w-14 h-14 rounded-lg bg-slate-100 border flex items-center justify-center overflow-hidden">
                         {c.image_url ? (
-                          <img src={c.image_url} alt="" className="max-w-full max-h-full object-contain" />
+                          <img src={categoryImageSrc(c.image_url)} alt="" className="max-w-full max-h-full object-contain" />
                         ) : (
                           <ImageIcon className="h-6 w-6 text-slate-300" />
                         )}
@@ -651,8 +722,62 @@ export default function ProductsPage() {
               </select>
             </div>
             <div>
-              <Label>Image URL</Label>
-              <Input value={catForm.image_url} onChange={(e) => setCatForm({ ...catForm, image_url: e.target.value })} placeholder="Optional image URL" />
+              <Label>Category image</Label>
+              <div
+                role="button"
+                tabIndex={0}
+                onClick={() => !catUploading && catFileRef.current?.click()}
+                onDragOver={(e) => { e.preventDefault(); setCatDragging(true); }}
+                onDragLeave={() => setCatDragging(false)}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  setCatDragging(false);
+                  handleCategoryFile(e.dataTransfer?.files?.[0]);
+                }}
+                className={cn(
+                  'mt-1 flex min-h-[120px] cursor-pointer flex-col items-center justify-center gap-2',
+                  'rounded-lg border-2 border-dashed p-4 text-sm transition-colors',
+                  catDragging ? 'border-[#003D82] bg-blue-50' : 'border-slate-300 hover:bg-slate-50',
+                  catUploading && 'cursor-wait opacity-70'
+                )}
+              >
+                {catUploading ? (
+                  <>
+                    <Loader2 className="h-6 w-6 animate-spin text-[#003D82]" />
+                    <span className="text-slate-600">Uploading…</span>
+                  </>
+                ) : (
+                  <>
+                    <UploadCloud className="h-6 w-6 text-slate-400" />
+                    <span className="text-slate-600">Drop, click, or paste an image</span>
+                    <span className="text-xs text-slate-400">PNG, JPG, or WebP</span>
+                  </>
+                )}
+                <input
+                  ref={catFileRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => handleCategoryFile(e.target.files?.[0])}
+                />
+              </div>
+              {catForm.image_url ? (
+                <div className="mt-3 flex items-center gap-3 rounded-lg border p-2">
+                  <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-md border bg-slate-50">
+                    <img src={categoryImageSrc(catForm.image_url)} alt="" className="max-h-full max-w-full object-contain" />
+                  </div>
+                  <div className="min-w-0 flex-1 text-xs text-slate-500 truncate">{catForm.image_url}</div>
+                  <Button type="button" variant="ghost" size="icon" onClick={() => setCatForm({ ...catForm, image_url: '' })}>
+                    <X className="h-4 w-4 text-red-600" />
+                  </Button>
+                </div>
+              ) : null}
+              <Input
+                className="mt-2"
+                value={/^https?:\/\//i.test(catForm.image_url) ? catForm.image_url : ''}
+                onChange={(e) => setCatForm({ ...catForm, image_url: e.target.value })}
+                placeholder="Or paste an image URL"
+              />
             </div>
             <div className="flex justify-end gap-2">
               <Button type="button" variant="outline" onClick={() => setShowAddCategory(false)}>Cancel</Button>

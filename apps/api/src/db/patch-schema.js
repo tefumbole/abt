@@ -140,6 +140,10 @@ export const SCHEMA_PATCHES = [
   // Rental goods-receipt leftovers
   'ALTER TABLE erp_bookings ADD COLUMN goods_received_at DATETIME DEFAULT NULL',
   'ALTER TABLE erp_bookings ADD COLUMN goods_receipt_note TEXT DEFAULT NULL',
+  'ALTER TABLE hr_letters MODIFY staff_profile_id CHAR(36) NULL',
+  'ALTER TABLE hr_letters ADD COLUMN recipient_name VARCHAR(255) NULL',
+  'ALTER TABLE hr_letters ADD COLUMN recipient_phone VARCHAR(50) NULL',
+  'ALTER TABLE hr_letters ADD COLUMN recipient_user_id CHAR(36) NULL',
   ...COMMERCE_SCHEMA_PATCHES,
 ];
 
@@ -540,7 +544,10 @@ export const CREATE_STATEMENTS = [
   `CREATE TABLE IF NOT EXISTS hr_letters (
     id CHAR(36) NOT NULL PRIMARY KEY,
     template_id CHAR(36) DEFAULT NULL,
-    staff_profile_id CHAR(36) NOT NULL,
+    staff_profile_id CHAR(36) DEFAULT NULL,
+    recipient_user_id CHAR(36) DEFAULT NULL,
+    recipient_name VARCHAR(255) DEFAULT NULL,
+    recipient_phone VARCHAR(50) DEFAULT NULL,
     letter_type ENUM('leave_of_absence','permission','employment_letter','attestation_of_work') NOT NULL,
     subject VARCHAR(500) NOT NULL,
     body TEXT NOT NULL,

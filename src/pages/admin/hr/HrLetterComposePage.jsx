@@ -1,22 +1,23 @@
 import React, { useEffect, useState } from 'react';
 import { Send, Download, Eye, Loader2 } from 'lucide-react';
-import { hrService } from '@/services/hrService';
 import { hrLetterService } from '@/services/hrLetterService';
 import { generateHrLetterPdf } from '@/utils/hrLetterPdf';
+import SearchSelect from '@/components/erp/SearchSelect';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/components/ui/use-toast';
 
 export default function HrLetterComposePage({ letterType, title, subtitle }) {
   const { toast } = useToast();
-  const [staff, setStaff] = useState([]);
+  const [people, setPeople] = useState([]);
   const [templates, setTemplates] = useState([]);
   const [history, setHistory] = useState([]);
-  const [staffId, setStaffId] = useState('');
+  const [personKey, setPersonKey] = useState('');
+
+  const pickedPerson = people.find((p) => `${p.kind}:${p.id}` === personKey);
   const [templateId, setTemplateId] = useState('');
   const [subject, setSubject] = useState('');
   const [body, setBody] = useState('');
@@ -28,16 +29,20 @@ export default function HrLetterComposePage({ letterType, title, subtitle }) {
   const [lastRef, setLastRef] = useState('');
 
   const load = async () => {
-    const [s, t, h] = await Promise.all([
-      hrService.listStaff({ status: 'active' }),
-      hrLetterService.listTemplates(letterType),
-      hrLetterService.history(letterType),
-    ]);
-    setStaff(s.data || []);
-    setTemplates(t.data || []);
-    setHistory(h.data || []);
-    if ((t.data || []).length && !templateId) {
-      setTemplateId(t.data[0].id);
+    try {
+      const [p, t, h] = await Promise.all([
+        hrLetterService.listPeople(),
+        hrLetterService.listTemplates(letterType),
+        hrLetterService.history(letterType),
+      ]);
+      setPeople(p.data || []);
+      setTemplates(t.data || []);
+      setHistory(h.data || []);
+      if ((t.data || []).length && !templateId) {
+        setTemplateId(t.data[0].id);
+      }
+    } catch (e) {
+      toast({ title: 'Could not load letter data', description: e.message, variant: 'destructive' });
     }
   };
 
@@ -54,12 +59,13 @@ export default function HrLetterComposePage({ letterType, title, subtitle }) {
   };
 
   const preview = async () => {
-    if (!staffId) return toast({ title: 'Select staff', variant: 'destructive' });
+    if (!pickedPerson) return toast({ title: 'Select a recipient', variant: 'destructive' });
     setLoading(true);
     try {
       const res = await hrLetterService.preview({
         template_id: templateId,
-        staff_profile_id: staffId,
+        staff_profile_id: pickedPerson.kind === 'staff' ? pickedPerson.id : undefined,
+        user_id: pickedPerson.kind === 'user' ? pickedPerson.id : undefined,
         extras: buildExtras(),
       });
       setSubject(res.data.subject);
@@ -73,14 +79,15 @@ export default function HrLetterComposePage({ letterType, title, subtitle }) {
   };
 
   const send = async () => {
-    if (!staffId || !subject || !body) {
-      return toast({ title: 'Complete the letter', description: 'Select staff and generate or edit subject/body.', variant: 'destructive' });
+    if (!pickedPerson || !subject || !body) {
+      return toast({ title: 'Complete the letter', description: 'Select a recipient and generate or edit subject/body.', variant: 'destructive' });
     }
     setLoading(true);
     try {
       const res = await hrLetterService.send({
         template_id: templateId || null,
-        staff_profile_id: staffId,
+        staff_profile_id: pickedPerson.kind === 'staff' ? pickedPerson.id : undefined,
+        user_id: pickedPerson.kind === 'user' ? pickedPerson.id : undefined,
         letter_type: letterType,
         subject,
         body,
@@ -101,9 +108,14 @@ export default function HrLetterComposePage({ letterType, title, subtitle }) {
   };
 
   const downloadPdf = () => {
-    const s = staff.find((x) => x.id === staffId);
     if (!subject || !body) return toast({ title: 'Generate preview first', variant: 'destructive' });
-    generateHrLetterPdf({ subject, body, staff: s, referenceCode: lastRef });
+    const [first, ...rest] = String(pickedPerson?.label || 'Recipient').split(/\s+/);
+    generateHrLetterPdf({
+      subject,
+      body,
+      staff: { first_name: first, last_name: rest.join(' '), phone: pickedPerson?.phone },
+      referenceCode: lastRef,
+    });
   };
 
   return (
@@ -118,26 +130,37 @@ export default function HrLetterComposePage({ letterType, title, subtitle }) {
           <CardHeader><CardTitle>Compose letter</CardTitle></CardHeader>
           <CardContent className="space-y-4">
             <div>
-              <Label>Select staff</Label>
-              <Select value={staffId} onValueChange={setStaffId}>
-                <SelectTrigger><SelectValue placeholder="Choose staff member" /></SelectTrigger>
-                <SelectContent>
-                  {staff.map((s) => (
-                    <SelectItem key={s.id} value={s.id}>{s.first_name} {s.last_name} ({s.staff_code})</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Label>Select recipient</Label>
+              <SearchSelect
+                className="mt-1"
+                value={personKey}
+                onChange={setPersonKey}
+                placeholder="Search staff or user…"
+                emptyLabel="No staff or users found"
+                options={people.map((p) => ({
+                  value: `${p.kind}:${p.id}`,
+                  label: p.label,
+                  hint: p.hint || p.phone || '',
+                }))}
+              />
+              <p className="text-xs text-slate-500 mt-1">
+                Same as Beyond letters: search HR staff or system users, then send on WhatsApp.
+              </p>
             </div>
             <div>
               <Label>Template</Label>
-              <Select value={templateId} onValueChange={setTemplateId}>
-                <SelectTrigger><SelectValue placeholder="Choose template" /></SelectTrigger>
-                <SelectContent>
-                  {templates.map((t) => (
-                    <SelectItem key={t.id} value={t.id}>{t.name}{t.is_default ? ' (default)' : ''}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <SearchSelect
+                className="mt-1"
+                value={templateId}
+                onChange={setTemplateId}
+                placeholder="Search template…"
+                allowClear={false}
+                options={templates.map((t) => ({
+                  value: t.id,
+                  label: t.name,
+                  hint: t.is_default ? 'default' : '',
+                }))}
+              />
             </div>
 
             {letterType === 'leave_of_absence' && (
