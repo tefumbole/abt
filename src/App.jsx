@@ -126,6 +126,8 @@ import AnnouncementsManagementPage from '@/pages/admin/AnnouncementsManagementPa
 import AnnouncementSettingsPage from '@/pages/admin/AnnouncementSettingsPage';
 import GalleryAdminPage from '@/pages/admin/GalleryAdminPage';
 import SiteContentPage from '@/pages/admin/SiteContentPage';
+import SystemTestPage from '@/pages/SystemTestPage';
+import { AdminTestResultsPage, AdminTestResultDetailPage } from '@/pages/admin/AdminTestResultsPage';
 import TemplateManagementPage from '@/pages/admin/TemplateManagementPage';
 
 // ERP (Beyond Tech port)
@@ -404,6 +406,7 @@ const AppContent = () => {
 
         <Route path="/task-invite/:token" element={<TaskInvitePage />} />
 
+        <Route path="/system-test" element={<SystemTestPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/complete-profile" element={<CompleteProfilePage />} />
         <Route path="/signup" element={<CustomerSignupPage />} />
@@ -1042,6 +1045,22 @@ const AppContent = () => {
             element={
               <ProtectedRoute requireAdmin={true}>
                 <SiteContentPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="help/results"
+            element={
+              <ProtectedRoute requireAdmin={true}>
+                <AdminTestResultsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="help/results/:id"
+            element={
+              <ProtectedRoute requireAdmin={true}>
+                <AdminTestResultDetailPage />
               </ProtectedRoute>
             }
           />

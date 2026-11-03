@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Phone, Mail, MapPin } from 'lucide-react';
+import { useLocation } from 'react-router-dom';
 import { getSystemSettings } from '@/services/settingsService';
 import { usePageT } from '@/hooks/useSiteLabel';
 import {
@@ -60,7 +61,10 @@ function cleanDevelopedBy(value) {
 
 function Footer() {
   const tf = usePageT('footer');
+  const location = useLocation();
+  const hideOnThisPage = location.pathname.startsWith('/system-test') || location.pathname.startsWith('/admin');
   const currentYear = new Date().getFullYear();
+  const [barHidden, setBarHidden] = useState(false);
   const [settings, setSettings] = useState({
     developed_by: COMPANY_NAME_SHORT,
     copyright_text: 'All rights reserved',
@@ -84,6 +88,24 @@ function Footer() {
     fetchSettings();
   }, []);
 
+  useEffect(() => {
+    if (hideOnThisPage) return undefined;
+    let timer;
+    let last = window.scrollY;
+    const onScroll = () => {
+      const y = window.scrollY;
+      if (Math.abs(y - last) > 2) setBarHidden(true);
+      last = y;
+      clearTimeout(timer);
+      timer = window.setTimeout(() => setBarHidden(false), 450);
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => {
+      window.removeEventListener('scroll', onScroll);
+      clearTimeout(timer);
+    };
+  }, [hideOnThisPage]);
+
   const rawCopyright = String(settings.copyright_text || '').trim();
   const copyrightLabel =
     !rawCopyright
@@ -96,9 +118,13 @@ function Footer() {
     <footer className="relative mt-auto overflow-hidden bg-[#001f42] text-white">
       <MarqueeBand />
 
-      <div className="relative border-t-2 border-[#D4AF37] bg-[#003D82]">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5">
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 text-center lg:text-left">
+      <div
+        className={`fixed bottom-0 left-0 right-0 z-30 border-t-2 border-[#D4AF37] bg-[#003D82] transition-transform duration-300 ${
+          hideOnThisPage || barHidden ? 'translate-y-full pointer-events-none' : 'translate-y-0'
+        }`}
+      >
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-3 sm:py-4">
+          <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center sm:justify-between gap-2 sm:gap-3 text-center sm:text-left">
             <p className="text-white text-sm font-semibold">
               © {currentYear} {COMPANY_NAME}.{' '}
               <span className="text-[#D4AF37]">{copyrightLabel}</span>

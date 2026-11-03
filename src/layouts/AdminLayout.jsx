@@ -416,6 +416,7 @@ const AdminLayout = () => {
       items: [
         { label: 'Site Content', path: '/admin/site-content', icon: Globe, permission: MENU_PERMISSIONS.siteContent, menuKey: 'site-content' },
         { label: 'Settings', path: '/admin/general-settings', icon: Settings, menuKey: 'general-settings' },
+        { label: 'Test Results', path: '/admin/help/results', icon: ClipboardCheck, menuKey: 'test-results' },
       ]
     }
   ];
