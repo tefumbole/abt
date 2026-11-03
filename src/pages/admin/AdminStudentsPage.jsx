@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { getStudents, createStudent, updateStudent, deleteStudent } from '@/services/studentsService';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,6 +16,7 @@ const AdminStudentsPage = () => {
   const [modalOpen, setModalOpen] = useState(false);
   const [editingStudent, setEditingStudent] = useState(null);
   const [formData, setFormData] = useState({ name: '', email: '', phone: '', course: '', status: 'Pending' });
+  const [searchParams, setSearchParams] = useSearchParams();
   const { toast } = useToast();
 
   const fetchStudents = async () => {
@@ -27,6 +29,16 @@ const AdminStudentsPage = () => {
   useEffect(() => {
     fetchStudents();
   }, []);
+
+  useEffect(() => {
+    if (searchParams.get('action') !== 'new') return;
+    setEditingStudent(null);
+    setFormData({ name: '', email: '', phone: '', course: '', status: 'Pending' });
+    setModalOpen(true);
+    const next = new URLSearchParams(searchParams);
+    next.delete('action');
+    setSearchParams(next, { replace: true });
+  }, [searchParams, setSearchParams]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -93,7 +105,7 @@ const AdminStudentsPage = () => {
           <p className="text-gray-500">Manage student enrollments and admissions.</p>
         </div>
         <Button onClick={openNewModal} className="bg-[#D4AF37] text-[#003D82] hover:bg-[#bfa030] font-bold">
-          <Plus className="mr-2 h-4 w-4" /> Enroll Student
+          <Plus className="mr-2 h-4 w-4" /> Add Student
         </Button>
       </div>
 

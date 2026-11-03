@@ -1030,7 +1030,7 @@ export default function PosPage() {
               <Button
                 size="sm"
                 className={cn('h-7 px-2.5 text-xs', filterMode === 'brand' ? 'bg-white text-[#003D82]' : 'bg-blue-500 hover:bg-blue-600 text-white')}
-                onClick={() => { setFilterMode('brand'); setFilterId(brands[0]?.id || ''); }}
+                onClick={() => { setFilterMode('brand'); setFilterId(''); }}
               >
                 Brand
               </Button>
@@ -1046,35 +1046,21 @@ export default function PosPage() {
           </div>
 
           {(filterMode === 'category' || filterMode === 'brand') && (
-            <div className="px-2 py-2 border-b flex flex-wrap gap-1.5">
-              <button
-                type="button"
-                onClick={() => setFilterId('')}
-                className={cn(
-                  'rounded-full px-3 py-1 text-xs font-semibold border',
-                  !filterId ? 'bg-[#003D82] text-white border-[#003D82]' : 'bg-white text-slate-700 border-slate-200'
-                )}
-              >
-                All
-              </button>
-              {(filterMode === 'category' ? categories : brands).map((x) => (
-                <button
-                  key={x.id}
-                  type="button"
-                  onClick={() => setFilterId(String(x.id))}
-                  className={cn(
-                    'rounded-full px-3 py-1 text-xs font-semibold border',
-                    String(filterId) === String(x.id)
-                      ? 'bg-[#003D82] text-white border-[#003D82]'
-                      : 'bg-white text-slate-700 border-slate-200'
-                  )}
-                >
-                  {x.name}
-                </button>
-              ))}
-              {!(filterMode === 'category' ? categories : brands).length && (
-                <span className="text-xs text-slate-500 px-1 py-1">No {filterMode === 'category' ? 'categories' : 'brands'} yet</span>
-              )}
+            <div className="px-2 py-2 border-b">
+              <SearchSelect
+                size="sm"
+                value={filterId}
+                onChange={setFilterId}
+                placeholder={filterMode === 'category' ? 'Search category…' : 'Search brand…'}
+                emptyLabel={filterMode === 'category' ? 'No categories match' : 'No brands match'}
+                options={[
+                  { value: '', label: filterMode === 'category' ? 'All categories' : 'All brands' },
+                  ...(filterMode === 'category' ? categories : brands).map((x) => ({
+                    value: String(x.id),
+                    label: x.name,
+                  })),
+                ]}
+              />
             </div>
           )}
 

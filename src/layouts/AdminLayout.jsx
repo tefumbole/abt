@@ -43,7 +43,6 @@ import {
   Utensils,
   ClipboardCheck,
   Trash2,
-  UserPlus,
   Wallet,
   UserCog,
   Image as ImageIcon,
@@ -84,6 +83,14 @@ const DEFAULT_SECTION_TAB = {
   '/admin/erp/products': 'category',
   '/admin/erp/people': 'user-list',
   '/admin/erp/rentals': 'booking-create',
+};
+
+/** Add/edit screens stay under the matching list tab. */
+const PEOPLE_ADD_TO_LIST = {
+  'add-user': 'user-list',
+  'add-customer': 'customer-list',
+  'add-supplier': 'supplier-list',
+  'add-biller': 'customer-list',
 };
 
 function orderIndex(order, key) {
@@ -298,15 +305,10 @@ const AdminLayout = () => {
           menuKey: 'people',
           submenu: [
             { label: 'User List', path: '/admin/erp/people?tab=user-list', icon: Users, color: 'navy', permission: [MENU_PERMISSIONS.users, MENU_PERMISSIONS.erpCommerce] },
-            { label: 'Add User', path: '/admin/erp/people?tab=add-user', icon: UserPlus, color: 'gold', permission: [MENU_PERMISSIONS.users, MENU_PERMISSIONS.erpCommerce] },
             { label: 'Customer List', path: '/admin/erp/people?tab=customer-list', color: 'purple', permission: [MENU_PERMISSIONS.users, MENU_PERMISSIONS.erpCommerce] },
-            { label: 'Add Customer', path: '/admin/erp/people?tab=add-customer', icon: UserPlus, color: 'pink', permission: [MENU_PERMISSIONS.users, MENU_PERMISSIONS.erpCommerce] },
             { label: 'Supplier List', path: '/admin/erp/people?tab=supplier-list', color: 'rose', permission: MENU_PERMISSIONS.erpCommerce },
-            { label: 'Add Supplier', path: '/admin/erp/people?tab=add-supplier', icon: UserPlus, color: 'indigo', permission: MENU_PERMISSIONS.erpCommerce },
             { label: 'Member List', path: '/admin/members', color: 'green', permission: MENU_PERMISSIONS.members },
-            { label: 'Add Member', path: '/admin/members?action=new', icon: UserPlus, color: 'teal', permission: MENU_PERMISSIONS.members },
             { label: 'Student List', path: '/admin/students', color: 'orange', permission: MENU_PERMISSIONS.users },
-            { label: 'Add Student', path: '/admin/students?action=new', icon: UserPlus, color: 'cyan', permission: MENU_PERMISSIONS.users },
           ]
         },
         { 
@@ -468,8 +470,11 @@ const AdminLayout = () => {
     const current = new URLSearchParams(location.search);
     for (const key of current.keys()) if (key !== 'tab' && key !== 'id') return false;
 
-    return (current.get('tab') || DEFAULT_SECTION_TAB[base] || 'list')
-      === (wanted.get('tab') || 'list');
+    const currentTab = PEOPLE_ADD_TO_LIST[current.get('tab')]
+      || current.get('tab')
+      || DEFAULT_SECTION_TAB[base]
+      || 'list';
+    return currentTab === (wanted.get('tab') || 'list');
   };
 
   /** Broader match for highlighting sidebar parent links. */
