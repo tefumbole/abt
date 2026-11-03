@@ -31,7 +31,7 @@ const DEFAULT_LANDING_MENU = [
     key: 'about',
     label: 'About Us',
     path: '/about',
-    children: [{ key: 'contact', label: 'Contact Us', path: '/about#contact' }],
+    children: [{ key: 'contact', label: 'Contact Us', path: '/contact' }],
   },
   { key: 'shareholders', label: 'Shareholders', path: '/shareholders' },
 ];
@@ -46,8 +46,10 @@ function normalizeLandingMenu(items) {
           ...item,
           path: item.path || '/about',
           children: item.children?.length
-            ? item.children
-            : [{ key: 'contact', label: 'Contact Us', path: '/about#contact' }],
+            ? item.children.map((child) =>
+                child.key === 'contact' ? { ...child, path: '/contact' } : child
+              )
+            : [{ key: 'contact', label: 'Contact Us', path: '/contact' }],
         };
       }
       return item;
