@@ -33,7 +33,7 @@ export function num(value, fallback = 0) {
 export function makeMoney(settings = {}) {
   const symbol = currencySymbol(settings.currency || 'RWF');
   const suffix = String(settings.currency_position || 'prefix').toLowerCase() === 'suffix';
-  return (value, { decimals = 2 } = {}) => {
+  return (value, { decimals = 0 } = {}) => {
     const amount = num(value).toLocaleString('en-US', {
       minimumFractionDigits: decimals,
       maximumFractionDigits: decimals,
@@ -42,8 +42,8 @@ export function makeMoney(settings = {}) {
   };
 }
 
-/** Plain 2-decimal number, for table cells where the symbol is in the header. */
-export function amount(value, decimals = 2) {
+/** Whole units by default — 2,000 not 2,000.00 */
+export function amount(value, decimals = 0) {
   return num(value).toLocaleString('en-US', {
     minimumFractionDigits: decimals,
     maximumFractionDigits: decimals,
@@ -109,18 +109,25 @@ export const PAYMENT_STATUS_META = {
 
 export const PAYING_METHODS = [
   { value: 'cash', label: 'Cash' },
-  { value: 'card', label: 'Card' },
-  { value: 'cheque', label: 'Cheque' },
-  { value: 'bank_transfer', label: 'Bank Transfer' },
-  { value: 'momo_mtn', label: 'MTN MoMo' },
-  { value: 'momo_orange', label: 'MoMo' },
-  { value: 'je', label: 'Journal Entry' },
-  { value: 'deposit', label: 'Deposit' },
-  { value: 'credit', label: 'Credit' },
-  { value: 'group_credit', label: 'Group Credit' },
-  { value: 'pay_later', label: 'Pay Later' },
+  { value: 'momo_mtn', label: 'MoMo' },
+  { value: 'visa', label: 'Visa' },
 ];
 
+const PAYING_METHOD_LABELS = {
+  cash: 'Cash',
+  visa: 'Visa',
+  card: 'Visa',
+  momo_mtn: 'MoMo',
+  momo_orange: 'MoMo',
+  cheque: 'Cheque',
+  bank_transfer: 'Bank Transfer',
+  je: 'Journal Entry',
+  deposit: 'Deposit',
+  credit: 'Credit',
+  group_credit: 'Group Credit',
+  pay_later: 'Pay Later',
+};
+
 export function payingMethodLabel(value) {
-  return PAYING_METHODS.find((m) => m.value === value)?.label || value || 'Cash';
+  return PAYING_METHOD_LABELS[value] || PAYING_METHODS.find((m) => m.value === value)?.label || value || 'Cash';
 }

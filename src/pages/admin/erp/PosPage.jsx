@@ -23,6 +23,10 @@ import {
 import PaymentModal, { paymentTotals } from '@/components/erp/pos/PaymentModal';
 import SaleCompleteModal from '@/components/erp/pos/SaleCompleteModal';
 import RegisterCloseModal from '@/components/erp/pos/RegisterCloseModal';
+import PosVisaModal from '@/components/erp/pos/PosVisaModal';
+import SearchSelect from '@/components/erp/SearchSelect';
+import { COUNTRIES } from '@/lib/countries';
+import { acceptPhone } from '@/lib/phones';
 import {
   buildCartReceiptDoc, buildRegisterReportHtml, lineSubtotal,
 } from '@/components/erp/pos/posDocs';
@@ -31,13 +35,12 @@ import {
 const QUICK_METHODS = [
   { key: 'cash', method: 'cash', paidById: 1, label: 'Cash', className: 'bg-teal-600 hover:bg-teal-700 text-white' },
   { key: 'momo', method: 'momo_mtn', paidById: 8, label: 'MoMo', className: 'bg-[#da7828] hover:bg-[#c06820] text-white' },
-  { key: 'deposit', method: 'deposit', paidById: 6, label: 'Deposit', className: 'bg-[#7b2d3b] hover:bg-[#642430] text-white' },
-  { key: 'pay_later', method: 'pay_later', paidById: 9, label: 'Pay Later', className: 'bg-slate-700 hover:bg-slate-800 text-white' },
+  { key: 'visa', method: 'visa', paidById: 2, label: 'Visa', className: 'bg-[#1a1f71] hover:bg-[#12164f] text-white' },
 ];
 const POS_PAY_METHODS = QUICK_METHODS.map((m) => ({ value: m.method, label: m.label }));
 
 const PAID_BY_ID = {
-  cash: 1, je: 3, deposit: 6, momo_orange: 8, momo_mtn: 8, pay_later: 9, credit: 10, group_credit: 11,
+  cash: 1, visa: 2, je: 3, deposit: 6, momo_orange: 8, momo_mtn: 8, pay_later: 9, credit: 10, group_credit: 11,
 };
 
 const SETTINGS_DEFAULTS = {
@@ -132,7 +135,8 @@ export default function PosPage() {
   const [tax, setTax] = useState(0);
   const [shipping, setShipping] = useState(0);
   const [showQuickCustomer, setShowQuickCustomer] = useState(false);
-  const [quickCustomer, setQuickCustomer] = useState({ name: '', phone: '', email: '' });
+  const [quickCustomer, setQuickCustomer] = useState({ name: '', phone: '', address: '', country: 'Rwanda' });
+  const [visaOpen, setVisaOpen] = useState(false);
   const [cashInHand, setCashInHand] = useState('0');
   const [showRegisterModal, setShowRegisterModal] = useState(false);
 
@@ -253,8 +257,8 @@ export default function PosPage() {
       const settings = normalizePosSettings(rawSettings);
       setWarehouses(w || []);
       setBillers(bl || []);
-      setCategories(cats || []);
-      setBrands(brs || []);
+      setCategories(Array.isArray(cats) ? cats : unwrap(cats));
+      setBrands(Array.isArray(brs) ? brs : unwrap(brs));
       setPosSettings(settings);
       setSysSettings(sys || {});
       setCompany(comp || {});
@@ -307,25 +311,30 @@ export default function PosPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const searchMatches = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return [];
+    return products.filter((p) => (
+      p.name?.toLowerCase().includes(q)
+      || String(p.code || '').toLowerCase().includes(q)
+      || String(p.barcode || '').toLowerCase().includes(q)
+    )).slice(0, 12);
+  }, [products, search]);
+
   const filteredProducts = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (q) return searchMatches;
     let list = products;
     if (filterMode === 'category' && filterId) {
       list = list.filter((p) => String(p.category_id) === String(filterId));
     } else if (filterMode === 'brand' && filterId) {
       list = list.filter((p) => String(p.brand_id) === String(filterId));
     } else if (filterMode === 'featured') {
-      // Falls back to the whole catalogue while nothing is flagged featured yet.
       const featured = list.filter((p) => p.is_featured);
       if (featured.length) list = featured;
     }
-    const q = search.trim().toLowerCase();
-    if (!q) return list;
-    return list.filter(
-      (p) => p.name?.toLowerCase().includes(q)
-        || String(p.code || '').toLowerCase().includes(q)
-        || String(p.barcode || '').toLowerCase().includes(q)
-    );
-  }, [products, search, filterMode, filterId]);
+    return list;
+  }, [products, search, searchMatches, filterMode, filterId]);
 
   /**
    * `null` means unlimited — either the warehouse has no stock row for that product,
@@ -472,7 +481,11 @@ export default function PosPage() {
       toast.error('Select a customer (add one with + if the list is empty)');
       return;
     }
-    setPayRows([{ id: 'row-1', method: methodEntry.method, amount: grandTotal.toFixed(2) }]);
+    if (methodEntry.method === 'visa') {
+      setVisaOpen(true);
+      return;
+    }
+    setPayRows([{ id: 'row-1', method: methodEntry.method, amount: String(Math.round(grandTotal)) }]);
     setPayModal(methodEntry);
   };
 
@@ -702,17 +715,23 @@ export default function PosPage() {
       toast.error('Name required');
       return;
     }
+    const phone = acceptPhone(quickCustomer.phone);
+    if (quickCustomer.phone.trim() && !phone) {
+      toast.error('Enter a valid phone such as +250794… or 250794…');
+      return;
+    }
     try {
       const created = await createCustomer({
         name: quickCustomer.name.trim(),
-        phone: quickCustomer.phone || null,
-        email: quickCustomer.email || null,
+        phone: phone || null,
+        address: quickCustomer.address || null,
+        country: quickCustomer.country || 'Rwanda',
         is_active: true,
       });
       const row = created?.data || created;
       toast.success('Customer added');
       setShowQuickCustomer(false);
-      setQuickCustomer({ name: '', phone: '', email: '' });
+      setQuickCustomer({ name: '', phone: '', address: '', country: 'Rwanda' });
       const list = await listCustomers('?active=1');
       setCustomers((list || []).filter((x) => x?.id && x?.name));
       if (row?.id) setCustomerId(row.id);
@@ -808,36 +827,31 @@ export default function PosPage() {
               value={reference}
               onChange={(e) => setReference(e.target.value)}
             />
-            <select
-              className="border rounded-md h-10 px-2 bg-white text-sm"
+            <SearchSelect
               value={warehouseId}
-              onChange={(e) => { setWarehouseId(e.target.value); load(e.target.value); }}
-            >
-              {warehouses.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
-            </select>
-            <select
-              className="border rounded-md h-10 px-2 bg-white text-sm"
+              onChange={(id) => { setWarehouseId(id); load(id); }}
+              placeholder="Warehouse…"
+              options={warehouses.map((w) => ({ value: w.id, label: w.name }))}
+              allowClear={false}
+              size="sm"
+            />
+            <SearchSelect
               value={billerId}
-              onChange={(e) => setBillerId(e.target.value)}
-            >
-              <option value="">Select biller</option>
-              {billers.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
-            </select>
+              onChange={setBillerId}
+              placeholder="Biller…"
+              options={billers.map((b) => ({ value: b.id, label: b.name }))}
+              size="sm"
+            />
           </div>
 
           <div className="px-4 pt-4 pb-2 flex gap-2 items-center">
-            <select
-              className="border rounded-md h-11 px-2 bg-white text-sm flex-1"
+            <SearchSelect
+              className="flex-1"
               value={customerId}
-              onChange={(e) => setCustomerId(e.target.value)}
-            >
-              <option value="">Select customer</option>
-              {customers.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}{c.phone ? ` (${c.phone})` : ''}
-                </option>
-              ))}
-            </select>
+              onChange={setCustomerId}
+              placeholder="Search customer…"
+              options={customers.map((c) => ({ value: c.id, label: c.name, hint: c.phone || '' }))}
+            />
             <Button type="button" size="icon" className="bg-[#003D82] h-11 w-11" title="Add customer" onClick={() => setShowQuickCustomer(true)}>
               <Plus className="h-4 w-4" />
             </Button>
@@ -854,17 +868,32 @@ export default function PosPage() {
               <Input
                 ref={searchRef}
                 className="pl-9 pr-10 h-12 text-base bg-white"
-                placeholder="Scan barcode or type product code and press Enter..."
+                placeholder="Search product name…"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 onKeyDown={handleSearchKeyDown}
               />
-              <span
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400"
-                title="Scan mode: a barcode or exact code followed by Enter adds the product straight to the cart"
-              >
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400">
                 <ScanLine className="h-4 w-4" />
               </span>
+              {search.trim() && (
+                <div className="absolute z-30 left-0 right-0 mt-1 max-h-72 overflow-y-auto rounded-xl border bg-white shadow-xl">
+                  {!searchMatches.length && (
+                    <div className="p-3 text-sm text-slate-500">No product matches “{search}”</div>
+                  )}
+                  {searchMatches.map((p) => (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() => { addToCart(p); setSearch(''); }}
+                      className="flex w-full items-center justify-between gap-3 px-3 py-2.5 text-left text-sm hover:bg-slate-50"
+                    >
+                      <span className="truncate font-medium">{p.name}</span>
+                      <span className="shrink-0 text-[#003D82] font-semibold">{money(p.price)}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
 
@@ -965,7 +994,7 @@ export default function PosPage() {
             </div>
           </div>
 
-          <div className="p-2 grid grid-cols-2 sm:grid-cols-4 gap-2 border-t bg-slate-50">
+          <div className="p-2 grid grid-cols-3 gap-2 border-t bg-slate-50">
             {QUICK_METHODS.map((m) => (
               <button
                 key={m.key}
@@ -980,7 +1009,7 @@ export default function PosPage() {
             <button
               type="button"
               onClick={cancelSale}
-              className="rounded-xl py-3 px-2 text-sm font-bold shadow-sm bg-red-600 hover:bg-red-700 text-white col-span-2 sm:col-span-4"
+              className="rounded-xl py-3 px-2 text-sm font-bold shadow-sm bg-red-600 hover:bg-red-700 text-white col-span-3"
             >
               Cancel
             </button>
@@ -994,7 +1023,7 @@ export default function PosPage() {
               <Button
                 size="sm"
                 className={cn('h-7 px-2.5 text-xs', filterMode === 'category' ? 'bg-white text-[#003D82]' : 'bg-blue-500 hover:bg-blue-600 text-white')}
-                onClick={() => { setFilterMode('category'); setFilterId(categories[0]?.id || ''); }}
+                onClick={() => { setFilterMode('category'); setFilterId(''); }}
               >
                 Category
               </Button>
@@ -1017,17 +1046,35 @@ export default function PosPage() {
           </div>
 
           {(filterMode === 'category' || filterMode === 'brand') && (
-            <div className="px-2 py-1.5 border-b">
-              <select
-                className="w-full border rounded-md h-8 px-2 text-sm"
-                value={filterId}
-                onChange={(e) => setFilterId(e.target.value)}
+            <div className="px-2 py-2 border-b flex flex-wrap gap-1.5">
+              <button
+                type="button"
+                onClick={() => setFilterId('')}
+                className={cn(
+                  'rounded-full px-3 py-1 text-xs font-semibold border',
+                  !filterId ? 'bg-[#003D82] text-white border-[#003D82]' : 'bg-white text-slate-700 border-slate-200'
+                )}
               >
-                <option value="">All {filterMode === 'category' ? 'categories' : 'brands'}</option>
-                {(filterMode === 'category' ? categories : brands).map((x) => (
-                  <option key={x.id} value={x.id}>{x.name}</option>
-                ))}
-              </select>
+                All
+              </button>
+              {(filterMode === 'category' ? categories : brands).map((x) => (
+                <button
+                  key={x.id}
+                  type="button"
+                  onClick={() => setFilterId(String(x.id))}
+                  className={cn(
+                    'rounded-full px-3 py-1 text-xs font-semibold border',
+                    String(filterId) === String(x.id)
+                      ? 'bg-[#003D82] text-white border-[#003D82]'
+                      : 'bg-white text-slate-700 border-slate-200'
+                  )}
+                >
+                  {x.name}
+                </button>
+              ))}
+              {!(filterMode === 'category' ? categories : brands).length && (
+                <span className="text-xs text-slate-500 px-1 py-1">No {filterMode === 'category' ? 'categories' : 'brands'} yet</span>
+              )}
             </div>
           )}
 
@@ -1070,6 +1117,80 @@ export default function PosPage() {
           </div>
         </div>
       </div>
+
+      {visaOpen && (
+        <PosVisaModal
+          amount={grandTotal}
+          currency={String(sysSettings.currency || 'RWF')}
+          amountLabel={money(grandTotal)}
+          description={`${company.name || 'Alpha Bridge'} POS`}
+          onClose={() => setVisaOpen(false)}
+          onPaid={async (intentId) => {
+            setVisaOpen(false);
+            setPaying(true);
+            try {
+              const customer = customers.find((c) => c.id === customerId) || {};
+              const res = await createPosSale({
+                warehouse_id: warehouseId,
+                customer_id: customerId || null,
+                biller_id: billerId || null,
+                reference: reference || undefined,
+                discount: num(discount),
+                tax: num(tax),
+                shipping: num(shipping),
+                note: note.trim() || undefined,
+                paid_amount: grandTotal,
+                paying_method: 'visa',
+                paid_by_id: 2,
+                stripe_payment_intent_id: intentId,
+                currency: String(sysSettings.currency || 'RWF'),
+                customer_phone: customer.phone || undefined,
+                cash_register_id: register?.id || null,
+                items: cart.map((line) => ({
+                  product_id: line.product_id,
+                  qty: num(line.qty),
+                  net_unit_price: num(line.price),
+                  discount: num(line.discount),
+                  tax: num(line.tax),
+                })),
+              });
+              const sale = res?.data || res || {};
+              const doc = buildCartReceiptDoc({
+                sale,
+                items: cart,
+                warehouseName,
+                customer,
+                cashier: billers.find((b) => String(b.id) === String(billerId))?.name || '',
+                discount,
+                tax,
+                shipping,
+                grandTotal: num(sale.grand_total, grandTotal),
+                paidAmount: num(sale.paid_amount, grandTotal),
+                changeAmount: 0,
+                payingMethod: 'visa',
+              });
+              setLastReceipt(doc);
+              setSaleComplete({
+                reference: doc.reference,
+                grand_total: doc.grand_total,
+                paid_amount: doc.paid_amount,
+                change_amount: 0,
+                method_label: 'Visa',
+                payment_status_label: 'Fully paid',
+                doc,
+              });
+              toast.success(`POS sale ${doc.reference} complete`);
+              clearCart();
+              if (posSettings.auto_print_receipt) printReceipt(doc);
+              load(warehouseId);
+            } catch (e) {
+              toast.error(e.message);
+            } finally {
+              setPaying(false);
+            }
+          }}
+        />
+      )}
 
       {payModal && (
         <PaymentModal
@@ -1166,8 +1287,26 @@ export default function PosPage() {
               <button type="button" onClick={() => setShowQuickCustomer(false)}><X className="h-5 w-5" /></button>
             </div>
             <div><Label>Name *</Label><Input required value={quickCustomer.name} onChange={(e) => setQuickCustomer({ ...quickCustomer, name: e.target.value })} /></div>
-            <div><Label>Phone</Label><Input value={quickCustomer.phone} onChange={(e) => setQuickCustomer({ ...quickCustomer, phone: e.target.value })} /></div>
-            <div><Label>Email</Label><Input value={quickCustomer.email} onChange={(e) => setQuickCustomer({ ...quickCustomer, email: e.target.value })} /></div>
+            <div>
+              <Label>Phone number</Label>
+              <Input
+                value={quickCustomer.phone}
+                placeholder="+250794… or 250794…"
+                onChange={(e) => setQuickCustomer({ ...quickCustomer, phone: e.target.value })}
+              />
+            </div>
+            <div><Label>Address</Label><Input value={quickCustomer.address} onChange={(e) => setQuickCustomer({ ...quickCustomer, address: e.target.value })} /></div>
+            <div>
+              <Label>Country</Label>
+              <SearchSelect
+                className="mt-1"
+                value={quickCustomer.country}
+                onChange={(country) => setQuickCustomer({ ...quickCustomer, country })}
+                options={COUNTRIES}
+                placeholder="Search country…"
+                allowClear={false}
+              />
+            </div>
             <div className="flex justify-end gap-2">
               <Button type="button" variant="outline" onClick={() => setShowQuickCustomer(false)}>Cancel</Button>
               <Button type="submit" className="bg-[#003D82]">Save</Button>

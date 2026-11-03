@@ -6,6 +6,7 @@ import { COMPANY_NAME as BRAND } from '../../constants/branding.js';
 import { nextErpReference } from '../../services/erp/referenceNumbers.js';
 import { adjustStock, getNonStockProductIds, getStock } from '../../services/erp/stock.js';
 import { startDeposit } from '../../services/pawapayPayments.js';
+import { getPaymentIntent, intentPaid } from '../../services/stripeClient.js';
 import { mysqlDateTime, num, requireErpAdmin } from './helpers.js';
 
 const router = Router();
@@ -233,12 +234,14 @@ router.get('/recent-sales', requireAuth, requireErpAdmin, async (req, res) => {
 
 const PAID_BY_METHODS = {
   1: 'cash',
+  2: 'visa',
   3: 'je',
   6: 'deposit',
   8: 'momo_orange',
   9: 'pay_later',
   10: 'credit',
   11: 'group_credit',
+  12: 'visa',
 };
 
 /** POS sale shortcut — same as sales create with is_pos=true */
@@ -278,15 +281,24 @@ router.post('/sale', requireAuth, requireErpAdmin, async (req, res) => {
       || PAID_BY_METHODS[Number(body.paid_by_id)]
       || 'cash';
     const isMomo = payingMethod === 'momo_orange' || payingMethod === 'momo_mtn' || Number(body.paid_by_id) === 8;
+    const isVisa = payingMethod === 'visa' || payingMethod === 'card' || Number(body.paid_by_id) === 2;
     let customerPhone = String(body.customer_phone || '').trim();
     if (!customerPhone && body.customer_id) {
       const [cust] = await pool.query('SELECT phone FROM erp_customers WHERE id = ? LIMIT 1', [body.customer_id]);
       customerPhone = cust[0]?.phone || '';
     }
     if (isMomo && (!customerPhone || grand < 100)) {
+      await conn.rollback();
       return res.status(400).json({ error: 'MoMo sales need a customer phone and at least 100 RWF' });
     }
-    const paid = isMomo ? 0 : num(body.paid_amount, grand);
+    if (isVisa) {
+      const intent = await getPaymentIntent(body.stripe_payment_intent_id);
+      if (!intentPaid(intent, grand, body.currency || 'RWF')) {
+        await conn.rollback();
+        return res.status(400).json({ error: 'Visa payment was not confirmed by Stripe' });
+      }
+    }
+    const paid = isMomo ? 0 : (isVisa ? grand : num(body.paid_amount, grand));
     const payment_status = isMomo || paid <= 0 ? 'pending' : paid >= grand ? 'paid' : 'partial';
     const sale_date = mysqlDateTime(body.sale_date);
     await conn.query(

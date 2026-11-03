@@ -12,6 +12,7 @@ import {
   pawapayConfigured,
 } from '../services/pawapayClient.js';
 import { handleCallback, refreshAndApply, startDeposit } from '../services/pawapayPayments.js';
+import { createCardIntent, stripeConfigured } from '../services/stripeClient.js';
 
 const router = Router();
 
@@ -35,6 +36,23 @@ router.post('/pawapay/refunds/callback', pawapayCallback);
 router.post('/pawapay/callback', pawapayCallback);
 
 router.use(requireAuth);
+
+router.post('/stripe/intent', async (req, res) => {
+  try {
+    if (!stripeConfigured()) return res.status(400).json({ error: 'Stripe is not configured' });
+    const amount = Number(req.body?.amount);
+    if (!Number.isFinite(amount) || amount < 1) return res.status(400).json({ error: 'Amount is required' });
+    const currency = String(req.body?.currency || process.env.STRIPE_CURRENCY || 'RWF').toUpperCase();
+    const intent = await createCardIntent({
+      amount,
+      currency,
+      description: req.body?.description || `${BRAND} sale`,
+    });
+    res.json({ clientSecret: intent.client_secret, id: intent.id });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
 
 router.get('/pawapay/:depositId/status', async (req, res) => {
   try {

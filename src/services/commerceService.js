@@ -55,6 +55,7 @@ export const paymentService = {
   createDeposit: (body) => api('/payments/deposits', { method: 'POST', body: JSON.stringify(body) }),
   deleteDeposits: (ids) => api('/payments/deposits/delete', { method: 'POST', body: JSON.stringify({ ids }) }),
   pawapayStatus: (depositId) => api(`/payments/pawapay/${encodeURIComponent(depositId)}/status`),
+  stripeIntent: (body) => api('/payments/stripe/intent', { method: 'POST', body: JSON.stringify(body) }),
 };
 
 export const posService = {
@@ -69,7 +70,7 @@ export const posService = {
 
 export function formatRwf(n) {
   const num = Math.round(Number(n) || 0);
-  return `${num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ')} RWF`;
+  return `${num.toLocaleString('en-US')} RWF`;
 }
 
 /** @deprecated Alpha is Rwanda — use formatRwf. */

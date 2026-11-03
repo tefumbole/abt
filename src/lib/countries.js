@@ -1,0 +1,15 @@
+export const COUNTRIES = [
+  { value: 'Rwanda', label: 'Rwanda' },
+  { value: 'Kenya', label: 'Kenya' },
+  { value: 'Uganda', label: 'Uganda' },
+  { value: 'Tanzania', label: 'Tanzania' },
+  { value: 'Burundi', label: 'Burundi' },
+  { value: 'DR Congo', label: 'DR Congo' },
+  { value: 'Cameroon', label: 'Cameroon' },
+  { value: 'South Africa', label: 'South Africa' },
+  { value: 'Nigeria', label: 'Nigeria' },
+  { value: 'Ghana', label: 'Ghana' },
+  { value: 'United States', label: 'United States' },
+  { value: 'United Kingdom', label: 'United Kingdom' },
+  { value: 'Other', label: 'Other' },
+];

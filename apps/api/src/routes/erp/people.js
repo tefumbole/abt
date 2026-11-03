@@ -6,6 +6,15 @@ import { bool, requireErpAdmin } from './helpers.js';
 
 const router = Router();
 
+function normalizePhone(phone) {
+  const raw = String(phone || '').trim();
+  if (!raw) return null;
+  const plus = raw.startsWith('+');
+  const digits = raw.replace(/\D/g, '');
+  if (digits.length < 9) return undefined;
+  return plus ? `+${digits}` : digits;
+}
+
 function makePartyCrud(table) {
   const r = Router();
 
@@ -26,6 +35,10 @@ function makePartyCrud(table) {
     try {
       const b = req.body || {};
       if (!b.name?.trim()) return res.status(400).json({ error: 'Name is required' });
+      const phone = normalizePhone(b.phone);
+      if (b.phone && String(b.phone).trim() && phone === undefined) {
+        return res.status(400).json({ error: 'Phone must look like +250794… or 250794…' });
+      }
       const id = randomUUID();
       const pool = getPool();
       if (table === 'erp_billers' && bool(b.is_default, false)) {
@@ -33,11 +46,11 @@ function makePartyCrud(table) {
       }
       if (table === 'erp_customers') {
         await pool.query(
-          `INSERT INTO erp_customers (id, user_id, customer_group_id, name, email, phone, company_name, address, city, is_active)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          `INSERT INTO erp_customers (id, user_id, customer_group_id, name, email, phone, company_name, address, city, country, is_active)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           [
-            id, b.user_id || null, b.customer_group_id || null, b.name.trim(), b.email || null, b.phone || null,
-            b.company_name || null, b.address || null, b.city || null, bool(b.is_active, true) ? 1 : 0,
+            id, b.user_id || null, b.customer_group_id || null, b.name.trim(), b.email || null, phone,
+            b.company_name || null, b.address || null, b.city || null, b.country || null, bool(b.is_active, true) ? 1 : 0,
           ]
         );
       } else if (table === 'erp_suppliers') {
@@ -45,7 +58,7 @@ function makePartyCrud(table) {
           `INSERT INTO erp_suppliers (id, name, email, phone, company_name, address, is_active)
            VALUES (?, ?, ?, ?, ?, ?, ?)`,
           [
-            id, b.name.trim(), b.email || null, b.phone || null, b.company_name || null,
+            id, b.name.trim(), b.email || null, phone, b.company_name || null,
             b.address || null, bool(b.is_active, true) ? 1 : 0,
           ]
         );
@@ -54,7 +67,7 @@ function makePartyCrud(table) {
           `INSERT INTO erp_billers (id, name, email, phone, company_name, address, warehouse_id, is_active, is_default)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           [
-            id, b.name.trim(), b.email || null, b.phone || null, b.company_name || null,
+            id, b.name.trim(), b.email || null, phone, b.company_name || null,
             b.address || null, b.warehouse_id || null, bool(b.is_active, true) ? 1 : 0, bool(b.is_default, false) ? 1 : 0,
           ]
         );
@@ -77,17 +90,24 @@ function makePartyCrud(table) {
         await pool.query(`UPDATE erp_billers SET is_default = 0`);
       }
       if (table === 'erp_customers') {
+        const nextPhone = b.phone !== undefined
+          ? (String(b.phone).trim() ? normalizePhone(b.phone) : null)
+          : c.phone;
+        if (b.phone !== undefined && String(b.phone).trim() && nextPhone === undefined) {
+          return res.status(400).json({ error: 'Phone must look like +250794… or 250794…' });
+        }
         await pool.query(
-          `UPDATE erp_customers SET user_id=?, customer_group_id=?, name=?, email=?, phone=?, company_name=?, address=?, city=?, is_active=? WHERE id=?`,
+          `UPDATE erp_customers SET user_id=?, customer_group_id=?, name=?, email=?, phone=?, company_name=?, address=?, city=?, country=?, is_active=? WHERE id=?`,
           [
             b.user_id !== undefined ? b.user_id : c.user_id,
             b.customer_group_id !== undefined ? b.customer_group_id : c.customer_group_id,
             b.name?.trim() || c.name,
             b.email !== undefined ? b.email : c.email,
-            b.phone !== undefined ? b.phone : c.phone,
+            nextPhone,
             b.company_name !== undefined ? b.company_name : c.company_name,
             b.address !== undefined ? b.address : c.address,
             b.city !== undefined ? b.city : c.city,
+            b.country !== undefined ? b.country : c.country,
             (b.is_active !== undefined ? bool(b.is_active) : Boolean(c.is_active)) ? 1 : 0,
             req.params.id,
           ]

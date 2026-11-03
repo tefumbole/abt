@@ -16,6 +16,7 @@ import { cn } from '@/lib/utils';
 import { COLORED_TAB_BASE, getTabTheme } from '@/components/admin/tabTheme';
 import SaleDetailsModal from '@/components/erp/SaleDetailsModal';
 import SaleFormFields from '@/components/erp/SaleFormFields';
+import SearchSelect from '@/components/erp/SearchSelect';
 import { AddPaymentModal, ViewPaymentsModal } from '@/components/erp/SalePaymentModals';
 import {
   PAYMENT_STATUS_META, SALE_STATUS_META, formatErpDate, makeMoney, num,
@@ -65,6 +66,7 @@ const EMPTY_FILTERS = {
   payment_status: '',
   warehouse_id: '',
   customer_id: '',
+  biller_id: '',
   from: '',
   to: '',
   source: '',
@@ -177,6 +179,7 @@ export default function SalesPage() {
         q: filters.q || undefined,
         warehouse_id: filters.warehouse_id || undefined,
         customer_id: filters.customer_id || undefined,
+        biller_id: filters.biller_id || undefined,
         sale_status: filters.sale_status || undefined,
         payment_status: filters.payment_status || undefined,
         from: filters.from || undefined,
@@ -526,23 +529,38 @@ export default function SalesPage() {
                   />
                 </div>
 
-                <select
-                  className="h-9 rounded-md border px-2 text-sm"
-                  value={filters.warehouse_id}
-                  onChange={(e) => { setPage(1); setFilters((f) => ({ ...f, warehouse_id: e.target.value })); }}
-                >
-                  <option value="">All warehouses</option>
-                  {warehouses.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
-                </select>
-
-                <select
-                  className="h-9 rounded-md border px-2 text-sm max-w-[200px]"
+                <SearchSelect
+                  className="w-[200px]"
+                  size="sm"
                   value={filters.customer_id}
-                  onChange={(e) => { setPage(1); setFilters((f) => ({ ...f, customer_id: e.target.value })); }}
-                >
-                  <option value="">All customers</option>
-                  {customers.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-                </select>
+                  onChange={(customer_id) => { setPage(1); setFilters((f) => ({ ...f, customer_id })); }}
+                  placeholder="All customers"
+                  options={customers.map((c) => ({ value: c.id, label: c.name, hint: c.phone || '' }))}
+                />
+                <SearchSelect
+                  className="w-[180px]"
+                  size="sm"
+                  value={filters.warehouse_id}
+                  onChange={(warehouse_id) => { setPage(1); setFilters((f) => ({ ...f, warehouse_id })); }}
+                  placeholder="All warehouses"
+                  options={warehouses.map((w) => ({ value: w.id, label: w.name }))}
+                />
+                <SearchSelect
+                  className="w-[180px]"
+                  size="sm"
+                  value={filters.biller_id}
+                  onChange={(biller_id) => { setPage(1); setFilters((f) => ({ ...f, biller_id })); }}
+                  placeholder="All billers"
+                  options={billers.map((b) => ({ value: b.id, label: b.name }))}
+                />
+                <SearchSelect
+                  className="w-[170px]"
+                  size="sm"
+                  value={filters.sale_status}
+                  onChange={(sale_status) => { setPage(1); setFilters((f) => ({ ...f, sale_status })); }}
+                  placeholder="All statuses"
+                  options={Object.entries(SALE_STATUS_META).map(([value, meta]) => ({ value, label: meta.label }))}
+                />
 
                 <select
                   className="h-9 rounded-md border px-2 text-sm"

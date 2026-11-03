@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/use-toast';
-import { Eye, EyeOff, Loader2, User, Lock, ArrowRight, MessageSquare, RefreshCw, AlertCircle } from 'lucide-react';
+import { Eye, EyeOff, Loader2, Lock, ArrowRight, RefreshCw, AlertCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { validateSessionAndProfile } from '@/utils/sessionValidator';
@@ -451,44 +451,10 @@ const LoginPage = () => {
                     </span>
                 )}
               </Button>
-              
-              <div className="relative flex items-center justify-center mt-6 mb-4">
-                  <div className="border-t border-gray-200 w-full absolute"></div>
-                  <span className="bg-white px-3 text-xs text-gray-400 relative z-10">OR</span>
-              </div>
-              
-              <Button
-                  type="button"
-                  variant="outline"
-                  className="w-full h-11 text-[#003D82] border-[#003D82]/30 hover:bg-blue-50 font-medium"
-                  onClick={() => navigate('/signup')}
-                  disabled={isLoading}
-              >
-                  <User className="w-4 h-4 mr-2" />
-                  Create Customer Account
-              </Button>
-
-              <Button
-                  type="button"
-                  variant="outline"
-                  className="w-full h-11 text-[#003D82] border-gray-300 hover:bg-gray-50 mt-3"
-                  onClick={() => navigate('/login-otp')}
-                  disabled={isLoading}
-              >
-                  <MessageSquare className="w-4 h-4 mr-2 text-green-600" />
-                  Login with WhatsApp OTP
-              </Button>
             </form>
 
             <div className="mt-6 pt-6 border-t border-gray-100 text-center">
-                <p className="text-sm text-gray-600">
-                    Don't have an account?{' '}
-                    <Link to="/signup" className="text-[#003D82] font-bold hover:underline">
-                        Sign Up
-                    </Link>
-                    {' '}to view tasks assigned to you.
-                </p>
-                <div className="mt-4 flex justify-center gap-4 text-xs text-gray-400">
+                <div className="flex justify-center gap-4 text-xs text-gray-400">
                     <Link to="/" className="hover:text-gray-600">Home</Link>
                     <span>•</span>
                     <Link to="/contact" className="hover:text-gray-600">Support</Link>

@@ -7,10 +7,13 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
 import {
-  PAYING_METHODS, num, toDateTimeLocal, toMysqlDateTime,
+  PAYING_METHODS, SALE_STATUS_META, num, toDateTimeLocal, toMysqlDateTime,
 } from '@/lib/erpFormat';
+import SearchSelect from '@/components/erp/SearchSelect';
 
-const SELECT_CLASS = 'w-full border rounded-md h-10 px-2 mt-1 text-sm bg-white';
+const SALE_STATUS_OPTIONS = Object.entries(SALE_STATUS_META)
+  .filter(([value]) => ['completed', 'pending', 'draft'].includes(value))
+  .map(([value, meta]) => ({ value, label: meta.label }));
 
 function emptyForm() {
   return {
@@ -234,48 +237,45 @@ export default function SaleFormFields({
         </div>
         <div>
           <Label>Customer *</Label>
-          <select
-            className={SELECT_CLASS}
+          <SearchSelect
+            className="mt-1"
             value={form.customer_id}
-            onChange={(e) => patch({ customer_id: e.target.value })}
-          >
-            <option value="">Select customer…</option>
-            {customers.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-          </select>
+            onChange={(customer_id) => patch({ customer_id })}
+            placeholder="Search customer…"
+            options={customers.map((c) => ({ value: c.id, label: c.name, hint: c.phone || '' }))}
+          />
         </div>
         <div>
           <Label>Warehouse *</Label>
-          <select
-            className={SELECT_CLASS}
+          <SearchSelect
+            className="mt-1"
             value={form.warehouse_id}
-            onChange={(e) => changeWarehouse(e.target.value)}
-          >
-            <option value="">Select warehouse…</option>
-            {warehouses.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
-          </select>
+            onChange={changeWarehouse}
+            placeholder="Search warehouse…"
+            options={warehouses.map((w) => ({ value: w.id, label: w.name }))}
+            allowClear={false}
+          />
         </div>
         <div>
           <Label>Biller</Label>
-          <select
-            className={SELECT_CLASS}
+          <SearchSelect
+            className="mt-1"
             value={form.biller_id}
-            onChange={(e) => patch({ biller_id: e.target.value })}
-          >
-            <option value="">—</option>
-            {billers.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
-          </select>
+            onChange={(biller_id) => patch({ biller_id })}
+            placeholder="Search biller…"
+            options={billers.map((b) => ({ value: b.id, label: b.name }))}
+          />
         </div>
         <div>
           <Label>Sale Status *</Label>
-          <select
-            className={SELECT_CLASS}
+          <SearchSelect
+            className="mt-1"
             value={form.sale_status}
-            onChange={(e) => patch({ sale_status: e.target.value })}
-          >
-            <option value="completed">Completed</option>
-            <option value="pending">Pending</option>
-            <option value="draft">Draft</option>
-          </select>
+            onChange={(sale_status) => patch({ sale_status })}
+            placeholder="Search status…"
+            options={SALE_STATUS_OPTIONS}
+            allowClear={false}
+          />
         </div>
       </div>
 
@@ -487,13 +487,14 @@ export default function SaleFormFields({
           </div>
           <div>
             <Label>Paying Method</Label>
-            <select
-              className={SELECT_CLASS}
+            <SearchSelect
+              className="mt-1"
               value={form.paying_method}
-              onChange={(e) => patch({ paying_method: e.target.value })}
-            >
-              {PAYING_METHODS.map((m) => <option key={m.value} value={m.value}>{m.label}</option>)}
-            </select>
+              onChange={(paying_method) => patch({ paying_method })}
+              placeholder="Payment method…"
+              options={PAYING_METHODS}
+              allowClear={false}
+            />
           </div>
           <div className="flex flex-col justify-end">
             <span className="text-sm text-slate-600">{balance >= 0 ? 'Balance Due' : 'Change'}</span>

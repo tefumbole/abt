@@ -23,7 +23,7 @@ export function baseUrl() {
 
 export function formatRwf(n) {
   const num = Math.round(Number(n) || 0);
-  return `${num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ')} RWF`;
+  return `${num.toLocaleString('en-US')} RWF`;
 }
 
 /** @deprecated use formatRwf — Alpha is Rwanda, not Cameroon. */

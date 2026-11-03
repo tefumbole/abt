@@ -9,6 +9,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
+import SearchSelect from '@/components/erp/SearchSelect';
+import { COUNTRIES } from '@/lib/countries';
+import { acceptPhone } from '@/lib/phones';
 import UserManagementForm from '@/components/admin/UserManagementForm';
 import { createUser, deleteUser, getAllUsers, updateUser } from '@/services/userService';
 import {
@@ -36,6 +39,7 @@ const EMPTY_PARTY = {
   company_name: '',
   address: '',
   city: '',
+  country: 'Rwanda',
   warehouse_id: '',
   customer_group_id: '',
   is_default: false,
@@ -154,11 +158,17 @@ export default function PeoplePage() {
       toast.error('Name is required');
       return;
     }
+    const phone = acceptPhone(partyForm.phone);
+    if (partyForm.phone?.trim() && !phone) {
+      toast.error('Enter a valid phone such as +250794… or 250794…');
+      return;
+    }
     setSaving(true);
     try {
       const payload = {
         ...partyForm,
         name: partyForm.name.trim(),
+        phone: phone || null,
         customer_group_id: partyForm.customer_group_id || null,
         warehouse_id: partyForm.warehouse_id || null,
       };
@@ -208,6 +218,7 @@ export default function PeoplePage() {
       company_name: row.company_name || '',
       address: row.address || '',
       city: row.city || '',
+      country: row.country || 'Rwanda',
       warehouse_id: row.warehouse_id || '',
       customer_group_id: row.customer_group_id || '',
       is_default: !!row.is_default,
@@ -315,40 +326,42 @@ export default function PeoplePage() {
         <Label>Name *</Label>
         <Input required value={partyForm.name} onChange={(e) => setPartyForm({ ...partyForm, name: e.target.value })} />
       </div>
+      {kind !== 'customers' && (
+        <div>
+          <Label>Email</Label>
+          <Input type="email" value={partyForm.email} onChange={(e) => setPartyForm({ ...partyForm, email: e.target.value })} />
+        </div>
+      )}
       <div>
-        <Label>Email</Label>
-        <Input type="email" value={partyForm.email} onChange={(e) => setPartyForm({ ...partyForm, email: e.target.value })} />
+        <Label>Phone number</Label>
+        <Input
+          value={partyForm.phone}
+          placeholder="+250794… or 250794…"
+          onChange={(e) => setPartyForm({ ...partyForm, phone: e.target.value })}
+        />
       </div>
-      <div>
-        <Label>Phone</Label>
-        <Input value={partyForm.phone} onChange={(e) => setPartyForm({ ...partyForm, phone: e.target.value })} />
-      </div>
-      <div>
-        <Label>Company Name</Label>
-        <Input value={partyForm.company_name} onChange={(e) => setPartyForm({ ...partyForm, company_name: e.target.value })} />
-      </div>
-      <div className="md:col-span-2">
+      {kind !== 'customers' && (
+        <div>
+          <Label>Company Name</Label>
+          <Input value={partyForm.company_name} onChange={(e) => setPartyForm({ ...partyForm, company_name: e.target.value })} />
+        </div>
+      )}
+      <div className={kind === 'customers' ? 'md:col-span-2' : ''}>
         <Label>Address</Label>
         <Input value={partyForm.address} onChange={(e) => setPartyForm({ ...partyForm, address: e.target.value })} />
       </div>
       {kind === 'customers' && (
-        <>
-          <div>
-            <Label>City</Label>
-            <Input value={partyForm.city} onChange={(e) => setPartyForm({ ...partyForm, city: e.target.value })} />
-          </div>
-          <div>
-            <Label>Customer Group</Label>
-            <select
-              className="w-full border rounded-md h-10 px-2 bg-white"
-              value={partyForm.customer_group_id}
-              onChange={(e) => setPartyForm({ ...partyForm, customer_group_id: e.target.value })}
-            >
-              <option value="">—</option>
-              {groups.map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}
-            </select>
-          </div>
-        </>
+        <div className="md:col-span-2">
+          <Label>Country</Label>
+          <SearchSelect
+            className="mt-1"
+            value={partyForm.country}
+            onChange={(country) => setPartyForm({ ...partyForm, country })}
+            options={COUNTRIES}
+            placeholder="Search country…"
+            allowClear={false}
+          />
+        </div>
       )}
       {kind === 'billers' && (
         <>

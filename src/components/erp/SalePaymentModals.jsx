@@ -12,8 +12,7 @@ import {
   PAYING_METHODS, formatErpDate, num, payingMethodLabel, toDateTimeLocal, toMysqlDateTime,
 } from '@/lib/erpFormat';
 import { createSalePayment, deleteSalePayment, listSalePayments } from '@/services/erpService';
-
-const SELECT_CLASS = 'w-full border rounded-md h-10 px-2 mt-1 text-sm bg-white';
+import SearchSelect from '@/components/erp/SearchSelect';
 
 /** Records a payment against an outstanding sale. */
 export function AddPaymentModal({ sale, money, onClose, onSaved }) {
@@ -85,13 +84,14 @@ export function AddPaymentModal({ sale, money, onClose, onSaved }) {
             </div>
             <div>
               <Label>Paying Method</Label>
-              <select
-                className={SELECT_CLASS}
+              <SearchSelect
+                className="mt-1"
                 value={form.paying_method}
-                onChange={(e) => setForm({ ...form, paying_method: e.target.value })}
-              >
-                {PAYING_METHODS.map((m) => <option key={m.value} value={m.value}>{m.label}</option>)}
-              </select>
+                onChange={(paying_method) => setForm({ ...form, paying_method })}
+                options={PAYING_METHODS}
+                placeholder="Payment method…"
+                allowClear={false}
+              />
             </div>
             <div className="sm:col-span-2">
               <Label>Date</Label>

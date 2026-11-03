@@ -80,6 +80,7 @@ export const SCHEMA_PATCHES = [
   'ALTER TABLE system_settings ADD COLUMN pdf_watermark_url TEXT DEFAULT NULL',
   'ALTER TABLE system_settings ADD COLUMN pdf_watermark_file_path VARCHAR(255) DEFAULT NULL',
   'ALTER TABLE erp_customers ADD COLUMN customer_group_id CHAR(36) DEFAULT NULL',
+  'ALTER TABLE erp_customers ADD COLUMN country VARCHAR(100) DEFAULT NULL',
   'CREATE INDEX idx_erp_customers_group ON erp_customers (customer_group_id)',
   'ALTER TABLE erp_units ADD COLUMN is_default TINYINT(1) NOT NULL DEFAULT 0',
   'CREATE INDEX idx_erp_units_default ON erp_units (is_default)',
