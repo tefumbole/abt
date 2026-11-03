@@ -24,6 +24,16 @@ export const WEBSITE_HOST =
 export const CONTACT_EMAIL =
   import.meta.env.VITE_CONTACT_EMAIL || 'info@alpha-bridge.net';
 
+export const OFFICE_NAME =
+  import.meta.env.VITE_OFFICE_NAME || 'Norrsken House';
+
+export const OFFICE_CITY =
+  import.meta.env.VITE_OFFICE_CITY || 'Kigali, Rwanda';
+
+export const OFFICE_MAPS_URL =
+  import.meta.env.VITE_OFFICE_MAPS_URL
+  || 'https://www.google.com/maps/search/?api=1&query=Norrsken+House+Kigali+Rwanda';
+
 /** Local transparent PNG — CDN original had an opaque black background */
 export const LOCAL_LOGO_URL = '/branding/alpha-bridge-logo.png';
 
