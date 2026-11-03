@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/use-toast';
-import { Eye, EyeOff, Loader2, Lock, ArrowRight, RefreshCw, AlertCircle } from 'lucide-react';
+import { Eye, EyeOff, Loader2, User, Lock, ArrowRight, RefreshCw, AlertCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { validateSessionAndProfile } from '@/utils/sessionValidator';
