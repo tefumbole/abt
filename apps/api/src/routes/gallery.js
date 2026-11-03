@@ -9,6 +9,94 @@ const ADMIN_ROLES = new Set(['super_admin', 'admin', 'director']);
 const FILE_TYPES = new Set(['image', 'video', 'audio']);
 const URL_TYPES = new Set(['youtube', 'youtube_short', 'tiktok', 'instagram', 'facebook']);
 const ALL_TYPES = new Set([...FILE_TYPES, ...URL_TYPES]);
+const oembedCache = new Map();
+
+function youtubeId(url) {
+  if (!url) return null;
+  try {
+    const parsed = new URL(url);
+    if (parsed.hostname.includes('youtu.be')) {
+      return parsed.pathname.split('/').filter(Boolean)[0] || null;
+    }
+    const fromQuery = parsed.searchParams.get('v');
+    if (fromQuery) return fromQuery;
+    const parts = parsed.pathname.split('/').filter(Boolean);
+    const marker = parts.findIndex((part) => part === 'embed' || part === 'shorts');
+    if (marker >= 0) return parts[marker + 1] || null;
+  } catch {
+    /* ignore */
+  }
+  const match = String(url).match(
+    /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/shorts\/)([A-Za-z0-9_-]{6,})/
+  );
+  return match?.[1] || null;
+}
+
+function tiktokVideoId(url) {
+  if (!url) return null;
+  return String(url).match(/\/video\/(\d+)/)?.[1] || null;
+}
+
+function instagramPath(url) {
+  if (!url) return null;
+  const match = String(url).match(/instagram\.com\/(p|reel|tv)\/([A-Za-z0-9_-]+)/);
+  return match ? `${match[1]}/${match[2]}` : null;
+}
+
+async function tiktokThumbnail(url) {
+  if (!url) return null;
+  if (oembedCache.has(url)) return oembedCache.get(url);
+  try {
+    const res = await fetch(`https://www.tiktok.com/oembed?url=${encodeURIComponent(url)}`, {
+      headers: { Accept: 'application/json' },
+      signal: AbortSignal.timeout(3500),
+    });
+    const json = res.ok ? await res.json() : {};
+    const thumb = json.thumbnail_url || null;
+    oembedCache.set(url, thumb);
+    return thumb;
+  } catch {
+    oembedCache.set(url, null);
+    return null;
+  }
+}
+
+async function enrichPreview(item) {
+  if (item.type === 'youtube' || item.type === 'youtube_short') {
+    const id = youtubeId(item.media_url);
+    return {
+      ...item,
+      embed_src: id ? `https://www.youtube.com/embed/${id}` : null,
+      thumbnail_url: id ? `https://img.youtube.com/vi/${id}/hqdefault.jpg` : null,
+    };
+  }
+  if (item.type === 'tiktok') {
+    const id = tiktokVideoId(item.media_url);
+    return {
+      ...item,
+      embed_src: id ? `https://www.tiktok.com/player/v1/${id}` : null,
+      thumbnail_url: await tiktokThumbnail(item.media_url),
+    };
+  }
+  if (item.type === 'instagram') {
+    const path = instagramPath(item.media_url);
+    return {
+      ...item,
+      embed_src: path ? `https://www.instagram.com/${path}/embed` : null,
+      thumbnail_url: null,
+    };
+  }
+  if (item.type === 'facebook') {
+    return {
+      ...item,
+      embed_src: item.media_url
+        ? `https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(item.media_url)}&show_text=false`
+        : null,
+      thumbnail_url: null,
+    };
+  }
+  return { ...item, embed_src: null, thumbnail_url: null };
+}
 
 function requireAdmin(req, res, next) {
   const role = String(req.user?.role || '').toLowerCase();
@@ -42,7 +130,8 @@ router.get('/', async (_req, res) => {
        WHERE is_published = 1
        ORDER BY sort_order ASC, created_at DESC`
     );
-    res.json({ data: rows.map(mapItem) });
+    const data = await Promise.all(rows.map((row) => enrichPreview(mapItem(row))));
+    res.json({ data });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -55,7 +144,8 @@ router.get('/admin', requireAuth, requireAdmin, async (_req, res) => {
     const [rows] = await pool.query(
       `SELECT * FROM gallery_items ORDER BY sort_order ASC, created_at DESC`
     );
-    res.json({ data: rows.map(mapItem) });
+    const data = await Promise.all(rows.map((row) => enrichPreview(mapItem(row))));
+    res.json({ data });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

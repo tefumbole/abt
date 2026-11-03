@@ -1,38 +1,43 @@
-import React, { useEffect } from 'react';
-import { ExternalLink, Music } from 'lucide-react';
+import React, { useState } from 'react';
+import { ExternalLink, Music, Play } from 'lucide-react';
 import { buildGalleryCard, GALLERY_TYPES } from '@/utils/galleryEmbed';
 
-function loadScriptOnce(src, id) {
-  if (typeof document === 'undefined') return;
-  if (document.getElementById(id)) return;
-  const script = document.createElement('script');
-  script.id = id;
-  script.async = true;
-  script.src = src;
-  document.body.appendChild(script);
+function MediaFrame({ portrait, children }) {
+  return (
+    <div
+      className={`relative w-full overflow-hidden bg-slate-900 ${
+        portrait ? 'aspect-[9/16] max-h-[560px] mx-auto' : 'aspect-video'
+      }`}
+    >
+      {children}
+    </div>
+  );
+}
+
+function EmbedIframe({ src, title }) {
+  return (
+    <iframe
+      src={src}
+      title={title || 'Gallery video'}
+      className="absolute inset-0 h-full w-full border-0"
+      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
+      allowFullScreen
+      loading="lazy"
+    />
+  );
 }
 
 export default function GalleryItemCard({ item, onImageClick }) {
   const card = buildGalleryCard(item);
+  const [playing, setPlaying] = useState(!card.thumbnail_url && Boolean(card.embed_src));
 
-  useEffect(() => {
-    if (item.type === 'tiktok') {
-      loadScriptOnce('https://www.tiktok.com/embed.js', 'tiktok-embed-js');
-      if (window.tiktokEmbed?.lib?.render) {
-        try { window.tiktokEmbed.lib.render(); } catch { /* ignore */ }
-      }
-    }
-    if (item.type === 'instagram') {
-      loadScriptOnce('//www.instagram.com/embed.js', 'instagram-embed-js');
-      if (window.instgrm?.Embeds?.process) {
-        try { window.instgrm.Embeds.process(); } catch { /* ignore */ }
-      }
-    }
-  }, [item.type, item.id, item.media_url]);
+  const openOriginal = () => {
+    if (item.media_url) window.open(item.media_url, '_blank', 'noopener,noreferrer');
+  };
 
   return (
     <div className="bg-white rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden flex flex-col h-full">
-      <div className="relative bg-gray-100 flex items-center justify-center overflow-hidden min-h-[280px]">
+      <div className="bg-slate-900">
         {item.type === 'image' && card.file_url && (
           <img
             src={card.file_url}
@@ -49,7 +54,7 @@ export default function GalleryItemCard({ item, onImageClick }) {
         )}
 
         {item.type === 'audio' && card.file_url && (
-          <div className="p-8 w-full text-center">
+          <div className="p-8 w-full text-center bg-gray-100">
             <Music className="w-16 h-16 text-[#D4AF37] mx-auto mb-4" />
             <audio controls className="w-full">
               <source src={card.file_url} />
@@ -57,63 +62,43 @@ export default function GalleryItemCard({ item, onImageClick }) {
           </div>
         )}
 
-        {(item.type === 'youtube' || item.type === 'youtube_short') && card.youtube_id && (
-          <div className="w-full aspect-video">
-            <iframe
-              className="w-full h-full"
-              src={`https://www.youtube.com/embed/${card.youtube_id}`}
-              title={item.title || 'YouTube video'}
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-              allowFullScreen
-            />
-          </div>
+        {card.embed_src && (
+          <MediaFrame portrait={card.portrait}>
+            {playing ? (
+              <EmbedIframe src={card.embed_src} title={item.title} />
+            ) : (
+              <button
+                type="button"
+                className="absolute inset-0 group"
+                onClick={() => setPlaying(true)}
+                aria-label={`Play ${item.title || GALLERY_TYPES[item.type] || 'video'}`}
+              >
+                {card.thumbnail_url && (
+                  <img
+                    src={card.thumbnail_url}
+                    alt={item.title || GALLERY_TYPES[item.type] || 'Gallery video'}
+                    className="absolute inset-0 h-full w-full object-cover"
+                  />
+                )}
+                <span className="absolute inset-0 bg-black/25 group-hover:bg-black/35 transition-colors" />
+                <span className="absolute inset-0 flex items-center justify-center">
+                  <span className="inline-flex h-16 w-16 items-center justify-center rounded-full bg-[#D4AF37] text-[#003D82] shadow-lg group-hover:scale-105 transition-transform">
+                    <Play className="w-7 h-7 ml-1 fill-current" />
+                  </span>
+                </span>
+              </button>
+            )}
+          </MediaFrame>
         )}
 
-        {item.type === 'tiktok' && card.tiktok_id && (
-          <blockquote
-            className="tiktok-embed mx-auto"
-            cite={item.media_url}
-            data-video-id={card.tiktok_id}
-            style={{ maxWidth: 605, minWidth: 325 }}
-          >
-            <section>
-              <a target="_blank" rel="noopener noreferrer" href={item.media_url}>
-                {item.title || 'TikTok video'}
-              </a>
-            </section>
-          </blockquote>
-        )}
-
-        {item.type === 'instagram' && card.instagram_path && (
-          <blockquote
-            className="instagram-media mx-auto"
-            data-instgrm-permalink={`https://www.instagram.com/${card.instagram_path}/`}
-            data-instgrm-version="14"
-            style={{ maxWidth: 540, minWidth: 326, width: '100%' }}
-          />
-        )}
-
-        {item.type === 'facebook' && item.media_url && (
-          <div className="w-full aspect-video">
-            <iframe
-              className="w-full h-full"
-              src={`https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(item.media_url)}&show_text=false`}
-              style={{ border: 'none', overflow: 'hidden' }}
-              scrolling="no"
-              allowFullScreen
-              allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"
-              title={item.title || 'Facebook video'}
-            />
-          </div>
-        )}
-
-        {!['image', 'video', 'audio', 'youtube', 'youtube_short', 'tiktok', 'instagram', 'facebook'].includes(item.type)
+        {!card.embed_src
+          && !['image', 'video', 'audio'].includes(item.type)
           && item.media_url && (
           <a
             href={item.media_url}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-[#003D82] font-semibold p-8 text-center hover:underline inline-flex items-center gap-2"
+            className="flex min-h-[220px] items-center justify-center gap-2 p-8 text-center font-semibold text-white hover:text-[#D4AF37]"
           >
             View media <ExternalLink className="w-4 h-4" />
           </a>
@@ -128,9 +113,20 @@ export default function GalleryItemCard({ item, onImageClick }) {
           <p className="text-gray-600 text-sm leading-relaxed">{item.description}</p>
         )}
         {item.type !== 'image' && (
-          <span className="inline-block mt-3 text-xs font-semibold uppercase tracking-wide text-[#D4AF37]">
-            {GALLERY_TYPES[item.type] || item.type}
-          </span>
+          <div className="mt-3 flex items-center justify-between gap-3">
+            <span className="inline-block text-xs font-semibold uppercase tracking-wide text-[#D4AF37]">
+              {GALLERY_TYPES[item.type] || item.type}
+            </span>
+            {item.media_url && (
+              <button
+                type="button"
+                onClick={openOriginal}
+                className="inline-flex items-center gap-1 text-xs text-[#003D82] hover:underline"
+              >
+                Open <ExternalLink className="w-3 h-3" />
+              </button>
+            )}
+          </div>
         )}
       </div>
     </div>

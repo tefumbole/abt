@@ -532,6 +532,8 @@ export default function GalleryAdminPage() {
                     <img src={item.file_url} alt="" className="w-full h-full object-cover" draggable={false} />
                   ) : item.type === 'video' && item.file_url ? (
                     <video src={item.file_url} className="w-full h-full object-cover" muted draggable={false} />
+                  ) : item.thumbnail_url ? (
+                    <img src={item.thumbnail_url} alt="" className="w-full h-full object-cover" draggable={false} />
                   ) : (
                     <span className="text-xs font-bold uppercase tracking-wide text-[#003D82] bg-[#e8f0fb] px-2 py-1 rounded-full">
                       {GALLERY_TYPES[item.type] || item.type}
