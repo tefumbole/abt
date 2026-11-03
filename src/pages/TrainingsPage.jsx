@@ -262,70 +262,13 @@ function TrainingsPage() {
         </div>
       </section>
 
-      {/* Why Choose Us Section */}
-      <section className="py-20 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-12">
-            <h2 className="text-4xl font-bold text-[#003D82] mb-4">Why Train With Us?</h2>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div className="text-center p-6 bg-gray-50 rounded-xl">
-              <div className="w-16 h-16 bg-[#003D82] rounded-full flex items-center justify-center mx-auto mb-4">
-                <CheckCircle2 className="w-8 h-8 text-white" />
-              </div>
-              <h3 className="text-xl font-bold text-[#003D82] mb-2">Industry Experts</h3>
-              <p className="text-gray-600">Learn from certified professionals with real-world experience</p>
-            </div>
-            <div className="text-center p-6 bg-gray-50 rounded-xl">
-              <div className="w-16 h-16 bg-[#003D82] rounded-full flex items-center justify-center mx-auto mb-4">
-                <CheckCircle2 className="w-8 h-8 text-white" />
-              </div>
-              <h3 className="text-xl font-bold text-[#003D82] mb-2">Hands-On Labs</h3>
-              <p className="text-gray-600">Practical training with real equipment and enterprise tools</p>
-            </div>
-            <div className="text-center p-6 bg-gray-50 rounded-xl">
-              <div className="w-16 h-16 bg-[#003D82] rounded-full flex items-center justify-center mx-auto mb-4">
-                <CheckCircle2 className="w-8 h-8 text-white" />
-              </div>
-              <h3 className="text-xl font-bold text-[#003D82] mb-2">Career Support</h3>
-              <p className="text-gray-600">Job placement assistance and certification preparation</p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* CTA Section */}
-      <section className="py-20 bg-gradient-to-br from-[#003D82] via-[#0052A3] to-[#003D82] relative overflow-hidden">
-        <div className="absolute top-0 left-0 w-64 h-64 bg-blue-600/20 rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2"></div>
-        <div className="absolute bottom-0 right-0 w-96 h-96 bg-[#D4AF37]/10 rounded-full blur-3xl translate-x-1/3 translate-y-1/3"></div>
-
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10">
-          <h2 className="text-4xl md:text-5xl font-bold text-white mb-6">
-            Ready to Transform Your Career?
-          </h2>
-          <p className="text-xl text-blue-100 mb-10 max-w-2xl mx-auto">
-            Join thousands of professionals who have upgraded their skills with Alpha Bridge
-          </p>
-          
-          <div className="flex flex-col items-center space-y-6">
-            <Link to="/registration">
-              <Button 
-                className="bg-[#D4AF37] text-[#003D82] hover:bg-[#C19B2A] px-12 py-6 text-xl font-bold rounded-full shadow-2xl hover:scale-110 transition-transform h-auto" 
-              >
-                Enroll Now — Limited Seats Available
-              </Button>
-            </Link>
-            
-            <div className="flex flex-col sm:flex-row items-center gap-6 mt-8 text-blue-200 text-sm">
-              <a href="mailto:info@alpha-bridge.net" className="hover:text-[#D4AF37] transition-colors">
-                info@alpha-bridge.net
-              </a>
-              <span className="hidden sm:inline text-blue-400">•</span>
-              <a href="tel:+250794006160" className="hover:text-[#D4AF37] transition-colors">
-                +250 794 006 160
-              </a>
-            </div>
-          </div>
+      <section className="py-16 bg-gradient-to-br from-[#003D82] via-[#0052A3] to-[#003D82]">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          <Link to="/registration">
+            <Button className="bg-[#D4AF37] text-[#003D82] hover:bg-[#C19B2A] px-12 py-6 text-xl font-bold rounded-full shadow-2xl hover:scale-105 transition-transform h-auto">
+              Enroll Now — Limited Seats Available
+            </Button>
+          </Link>
         </div>
       </section>
     </>
