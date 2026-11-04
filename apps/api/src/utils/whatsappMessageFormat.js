@@ -40,6 +40,8 @@ export function otpPurposeLabel(purpose = null) {
     registration: 'Account registration',
     verify: 'Account verification',
     customer: 'Account registration',
+    review: 'Review verification',
+    reviews: 'Review verification',
   };
   if (map[key]) return map[key];
   if (!purpose) return 'Login verification';

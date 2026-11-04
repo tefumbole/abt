@@ -17,14 +17,14 @@ import LanguageSwitcher from '@/components/LanguageSwitcher';
 import { useSiteLabel } from '@/hooks/useSiteLabel';
 import { useSiteContent } from '@/hooks/useSiteContent';
 
-/** Removed from public header — Contact is under About; QR is admin/invite-only. */
-const REMOVED_LANDING_KEYS = new Set(['contact', 'qr']);
+/** Removed from public header — Contact is under About; Register Now lives on Training. */
+const REMOVED_LANDING_KEYS = new Set(['contact', 'qr', 'register']);
 
 const DEFAULT_LANDING_MENU = [
   { key: 'home', label: 'Home', path: '/' },
   { key: 'trainings', label: 'Training', path: '/trainings' },
   { key: 'events', label: 'Events', path: '/events' },
-  { key: 'register', label: 'Register Now', path: '/register-now' },
+  { key: 'reviews', label: 'Reviews', path: '/reviews' },
   { key: 'apply', label: 'Apply Now', path: '/apply-now', special: true },
   { key: 'gallery', label: 'Gallery', path: '/gallery' },
   {
@@ -38,7 +38,7 @@ const DEFAULT_LANDING_MENU = [
 
 function normalizeLandingMenu(items) {
   const source = Array.isArray(items) && items.length ? items : DEFAULT_LANDING_MENU;
-  return source
+  const next = source
     .filter((item) => item?.key && !REMOVED_LANDING_KEYS.has(item.key) && item.icon !== 'scan')
     .map((item) => {
       if (item.key === 'about') {
@@ -54,6 +54,15 @@ function normalizeLandingMenu(items) {
       }
       return item;
     });
+  if (!next.some((item) => item.key === 'reviews')) {
+    const eventsAt = next.findIndex((item) => item.key === 'events');
+    next.splice(eventsAt >= 0 ? eventsAt + 1 : 2, 0, {
+      key: 'reviews',
+      label: 'Reviews',
+      path: '/reviews',
+    });
+  }
+  return next;
 }
 
 function Header() {

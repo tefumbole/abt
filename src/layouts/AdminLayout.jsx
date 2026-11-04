@@ -62,6 +62,7 @@ import {
   PencilLine,
   Printer,
   ClipboardList,
+  Star,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -201,6 +202,7 @@ const AdminLayout = () => {
           ]
         },
         { label: 'Gallery', path: '/admin/gallery', icon: ImageIcon, permission: MENU_PERMISSIONS.gallery, menuKey: 'gallery' },
+        { label: 'Reviews', path: '/admin/reviews', icon: Star, permission: MENU_PERMISSIONS.gallery, menuKey: 'reviews' },
       ]
     },
     {

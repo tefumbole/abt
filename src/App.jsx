@@ -21,7 +21,7 @@ import TrainingsPage from '@/pages/TrainingsPage';
 import EventsPage from '@/pages/EventsPage';
 import EventDetailsPage from '@/pages/EventDetailsPage';
 import RegistrationPage from '@/pages/RegistrationPage';
-import RegisterNowPage from '@/pages/RegisterNowPage';
+import ReviewsPage from '@/pages/ReviewsPage';
 import ShareholdersPage from '@/pages/ShareholdersPage';
 import MenuSelectionPage from '@/pages/public/MenuSelectionPage';
 
@@ -91,6 +91,7 @@ import AdminInvoicesPage from '@/pages/admin/AdminInvoicesPage';
 import AdminCertificatesPage from '@/pages/admin/AdminCertificatesPage';
 import AdminProgressPage from '@/pages/admin/AdminProgressPage';
 import AdminFeedbackPage from '@/pages/admin/AdminFeedbackPage';
+import AdminReviewsPage from '@/pages/admin/AdminReviewsPage';
 import AdminReportsPage from '@/pages/admin/AdminReportsPage';
 import AdminHistoryPage from '@/pages/admin/AdminHistoryPage';
 import DeploymentVersionsPage from '@/pages/admin/DeploymentVersionsPage';
@@ -359,7 +360,8 @@ const AppContent = () => {
           />
 
           <Route path="registration" element={<RegistrationPage />} />
-          <Route path="register-now" element={<RegisterNowPage />} />
+          <Route path="register-now" element={<Navigate to="/trainings" replace />} />
+          <Route path="reviews" element={<ReviewsPage />} />
 
           <Route path="shareholders" element={<ShareholdersPage />} />
           <Route path="shares" element={<SharesPage />} />
@@ -1036,6 +1038,14 @@ const AppContent = () => {
             element={
               <ProtectedRoute requireAdmin={true}>
                 <GalleryAdminPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="reviews"
+            element={
+              <ProtectedRoute requireAdmin={true}>
+                <AdminReviewsPage />
               </ProtectedRoute>
             }
           />

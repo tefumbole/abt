@@ -49,6 +49,7 @@ const ADMIN_ROUTE_RULES = [
   ['/admin/invitations', ['invitations.view', 'invitations.create', 'menu.invitations']],
   ['/admin/announcements', ['announcements.compose.view', 'announcements.list.view', 'menu.announcements']],
   ['/admin/gallery', ['gallery.view', 'gallery.create', 'gallery.edit', 'menu.gallery']],
+  ['/admin/reviews', ['gallery.view', 'gallery.create', 'gallery.edit', 'menu.gallery', 'menu.site_content']],
   ['/admin/site-content', ['site_content.view', 'site_content.edit', 'menu.site_content']],
   ['/admin/timesheet', ['timesheets.view', 'timesheets.create', 'menu.timesheets']],
   ['/admin/tasks', ['tasks.view', 'tasks.create', 'menu.tasks']],

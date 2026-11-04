@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { getAllCourses } from '@/services/coursesService';
 import { createRegistration, updateRegistration } from '@/services/registrationsService';
 import { sendRegistrationConfirmation, sendAdminNotification } from '@/services/emailService';
 import { initializeStripe, createPaymentIntent } from '@/services/stripeService';
+import { parseCurriculumJson } from '@/utils/trainingCourseUtils';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -14,6 +16,12 @@ import { Loader2, CheckCircle, ShoppingCart, Info, User, Mail, Phone, Building, 
 import { motion } from 'framer-motion';
 import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import FeedbackStatsCard from '@/components/FeedbackStatsCard';
+
+function formatFee(value) {
+    const amount = Number(value);
+    if (!Number.isFinite(amount) || amount <= 0) return 'Ask for fee';
+    return `$${Math.round(amount).toLocaleString('en-US')}`;
+}
 
 // Payment Form Component Wrapper
 const StripePaymentForm = ({ amount, onSuccess, onError }) => {
@@ -57,6 +65,8 @@ const StripePaymentForm = ({ amount, onSuccess, onError }) => {
 };
 
 const RegistrationPage = () => {
+    const [searchParams] = useSearchParams();
+    const moduleParam = (searchParams.get('module') || '').trim();
     const [courses, setCourses] = useState([]);
     const [loadingCourses, setLoadingCourses] = useState(true);
     const [selectedCourses, setSelectedCourses] = useState([]);
@@ -90,6 +100,17 @@ const RegistrationPage = () => {
         try {
             const data = await getAllCourses();
             setCourses(data);
+            if (moduleParam) {
+                const match = data.find((course) => {
+                    const name = String(course.name || '').toLowerCase();
+                    const wanted = moduleParam.toLowerCase();
+                    return String(course.id) === moduleParam || name === wanted || name.includes(wanted);
+                });
+                if (match) {
+                    setSelectedCourses([match.id]);
+                    setCategoryFilter('All');
+                }
+            }
         } catch (error) {
             toast({ title: "Error", description: "Failed to load courses.", variant: "destructive" });
         } finally {
@@ -246,6 +267,42 @@ const RegistrationPage = () => {
                     </p>
                 </div>
 
+                {selectedCourses.map((id) => {
+                    const course = courses.find((item) => item.id === id);
+                    if (!course) return null;
+                    const outline = parseCurriculumJson(course.curriculum_json).sections || [];
+                    return (
+                        <Card key={id} className="mb-8 border-t-4 border-t-[#003D82] shadow-sm">
+                            <CardContent className="p-6">
+                                <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
+                                    <div>
+                                        <h2 className="text-2xl font-bold text-[#003D82]">{course.name}</h2>
+                                        <p className="text-gray-600 mt-1">{course.description}</p>
+                                    </div>
+                                    <div className="text-right">
+                                        <p className="text-sm text-gray-500">Program fee</p>
+                                        <p className="text-2xl font-bold text-[#003D82]">{formatFee(course.price)}</p>
+                                    </div>
+                                </div>
+                                {outline.length > 0 && (
+                                    <div className="grid md:grid-cols-2 gap-4">
+                                        {outline.map((section, index) => (
+                                            <div key={`${course.id}-${section.title || index}`} className="bg-slate-50 rounded-lg p-4">
+                                                <h3 className="font-semibold text-[#003D82] mb-2">{section.title || `Section ${index + 1}`}</h3>
+                                                <ul className="space-y-1 text-sm text-gray-600">
+                                                    {(section.items || []).map((item) => (
+                                                        <li key={item}>• {item}</li>
+                                                    ))}
+                                                </ul>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </CardContent>
+                        </Card>
+                    );
+                })}
+
                 {/* Filter Bar */}
                 <div className="bg-white p-4 rounded-xl shadow-sm border mb-8 flex flex-col md:flex-row gap-4 justify-between items-center sticky top-20 z-10">
                     <div className="flex flex-wrap gap-2">
@@ -312,7 +369,7 @@ const RegistrationPage = () => {
                                                     </div>
 
                                                     <div className="pt-4 mt-auto border-t border-gray-100 flex justify-between items-center">
-                                                        <span className="font-bold text-xl text-[#003D82]">${Number(course.price).toLocaleString()}</span>
+                                                        <span className="font-bold text-xl text-[#003D82]">{formatFee(course.price)}</span>
                                                         <span className={`text-xs px-2 py-1 rounded-full ${isSelected ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-500'}`}>
                                                             {isSelected ? 'Selected' : 'Add to Cart'}
                                                         </span>
@@ -343,7 +400,7 @@ const RegistrationPage = () => {
                                                 return c ? (
                                                     <div key={id} className="flex justify-between text-sm py-1 border-b border-gray-200 last:border-0">
                                                         <span className="text-gray-700 truncate max-w-[180px]">{c.name}</span>
-                                                        <span className="font-medium text-gray-900">${Number(c.price).toLocaleString()}</span>
+                                                        <span className="font-medium text-gray-900">{formatFee(c.price)}</span>
                                                     </div>
                                                 ) : null;
                                             })
@@ -352,7 +409,7 @@ const RegistrationPage = () => {
                                         )}
                                         <div className="flex justify-between items-center pt-2 mt-2 border-t border-gray-300 font-bold">
                                             <span>Total</span>
-                                            <span className="text-[#003D82]">${calculateTotal().toLocaleString()}</span>
+                                            <span className="text-[#003D82]">{formatFee(calculateTotal())}</span>
                                         </div>
                                     </div>
 

@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 import WhatsAppButton from '@/components/WhatsAppButton';
 import { Button } from '@/components/ui/button';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { getTrainingPrograms } from '@/services/coursesService';
 import { trainingModules } from '@/utils/trainingCourseUtils';
 import { usePageT } from '@/hooks/useSiteLabel';
@@ -47,8 +47,18 @@ function TrainingsPage() {
   };
 
   const handleRegister = (moduleName, e) => {
-    e.stopPropagation();
+    e?.stopPropagation?.();
     navigate(`/registration?module=${encodeURIComponent(moduleName)}`);
+  };
+
+  const scrollToPrograms = () => {
+    document.getElementById('programs')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
+  const formatFee = (value) => {
+    const amount = Number(value);
+    if (!Number.isFinite(amount) || amount <= 0) return 'Ask for fee';
+    return `$${Math.round(amount).toLocaleString('en-US')}`;
   };
 
   return (
@@ -81,18 +91,17 @@ function TrainingsPage() {
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mt-8">
               <Button 
                 className="bg-[#D4AF37] hover:bg-[#C19B2A] text-[#003D82] px-8 py-6 text-lg font-bold shadow-lg hover:scale-105 transition-transform rounded-full"
-                onClick={() => document.getElementById('programs').scrollIntoView({ behavior: 'smooth' })}
+                onClick={scrollToPrograms}
               >
                 {tt('explore_programs', 'Explore Programs')}
               </Button>
-              <Link to="/registration">
-                <Button 
-                  variant="outline"
-                  className="border-2 border-white text-white hover:bg-white hover:text-[#003D82] px-8 py-6 text-lg font-bold shadow-lg hover:scale-105 transition-all rounded-full"
-                >
-                  {tt('register_now', 'Register Now')}
-                </Button>
-              </Link>
+              <Button
+                type="button"
+                className="bg-white text-[#003D82] hover:bg-[#D4AF37] px-8 py-6 text-lg font-bold shadow-lg hover:scale-105 transition-all rounded-full"
+                onClick={scrollToPrograms}
+              >
+                {tt('register_now', 'Register Now')}
+              </Button>
             </div>
           </motion.div>
         </div>
@@ -177,6 +186,7 @@ function TrainingsPage() {
                           </span>
                           <span className="hidden sm:inline">•</span>
                           <span className="hidden sm:inline">{module.deliveryMode}</span>
+                          <span className="text-[#003D82] font-bold">{formatFee(module.price ?? 300)}</span>
                         </div>
                       </div>
                     </div>
@@ -235,7 +245,8 @@ function TrainingsPage() {
                           <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 pt-6 border-t border-gray-200">
                             <div className="text-sm text-gray-600">
                               <span className="font-semibold">Duration:</span> {module.duration} | 
-                              <span className="font-semibold ml-2">Mode:</span> {module.deliveryMode}
+                              <span className="font-semibold ml-2">Mode:</span> {module.deliveryMode} | 
+                              <span className="font-semibold ml-2">Fee:</span> {formatFee(module.price ?? 300)}
                             </div>
                             <div className="flex flex-col sm:flex-row gap-3">
                               <WhatsAppButton 
@@ -264,11 +275,13 @@ function TrainingsPage() {
 
       <section className="py-16 bg-gradient-to-br from-[#003D82] via-[#0052A3] to-[#003D82]">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <Link to="/registration">
-            <Button className="bg-[#D4AF37] text-[#003D82] hover:bg-[#C19B2A] px-12 py-6 text-xl font-bold rounded-full shadow-2xl hover:scale-105 transition-transform h-auto">
-              Enroll Now — Limited Seats Available
-            </Button>
-          </Link>
+          <Button
+            type="button"
+            className="bg-[#D4AF37] text-[#003D82] hover:bg-[#C19B2A] px-12 py-6 text-xl font-bold rounded-full shadow-2xl hover:scale-105 transition-transform h-auto"
+            onClick={scrollToPrograms}
+          >
+            Enroll Now — Limited Seats Available
+          </Button>
         </div>
       </section>
     </>

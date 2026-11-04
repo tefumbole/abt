@@ -24,6 +24,7 @@ import siteContentRoutes from './routes/siteContent.js';
 import erpRoutes from './routes/erp/index.js';
 import paymentsRoutes from './routes/payments.js';
 import systemTestRoutes from './routes/systemTest.js';
+import reviewsRoutes from './routes/reviews.js';
 import { APP_VERSION } from './constants/appVersion.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -97,6 +98,7 @@ app.use('/site-content', siteContentRoutes);
 app.use('/erp', erpRoutes);
 app.use('/payments', paymentsRoutes);
 app.use('/system-test', systemTestRoutes);
+app.use('/reviews', reviewsRoutes);
 
 app.use((err, _req, res, next) => {
   if (err?.code === 'LIMIT_FILE_SIZE') {

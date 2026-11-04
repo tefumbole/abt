@@ -8,7 +8,7 @@ export const LANDING_MENU_ITEMS = {
   home: { label: 'Home', path: '/' },
   trainings: { label: 'Training', path: '/trainings' },
   events: { label: 'Events', path: '/events' },
-  register: { label: 'Register Now', path: '/register-now' },
+  reviews: { label: 'Reviews', path: '/reviews' },
   apply: { label: 'Apply Now', path: '/apply-now', special: true },
   gallery: { label: 'Gallery', path: '/gallery' },
     about: {
@@ -29,6 +29,7 @@ export const SIDE_MENU_ITEMS = {
   'event-templates': 'Event Templates & Config',
   announcements: 'Announcements',
   gallery: 'Gallery',
+  reviews: 'Reviews',
   timesheets: 'TimeSheets (Employee)',
   'timesheet-admin': 'TimeSheet Admin',
   payments: 'Payments',
@@ -277,6 +278,13 @@ export function contentTabItems() {
   return Object.fromEntries(Object.entries(PAGE_SCHEMA).map(([k, p]) => [k, p.label]));
 }
 
+function placeReviewsAfterEvents(keys) {
+  const next = keys.filter((key) => key !== 'reviews');
+  const eventsAt = next.indexOf('events');
+  next.splice(eventsAt >= 0 ? eventsAt + 1 : 2, 0, 'reviews');
+  return next;
+}
+
 export function mergeOrder(saved, items) {
   const keys = Object.keys(items);
   const ordered = [];
@@ -394,7 +402,9 @@ export async function getPublicSiteContent(pool) {
   const menus = await getMenuBundle(pool);
   const pages = await getAllPageContent(pool);
   return {
-    landingMenu: menus.landing.order.map((key) => ({
+    landingMenu: placeReviewsAfterEvents(
+      menus.landing.order.filter((key) => key !== 'register' && LANDING_MENU_ITEMS[key])
+    ).map((key) => ({
       key,
       ...LANDING_MENU_ITEMS[key],
     })),
