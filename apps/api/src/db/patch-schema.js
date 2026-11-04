@@ -144,6 +144,24 @@ export const SCHEMA_PATCHES = [
   'ALTER TABLE hr_letters ADD COLUMN recipient_name VARCHAR(255) NULL',
   'ALTER TABLE hr_letters ADD COLUMN recipient_phone VARCHAR(50) NULL',
   'ALTER TABLE hr_letters ADD COLUMN recipient_user_id CHAR(36) NULL',
+  'ALTER TABLE quotations ADD COLUMN client_approval_token VARCHAR(64) DEFAULT NULL',
+  'ALTER TABLE quotations ADD COLUMN client_signature_path VARCHAR(512) DEFAULT NULL',
+  'ALTER TABLE quotations ADD COLUMN client_signed_at DATETIME DEFAULT NULL',
+  'ALTER TABLE quotations ADD COLUMN client_responded_at DATETIME DEFAULT NULL',
+  'ALTER TABLE quotations ADD COLUMN approval_sent_at DATETIME DEFAULT NULL',
+  'ALTER TABLE quotations ADD COLUMN approval_sent_by CHAR(36) DEFAULT NULL',
+  'ALTER TABLE quotations ADD COLUMN cc_customer_ids TEXT DEFAULT NULL',
+  'ALTER TABLE quotations ADD COLUMN show_client_discount TINYINT(1) NOT NULL DEFAULT 1',
+  'ALTER TABLE quotations ADD COLUMN quotation_source VARCHAR(32) DEFAULT NULL',
+  'ALTER TABLE quotations ADD COLUMN workflow_state VARCHAR(64) DEFAULT NULL',
+  'ALTER TABLE quotations ADD COLUMN quotation_status INT NOT NULL DEFAULT 1',
+  'ALTER TABLE quotations ADD COLUMN total_price DECIMAL(15,2) NOT NULL DEFAULT 0',
+  'ALTER TABLE quotations ADD COLUMN total_discount DECIMAL(15,2) NOT NULL DEFAULT 0',
+  'ALTER TABLE quotations ADD COLUMN total_tax DECIMAL(15,2) NOT NULL DEFAULT 0',
+  'CREATE UNIQUE INDEX uq_quotations_client_token ON quotations (client_approval_token)',
+  'CREATE INDEX idx_quotations_qstatus ON quotations (quotation_status)',
+  'ALTER TABLE users ADD COLUMN signature_path VARCHAR(512) DEFAULT NULL',
+  'ALTER TABLE system_settings ADD COLUMN admin_signature_path VARCHAR(512) DEFAULT NULL',
   ...COMMERCE_SCHEMA_PATCHES,
 ];
 
@@ -586,7 +604,14 @@ export const CREATE_STATEMENTS = [
   ...COMMERCE_CREATE_STATEMENTS,
 ];
 
-export const DATA_PATCHES = [];
+export const DATA_PATCHES = [
+  `UPDATE quotations SET quotation_status = 2 WHERE status = 'awaiting_approval' AND (quotation_status IS NULL OR quotation_status = 1)`,
+  `UPDATE quotations SET quotation_status = 3 WHERE status = 'approved'`,
+  `UPDATE quotations SET quotation_status = 4 WHERE status = 'rejected'`,
+  `UPDATE quotations SET quotation_status = 5 WHERE status = 'no_signature'`,
+  `UPDATE quotations SET quotation_status = 6 WHERE status = 'client_quote'`,
+  `UPDATE quotations SET client_approval_token = approval_token WHERE client_approval_token IS NULL AND approval_token IS NOT NULL`,
+];
 
 export async function applySchemaPatches(pool) {
   for (const sql of SCHEMA_PATCHES) {

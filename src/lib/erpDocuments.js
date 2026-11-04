@@ -214,9 +214,18 @@ export function buildDocumentHtml({ kind = 'invoice', doc = {}, company = {} }) 
   ${payments}
   ${doc.note ? `<div class="note"><strong>Note:</strong> ${escapeHtml(doc.note)}</div>` : ''}
 
-  <div class="sign">
-    <div>Customer signature</div>
-    <div>For ${escapeHtml(company.name || '')}</div>
+  <div class="sign" style="gap:24px;align-items:flex-start;">
+    <div style="border-top:none;text-align:left;">
+      <strong>Created By:</strong> ${escapeHtml(doc.created_by_name || company.name || '')}<br />
+      ${doc.staff_signature_data ? `<img src="${escapeHtml(doc.staff_signature_data)}" alt="" style="height:42px;max-width:180px;object-fit:contain;" />` : ''}
+      ${doc.created_at ? `<div>${escapeHtml(formatErpDate(doc.created_at, company.dateFormat))}</div>` : ''}
+      ${doc.created_by_email ? `<div>${escapeHtml(doc.created_by_email)}</div>` : ''}
+    </div>
+    ${doc.client_signature_data || doc.client_signed_at ? `<div style="border-top:none;text-align:left;">
+      <strong>Client approved:</strong> ${escapeHtml((doc.customer && doc.customer.name) || '')}<br />
+      ${doc.client_signature_data ? `<img src="${escapeHtml(doc.client_signature_data)}" alt="" style="height:42px;max-width:180px;object-fit:contain;" />` : ''}
+      ${doc.client_signed_at ? `<div>${escapeHtml(formatErpDate(doc.client_signed_at, company.dateFormat))}</div>` : ''}
+    </div>` : '<div></div>'}
   </div>
 
   ${company.footerUrl ? `<img class="band" src="${escapeHtml(company.footerUrl)}" alt="" />` : ''}

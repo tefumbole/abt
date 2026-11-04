@@ -265,6 +265,20 @@ export const ERP_CREATE_STATEMENTS = [
     note LONGTEXT DEFAULT NULL,
     client_comment TEXT DEFAULT NULL,
     approval_token CHAR(64) DEFAULT NULL,
+    client_approval_token VARCHAR(64) DEFAULT NULL,
+    client_signature_path VARCHAR(512) DEFAULT NULL,
+    client_signed_at DATETIME DEFAULT NULL,
+    client_responded_at DATETIME DEFAULT NULL,
+    approval_sent_at DATETIME DEFAULT NULL,
+    approval_sent_by CHAR(36) DEFAULT NULL,
+    cc_customer_ids TEXT DEFAULT NULL,
+    show_client_discount TINYINT(1) NOT NULL DEFAULT 1,
+    quotation_source VARCHAR(32) DEFAULT NULL,
+    workflow_state VARCHAR(64) DEFAULT NULL,
+    quotation_status INT NOT NULL DEFAULT 1,
+    total_price DECIMAL(15,2) NOT NULL DEFAULT 0,
+    total_discount DECIMAL(15,2) NOT NULL DEFAULT 0,
+    total_tax DECIMAL(15,2) NOT NULL DEFAULT 0,
     cc_phones TEXT DEFAULT NULL,
     sale_id CHAR(36) DEFAULT NULL,
     created_by CHAR(36) DEFAULT NULL,
@@ -272,7 +286,39 @@ export const ERP_CREATE_STATEMENTS = [
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     UNIQUE KEY uq_quotations_ref (reference),
     UNIQUE KEY uq_quotations_token (approval_token),
-    INDEX idx_quotations_status (status)
+    UNIQUE KEY uq_quotations_client_token (client_approval_token),
+    INDEX idx_quotations_status (status),
+    INDEX idx_quotations_qstatus (quotation_status)
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
+
+  `CREATE TABLE IF NOT EXISTS quotation_quotes (
+    id CHAR(36) NOT NULL PRIMARY KEY,
+    quotation_id CHAR(36) NOT NULL,
+    mode VARCHAR(16) NOT NULL DEFAULT 'overall',
+    proposed_grand_total DECIMAL(15,2) NOT NULL DEFAULT 0,
+    original_grand_total DECIMAL(15,2) NOT NULL DEFAULT 0,
+    client_note TEXT DEFAULT NULL,
+    status VARCHAR(16) NOT NULL DEFAULT 'pending',
+    admin_note TEXT DEFAULT NULL,
+    admin_user_id CHAR(36) DEFAULT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_quotation_quotes_quotation (quotation_id),
+    INDEX idx_quotation_quotes_status (status)
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
+
+  `CREATE TABLE IF NOT EXISTS quotation_quote_lines (
+    id CHAR(36) NOT NULL PRIMARY KEY,
+    quotation_quote_id CHAR(36) NOT NULL,
+    product_quotation_id CHAR(36) NOT NULL,
+    original_net_unit_price DECIMAL(15,2) NOT NULL DEFAULT 0,
+    original_total DECIMAL(15,2) NOT NULL DEFAULT 0,
+    proposed_net_unit_price DECIMAL(15,2) NOT NULL DEFAULT 0,
+    proposed_total DECIMAL(15,2) NOT NULL DEFAULT 0,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_qql_quote (quotation_quote_id),
+    INDEX idx_qql_line (product_quotation_id)
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
 
   `CREATE TABLE IF NOT EXISTS product_quotations (

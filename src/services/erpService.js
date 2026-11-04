@@ -142,8 +142,8 @@ export const listQuotations = async (q = '') => {
   return { data: json.data || [], statusCounts: json.statusCounts || {} };
 };
 export const getQuotation = (id) => erpApi.get(`/quotations/${id}`);
-export const createQuotation = (body) => erpApi.post('/quotations', body).then((r) => r.data);
-export const updateQuotation = (id, body) => erpApi.put(`/quotations/${id}`, body).then((r) => r.data);
+export const createQuotation = (body) => erpApi.post('/quotations', body);
+export const updateQuotation = (id, body) => erpApi.put(`/quotations/${id}`, body);
 export const deleteQuotation = (id) => erpApi.del(`/quotations/${id}`);
 export const setQuotationStatus = (id, status) =>
   fetch(`${import.meta.env.VITE_API_URL || '/api'}/erp/quotations/${id}/status`, {
@@ -156,6 +156,10 @@ export const setQuotationStatus = (id, status) =>
     return json;
   });
 export const sendQuotationWhatsApp = (id, body = {}) => erpApi.post(`/quotations/${id}/send-whatsapp`, body);
+export const sendQuotationForSignature = (id, body = {}) => erpApi.post(`/quotations/${id}/send-for-signature`, body);
+export const sendQuotationPdf = (id, body = {}) => erpApi.post(`/quotations/${id}/send-pdf`, body);
+export const acceptQuotationQuote = (id, body = {}) => erpApi.post(`/quotations/${id}/accept-quote`, body);
+export const rejectQuotationQuote = (id, body = {}) => erpApi.post(`/quotations/${id}/reject-quote`, body);
 export const convertQuotation = (id) => erpApi.post(`/quotations/${id}/convert-sale`, {});
 export const listDeliveries = (q = '') => erpApi.get(`/deliveries${q}`);
 export const getDelivery = (id) => erpApi.get(`/deliveries/${id}`);
@@ -272,22 +276,57 @@ export const createLeader = (body) => erpApi.post('/heavy/leaders', body).then((
 export const updateLeader = (id, body) => erpApi.put(`/heavy/leaders/${id}`, body).then((r) => r.data);
 export const deleteLeader = (id) => erpApi.del(`/heavy/leaders/${id}`);
 
+function publicQuotationError(res, json) {
+  const err = new Error(json.error || (res.status === 410
+    ? 'This approval link has already been used or replaced. Please ask the company for a new one.'
+    : 'Failed'));
+  err.status = res.status;
+  err.expired = res.status === 410 || json.expired;
+  return err;
+}
+
 export const publicGetQuotation = (token) =>
-  fetch(`${API_BASE}/erp/public/quotation/${token}`).then(async (r) => {
-    const j = await r.json();
-    if (!r.ok) throw new Error(j.error || 'Failed');
+  fetch(`${API_BASE}/quotation-approval/${token}`).then(async (r) => {
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) throw publicQuotationError(r, j);
     return j.data;
   });
-export const publicRespondQuotation = (token, body) =>
-  fetch(`${API_BASE}/erp/public/quotation/${token}/respond`, {
+export const publicApproveQuotation = (token, body) =>
+  fetch(`${API_BASE}/quotation-approval/${token}/approve`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
   }).then(async (r) => {
-    const j = await r.json();
-    if (!r.ok) throw new Error(j.error || 'Failed');
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) throw publicQuotationError(r, j);
     return j;
   });
+export const publicRejectQuotation = (token, body) =>
+  fetch(`${API_BASE}/quotation-approval/${token}/reject`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  }).then(async (r) => {
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) throw publicQuotationError(r, j);
+    return j;
+  });
+export const publicQuoteQuotation = (token, body) =>
+  fetch(`${API_BASE}/quotation-approval/${token}/quote`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  }).then(async (r) => {
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) throw publicQuotationError(r, j);
+    return j;
+  });
+export const publicRespondQuotation = (token, body) => {
+  const action = String(body?.action || '').toLowerCase();
+  if (action === 'reject') return publicRejectQuotation(token, body);
+  if (action === 'quote') return publicQuoteQuotation(token, body);
+  return publicApproveQuotation(token, body);
+};
 export const publicGetDelivery = (token) =>
   fetch(`${API_BASE}/erp/public/delivery/${token}`).then(async (r) => {
     const j = await r.json();

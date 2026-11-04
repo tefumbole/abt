@@ -6,50 +6,74 @@ const router = Router();
 
 router.get('/quotation/:token', async (req, res) => {
   try {
-    const pool = getPool();
-    const [rows] = await pool.query(
-      `SELECT q.id, q.reference, q.status, q.grand_total, q.note, q.client_comment, q.discount, q.shipping, q.tax,
-              c.name AS customer_name
-       FROM quotations q
-       LEFT JOIN erp_customers c ON c.id = q.customer_id
-       WHERE q.approval_token = ?`,
-      [req.params.token]
-    );
-    if (!rows.length) return res.status(404).json({ error: 'Invalid or expired link' });
-    const [items] = await pool.query(
-      `SELECT pq.qty, pq.net_unit_price, pq.discount, pq.tax, pq.subtotal, p.name AS product_name
-       FROM product_quotations pq LEFT JOIN products p ON p.id = pq.product_id
-       WHERE pq.quotation_id = ?`,
-      [rows[0].id]
-    );
-    res.json({ data: { ...rows[0], items } });
+    const { findByToken, healSignedAwaiting, publicPayload } = await import('../../services/erp/quotationApproval.js');
+    const { isLinkLive } = await import('../../services/erp/quotationStatus.js');
+    let quotation = await findByToken(req.params.token);
+    if (quotation) quotation = await healSignedAwaiting(quotation);
+    if (!quotation || !isLinkLive(quotation)) {
+      return res.status(410).json({
+        error: 'This approval link has already been used or replaced. Please ask the company for a new one.',
+        expired: true,
+      });
+    }
+    const [settings] = await getPool().query(`SELECT application_name FROM system_settings LIMIT 1`);
+    const company = process.env.COMPANY_NAME || settings[0]?.application_name || 'Alpha Bridge';
+    res.json({ data: publicPayload(quotation, company) });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(err.status || 500).json({ error: err.message });
   }
 });
 
 router.post('/quotation/:token/respond', async (req, res) => {
+  const action = String(req.body?.action || '').toLowerCase();
+  const token = req.params.token;
+  const { approveByToken, rejectByToken, quoteByToken } = await import('../../services/erp/quotationApproval.js');
   try {
-    const { action, comment = null, signature_data = null } = req.body || {};
-    if (!['approve', 'reject'].includes(action)) {
-      return res.status(400).json({ error: 'action must be approve or reject' });
+    if (action === 'quote') {
+      await quoteByToken(req, token, req.body || {});
+      return res.json({ ok: true, message: 'Your quote was submitted. Our team will review it.' });
     }
-    const pool = getPool();
-    const [rows] = await pool.query(`SELECT * FROM quotations WHERE approval_token = ?`, [req.params.token]);
-    if (!rows.length) return res.status(404).json({ error: 'Invalid or expired link' });
-    const q = rows[0];
-    if (!['draft', 'awaiting_approval'].includes(q.status)) {
-      return res.status(400).json({ error: 'Quotation already processed' });
+    if (action === 'reject') {
+      await rejectByToken(req, token, { comment: req.body?.comment || req.body?.client_comment });
+      return res.json({ ok: true, message: 'Your response has been recorded.' });
     }
-    const status = action === 'approve' ? 'approved' : 'rejected';
-    const noteExtra = signature_data ? `\n[Signed electronically]` : '';
-    await pool.query(
-      `UPDATE quotations SET status = ?, client_comment = ?, note = CONCAT(COALESCE(note,''), ?) WHERE id = ?`,
-      [status, comment, noteExtra, q.id]
-    );
-    res.json({ ok: true, status });
+    const result = await approveByToken(req, token, {
+      signature_data: req.body?.signature_data,
+      comment: req.body?.comment,
+    });
+    res.json({ ok: true, waiting_company: result.waitingCompany });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(err.status || 500).json({ error: err.message, expired: err.status === 410 });
+  }
+});
+
+router.post('/quotation/:token/approve', async (req, res) => {
+  try {
+    const { approveByToken } = await import('../../services/erp/quotationApproval.js');
+    const result = await approveByToken(req, req.params.token, req.body || {});
+    res.json({ ok: true, waiting_company: result.waitingCompany });
+  } catch (err) {
+    res.status(err.status || 500).json({ error: err.message, expired: err.status === 410 });
+  }
+});
+
+router.post('/quotation/:token/reject', async (req, res) => {
+  try {
+    const { rejectByToken } = await import('../../services/erp/quotationApproval.js');
+    await rejectByToken(req, req.params.token, req.body || {});
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(err.status || 500).json({ error: err.message, expired: err.status === 410 });
+  }
+});
+
+router.post('/quotation/:token/quote', async (req, res) => {
+  try {
+    const { quoteByToken } = await import('../../services/erp/quotationApproval.js');
+    await quoteByToken(req, req.params.token, req.body || {});
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(err.status || 500).json({ error: err.message, expired: err.status === 410 });
   }
 });
 

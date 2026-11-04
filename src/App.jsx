@@ -381,6 +381,7 @@ const AppContent = () => {
           <Route path="student/progress" element={<StudentProgressPage />} />
 
           {/* ERP public WhatsApp portals */}
+          <Route path="quotation-approval/:token" element={<PublicQuotationPage />} />
           <Route path="erp/public/quotation/:token" element={<PublicQuotationPage />} />
           <Route path="erp/public/delivery/:token" element={<PublicDeliveryPage />} />
           <Route path="erp/public/booking/:token" element={<PublicBookingPage />} />

@@ -22,15 +22,24 @@ import { buildDocumentHtml, loadErpCompany } from '@/lib/erpDocuments';
 import { getSystemSettings } from '@/services/settingsService';
 import SearchSelect from '@/components/erp/SearchSelect';
 import {
-  convertQuotation, createQuotation, deleteQuotation, getQuotation,
+  acceptQuotationQuote, convertQuotation, createQuotation, deleteQuotation, getQuotation,
   listBillers, listCustomers, listProducts, listQuotations, listSuppliers,
-  listWarehouses, sendQuotationWhatsApp, setQuotationStatus, updateQuotation,
+  listWarehouses, rejectQuotationQuote, sendQuotationForSignature, sendQuotationPdf,
+  updateQuotation,
 } from '@/services/erpService';
 
 const STATUS_META = {
+  awaiting: {
+    label: 'Awaiting',
+    filterLabel: 'Awaiting',
+    badge: 'bg-amber-100 text-amber-800 border-amber-300',
+    pill: 'border-orange-300 bg-orange-50 text-orange-800 hover:bg-orange-100',
+    pillActive: 'bg-orange-500 text-white border-orange-500',
+    Icon: Clock3,
+  },
   awaiting_approval: {
-    label: 'Awaiting Client Approval',
-    filterLabel: 'Awaiting Client Approval',
+    label: 'Awaiting',
+    filterLabel: 'Awaiting',
     badge: 'bg-amber-100 text-amber-800 border-amber-300',
     pill: 'border-orange-300 bg-orange-50 text-orange-800 hover:bg-orange-100',
     pillActive: 'bg-orange-500 text-white border-orange-500',
@@ -38,6 +47,14 @@ const STATUS_META = {
   },
   approved: {
     label: 'Approved',
+    filterLabel: 'Approved',
+    badge: 'bg-emerald-100 text-emerald-800 border-emerald-300',
+    pill: 'border-emerald-300 bg-emerald-50 text-emerald-800 hover:bg-emerald-100',
+    pillActive: 'bg-emerald-600 text-white border-emerald-600',
+    Icon: CheckCircle2,
+  },
+  no_signature: {
+    label: 'No Signature Required',
     filterLabel: 'Approved',
     badge: 'bg-emerald-100 text-emerald-800 border-emerald-300',
     pill: 'border-emerald-300 bg-emerald-50 text-emerald-800 hover:bg-emerald-100',
@@ -54,11 +71,19 @@ const STATUS_META = {
   },
   draft: {
     label: 'Draft',
-    filterLabel: 'Drafts',
+    filterLabel: 'Draft',
     badge: 'bg-slate-200 text-slate-800 border-slate-300',
     pill: 'border-slate-300 bg-slate-100 text-slate-800 hover:bg-slate-200',
     pillActive: 'bg-slate-600 text-white border-slate-600',
     Icon: FileText,
+  },
+  client_quote: {
+    label: 'Client Quote',
+    filterLabel: 'Client Quote',
+    badge: 'bg-sky-100 text-sky-800 border-sky-300',
+    pill: 'border-sky-300 bg-sky-50 text-sky-800 hover:bg-sky-100',
+    pillActive: 'bg-sky-600 text-white border-sky-600',
+    Icon: MessageCircle,
   },
 };
 
@@ -72,10 +97,33 @@ const ALL_FILTER = {
 
 const STATUS_FILTERS = [
   ALL_FILTER,
-  ...Object.entries(STATUS_META).map(([key, meta]) => ({ key, ...meta })),
+  { key: 'awaiting', ...STATUS_META.awaiting },
+  { key: 'approved', ...STATUS_META.approved },
+  { key: 'rejected', ...STATUS_META.rejected },
+  { key: 'draft', ...STATUS_META.draft },
+  { key: 'client_quote', ...STATUS_META.client_quote },
 ];
 
-const statusLabel = (value) => STATUS_META[value]?.label || value || '—';
+const statusLabel = (row) => {
+  const value = typeof row === 'string' ? row : (row?.status || '');
+  if (row && typeof row === 'object') {
+    if (Number(row.quotation_status) === 5 || value === 'no_signature') return 'No Signature Required';
+    if (Number(row.quotation_status) === 6 || value === 'client_quote') return 'Client Quote';
+    if (Number(row.quotation_status) === 3 || row.client_signature_path) return 'Approved';
+    if (Number(row.quotation_status) === 2 || value === 'awaiting_approval') return 'Awaiting';
+  }
+  return STATUS_META[value]?.label || value || '—';
+};
+
+const rowStatusKey = (row) => {
+  const code = Number(row?.quotation_status);
+  if (code === 6 || row?.status === 'client_quote') return 'client_quote';
+  if (code === 5 || row?.status === 'no_signature') return 'no_signature';
+  if (code === 4 || row?.status === 'rejected') return 'rejected';
+  if (code === 3 || row?.client_signature_path) return 'approved';
+  if (code === 2 || row?.status === 'awaiting_approval') return 'awaiting';
+  return 'draft';
+};
 
 const EMPTY_LINE = { product_id: '', qty: 1, net_unit_price: 0, discount: 0, tax: 0 };
 
@@ -88,10 +136,18 @@ export default function QuotationsPage() {
   const editId = searchParams.get('id') || '';
   const isEdit = tab === 'add' && Boolean(editId);
 
-  const [status, setStatus] = useState('awaiting_approval');
+  const [status, setStatus] = useState(() => {
+    const raw = searchParams.get('status') || 'awaiting';
+    return raw === 'quoted' ? 'client_quote' : raw === 'awaiting_approval' ? 'awaiting' : raw;
+  });
   const [reloadKey, setReloadKey] = useState(0);
   const [rows, setRows] = useState([]);
-  const [counts, setCounts] = useState({ awaiting_approval: 0, approved: 0, rejected: 0, draft: 0, all: 0 });
+  const [counts, setCounts] = useState({ awaiting: 0, approved: 0, rejected: 0, draft: 0, client_quote: 0, all: 0 });
+  const [review, setReview] = useState(null);
+  const [reviewBusy, setReviewBusy] = useState(false);
+  const [reviewNote, setReviewNote] = useState('');
+  const [reviewGrand, setReviewGrand] = useState('');
+  const [reviewLines, setReviewLines] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [pageSize, setPageSize] = useState(10);
@@ -314,9 +370,9 @@ export default function QuotationsPage() {
           tax: 0,
         })),
       };
-      if (isEdit) await updateQuotation(editId, body);
-      else await createQuotation(body);
+      const saved = isEdit ? await updateQuotation(editId, body) : await createQuotation(body);
       toast.success(isEdit ? 'Quotation updated' : 'Quotation created');
+      if (saved?.warning) toast.error(saved.warning);
       setStatus(form.status || 'draft');
       resetForm();
       goList();
@@ -335,11 +391,32 @@ export default function QuotationsPage() {
     }
   };
 
+  const openReview = async (id) => {
+    try {
+      const q = await getQuotation(id);
+      setReview(q);
+      setReviewNote('');
+      setReviewGrand(q.pending_quote?.proposed_grand_total ?? q.grand_total ?? '');
+      setReviewLines((q.pending_quote?.lines || []).map((line) => ({
+        ...line,
+        proposed_net_unit_price: Number(line.proposed_net_unit_price),
+      })));
+    } catch (e) {
+      toast.error(e.message);
+    }
+  };
+
+  useEffect(() => {
+    const reviewId = searchParams.get('review');
+    if (reviewId) openReview(reviewId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   /** Normalises a quotation into the shape `buildDocumentHtml` expects. */
   const toDocument = (q) => ({
     reference: q.reference,
     date: q.created_at,
-    status_label: statusLabel(q.status),
+    status_label: statusLabel(q),
     customer: {
       name: q.customer_name,
       phone: q.customer_phone,
@@ -364,6 +441,12 @@ export default function QuotationsPage() {
     tax: q.tax,
     grand_total: q.grand_total,
     note: q.note,
+    created_at: q.created_at,
+    created_by_name: q.created_by_name,
+    created_by_email: q.created_by_email,
+    client_signed_at: q.client_signed_at,
+    client_signature_data: q.client_signature_data,
+    staff_signature_data: q.staff_signature_data,
   });
 
   const buildQuotationHtml = async (source) => {
@@ -407,7 +490,7 @@ export default function QuotationsPage() {
     { key: 'biller_name', label: 'Biller', value: (r) => r.biller_name || '' },
     { key: 'customer_name', label: 'Customer', value: (r) => r.customer_name || '' },
     { key: 'supplier_name', label: 'Supplier', value: (r) => r.supplier_name || '' },
-    { key: 'status', label: 'Status', value: (r) => statusLabel(r.status) },
+    { key: 'status', label: 'Status', value: (r) => statusLabel(r) },
     { key: 'grand_total', label: 'Grand Total', align: 'right', value: (r) => money(r.grand_total) },
   ];
 
@@ -603,7 +686,7 @@ export default function QuotationsPage() {
                       </tr>
                     )}
                     {pageRows.map((r) => {
-                      const meta = STATUS_META[r.status] || STATUS_META.draft;
+                      const meta = STATUS_META[rowStatusKey(r)] || STATUS_META.draft;
                       return (
                         <tr key={r.id} className="border-t hover:bg-slate-50/80">
                           <td className="p-3">
@@ -616,7 +699,7 @@ export default function QuotationsPage() {
                           <td className="p-3">{r.supplier_name || '—'}</td>
                           <td className="p-3">
                             <span className={cn('inline-flex rounded-full border px-2.5 py-0.5 text-xs font-semibold', meta.badge)}>
-                              {meta.label}
+                              {statusLabel(r)}
                             </span>
                           </td>
                           <td className="p-3 max-w-[180px] truncate">{r.client_comment || '—'}</td>
@@ -640,37 +723,29 @@ export default function QuotationsPage() {
                                   <Download className="h-4 w-4 mr-2" /> Download PDF
                                 </DropdownMenuItem>
                                 <DropdownMenuSeparator />
+                                {rowStatusKey(r) === 'client_quote' && (
+                                  <DropdownMenuItem onClick={() => openReview(r.id)}>
+                                    Review client quote
+                                  </DropdownMenuItem>
+                                )}
                                 <DropdownMenuItem onClick={async () => {
                                   try {
-                                    const res = await sendQuotationWhatsApp(r.id);
-                                    toast.success(res.link ? 'WhatsApp approval link sent' : 'WhatsApp sent');
+                                    const res = await sendQuotationForSignature(r.id);
+                                    if (res.warning) toast.error(res.warning);
+                                    else toast.success(res.link ? 'Approval link sent' : 'Sent for signature');
                                     loadList();
                                   } catch (e) { toast.error(e.message); }
                                 }}>
-                                  <MessageCircle className="h-4 w-4 mr-2" /> Send WhatsApp
+                                  <MessageCircle className="h-4 w-4 mr-2" /> Send for signature
                                 </DropdownMenuItem>
                                 <DropdownMenuItem onClick={async () => {
                                   try {
-                                    await setQuotationStatus(r.id, 'awaiting_approval');
-                                    toast.success('Marked awaiting approval');
+                                    await sendQuotationPdf(r.id);
+                                    toast.success('PDF sent');
                                     loadList();
                                   } catch (e) { toast.error(e.message); }
-                                }}>Mark awaiting approval</DropdownMenuItem>
-                                <DropdownMenuItem onClick={async () => {
-                                  try {
-                                    await setQuotationStatus(r.id, 'approved');
-                                    toast.success('Approved');
-                                    loadList();
-                                  } catch (e) { toast.error(e.message); }
-                                }}>Approve</DropdownMenuItem>
-                                <DropdownMenuItem onClick={async () => {
-                                  try {
-                                    await setQuotationStatus(r.id, 'rejected');
-                                    toast.success('Rejected');
-                                    loadList();
-                                  } catch (e) { toast.error(e.message); }
-                                }}>Reject</DropdownMenuItem>
-                                <DropdownMenuItem onClick={async () => {
+                                }}>Send PDF</DropdownMenuItem>
+                                <DropdownMenuItem disabled={rowStatusKey(r) === 'rejected'} onClick={async () => {
                                   try {
                                     await convertQuotation(r.id);
                                     toast.success('Converted to sale');
@@ -801,11 +876,8 @@ export default function QuotationsPage() {
                     allowClear={false}
                     options={[
                       { value: 'draft', label: 'Draft' },
-                      { value: 'awaiting_approval', label: 'Awaiting Client Approval' },
-                      ...(isEdit ? [
-                        { value: 'approved', label: 'Approved' },
-                        { value: 'rejected', label: 'Rejected' },
-                      ] : []),
+                      { value: 'awaiting_approval', label: 'Send for signature' },
+                      { value: 'no_signature', label: 'No signature required' },
                     ]}
                   />
                 </div>
@@ -936,7 +1008,7 @@ export default function QuotationsPage() {
               <div>Biller: <strong>{detail.biller_name || '—'}</strong></div>
               <div>Supplier: <strong>{detail.supplier_name || '—'}</strong></div>
               <div>Warehouse: <strong>{detail.warehouse_name || '—'}</strong></div>
-              <div>Status: <strong>{statusLabel(detail.status)}</strong></div>
+              <div>Status: <strong>{statusLabel(detail)}</strong></div>
               <div className="sm:col-span-2">Client comment: {detail.client_comment || '—'}</div>
             </div>
 
@@ -993,23 +1065,42 @@ export default function QuotationsPage() {
                 {docBusy ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Download className="h-4 w-4 mr-1" />}
                 Download PDF
               </Button>
+              {rowStatusKey(detail) === 'client_quote' && (
+                <Button type="button" variant="outline" onClick={() => { const id = detail.id; setDetail(null); openReview(id); }}>
+                  Review client quote
+                </Button>
+              )}
               <Button
                 type="button"
                 variant="outline"
                 onClick={async () => {
                   try {
-                    const res = await sendQuotationWhatsApp(detail.id);
-                    toast.success(res.link ? 'WhatsApp approval link sent' : 'WhatsApp sent');
+                    const res = await sendQuotationForSignature(detail.id);
+                    if (res.warning) toast.error(res.warning);
+                    else toast.success(res.link ? 'Approval link sent' : 'Sent for signature');
                     setDetail(null);
                     loadList();
                   } catch (e) { toast.error(e.message); }
                 }}
               >
-                <MessageCircle className="h-4 w-4 mr-1" /> Send WhatsApp
+                <MessageCircle className="h-4 w-4 mr-1" /> Send for signature
               </Button>
               <Button
                 type="button"
                 variant="outline"
+                onClick={async () => {
+                  try {
+                    await sendQuotationPdf(detail.id);
+                    toast.success('PDF sent');
+                  } catch (e) { toast.error(e.message); }
+                }}
+              >
+                Send PDF
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                disabled={rowStatusKey(detail) === 'rejected'}
                 onClick={async () => {
                   try {
                     await convertQuotation(detail.id);
@@ -1029,6 +1120,121 @@ export default function QuotationsPage() {
                 <Pencil className="h-4 w-4 mr-1" /> Edit
               </Button>
               <Button type="button" variant="outline" onClick={() => setDetail(null)}>Close</Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {review && (
+        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={() => setReview(null)}>
+          <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6 space-y-4 shadow-xl" onClick={(e) => e.stopPropagation()}>
+            <div className="flex justify-between items-start gap-3">
+              <div>
+                <h3 className="text-xl font-bold text-[#0A2540]">Review client quote</h3>
+                <p className="text-sm text-slate-600">{review.reference} · {review.customer_name || 'Customer'}</p>
+              </div>
+              <Button variant="outline" size="sm" onClick={() => setReview(null)}>Close</Button>
+            </div>
+            <p className="text-sm">
+              Original total: <strong>{money(review.pending_quote?.original_grand_total ?? review.grand_total)}</strong>
+              {' · '}Proposed: <strong>{money(review.pending_quote?.proposed_grand_total)}</strong>
+              {' · '}Mode: <strong>{review.pending_quote?.mode === 'lines' ? 'Item prices' : 'Overall total'}</strong>
+            </p>
+            {review.pending_quote?.client_note && (
+              <div className="rounded-lg bg-slate-50 border p-3 text-sm whitespace-pre-wrap">
+                <span className="font-semibold">Client note: </span>{review.pending_quote.client_note}
+              </div>
+            )}
+            <div className="overflow-x-auto border rounded-lg">
+              <table className="w-full text-sm">
+                <thead className="bg-slate-50 text-left">
+                  <tr>
+                    <th className="p-2">Product</th>
+                    <th className="p-2 text-right">Original</th>
+                    <th className="p-2 text-right">Proposed unit</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {reviewLines.map((line, idx) => (
+                    <tr key={line.id} className="border-t">
+                      <td className="p-2">{line.product_name}</td>
+                      <td className="p-2 text-right">{money(line.original_net_unit_price)}</td>
+                      <td className="p-2">
+                        <Input
+                          type="number"
+                          step="0.01"
+                          value={line.proposed_net_unit_price}
+                          onChange={(e) => {
+                            const next = [...reviewLines];
+                            next[idx] = { ...line, proposed_net_unit_price: e.target.value };
+                            setReviewLines(next);
+                          }}
+                        />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div>
+              <Label>Accepted grand total</Label>
+              <Input className="mt-1" type="number" step="0.01" value={reviewGrand} onChange={(e) => setReviewGrand(e.target.value)} />
+            </div>
+            <div>
+              <Label>Admin note</Label>
+              <Textarea className="mt-1" rows={2} value={reviewNote} onChange={(e) => setReviewNote(e.target.value)} />
+            </div>
+            <div className="flex flex-wrap justify-end gap-2 border-t pt-4">
+              <Button
+                type="button"
+                variant="outline"
+                className="text-red-700"
+                disabled={reviewBusy}
+                onClick={async () => {
+                  setReviewBusy(true);
+                  try {
+                    await rejectQuotationQuote(review.id, { admin_note: reviewNote });
+                    toast.success('Client quote rejected. Original amounts kept.');
+                    setReview(null);
+                    loadList();
+                  } catch (e) {
+                    toast.error(e.message);
+                  } finally {
+                    setReviewBusy(false);
+                  }
+                }}
+              >
+                Reject quote
+              </Button>
+              <Button
+                type="button"
+                className="bg-[#003D82] hover:bg-[#002855]"
+                disabled={reviewBusy}
+                onClick={async () => {
+                  setReviewBusy(true);
+                  try {
+                    await acceptQuotationQuote(review.id, {
+                      admin_note: reviewNote,
+                      proposed_grand_total: Number(reviewGrand),
+                      lines: reviewLines.map((line) => ({
+                        id: line.id,
+                        product_quotation_id: line.product_quotation_id,
+                        proposed_net_unit_price: Number(line.proposed_net_unit_price),
+                      })),
+                    });
+                    toast.success('Quote accepted. Updated quotation sent for signature.');
+                    setReview(null);
+                    loadList();
+                  } catch (e) {
+                    toast.error(e.message);
+                  } finally {
+                    setReviewBusy(false);
+                  }
+                }}
+              >
+                {reviewBusy ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                Accept quote
+              </Button>
             </div>
           </div>
         </div>
