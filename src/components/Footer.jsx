@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Phone, Mail, MapPin } from 'lucide-react';
-import { useLocation } from 'react-router-dom';
 import { getSystemSettings } from '@/services/settingsService';
 import { usePageT } from '@/hooks/useSiteLabel';
 import {
@@ -26,7 +25,7 @@ const MARQUEE_PHRASES = [
 function MarqueeBand() {
   const loop = [...MARQUEE_PHRASES, ...MARQUEE_PHRASES];
   return (
-    <div className="relative overflow-hidden border-b border-[#D4AF37]/30 bg-[#003D82]">
+    <div className="relative overflow-hidden bg-[#003D82]">
       <div className="pointer-events-none absolute inset-y-0 left-0 w-10 bg-gradient-to-r from-[#003D82] to-transparent z-10" />
       <div className="pointer-events-none absolute inset-y-0 right-0 w-10 bg-gradient-to-l from-[#003D82] to-transparent z-10" />
       <motion.div
@@ -61,10 +60,7 @@ function cleanDevelopedBy(value) {
 
 function Footer() {
   const tf = usePageT('footer');
-  const location = useLocation();
-  const hideOnThisPage = location.pathname.startsWith('/system-test') || location.pathname.startsWith('/admin');
   const currentYear = new Date().getFullYear();
-  const [barHidden, setBarHidden] = useState(false);
   const [settings, setSettings] = useState({
     developed_by: COMPANY_NAME_SHORT,
     copyright_text: 'All rights reserved',
@@ -88,24 +84,6 @@ function Footer() {
     fetchSettings();
   }, []);
 
-  useEffect(() => {
-    if (hideOnThisPage) return undefined;
-    let timer;
-    let last = window.scrollY;
-    const onScroll = () => {
-      const y = window.scrollY;
-      if (Math.abs(y - last) > 2) setBarHidden(true);
-      last = y;
-      clearTimeout(timer);
-      timer = window.setTimeout(() => setBarHidden(false), 450);
-    };
-    window.addEventListener('scroll', onScroll, { passive: true });
-    return () => {
-      window.removeEventListener('scroll', onScroll);
-      clearTimeout(timer);
-    };
-  }, [hideOnThisPage]);
-
   const rawCopyright = String(settings.copyright_text || '').trim();
   const copyrightLabel =
     !rawCopyright
@@ -115,14 +93,8 @@ function Footer() {
       : rawCopyright;
 
   return (
-    <footer className="relative mt-auto overflow-hidden bg-[#001f42] text-white">
-      <MarqueeBand />
-
-      <div
-        className={`fixed bottom-0 left-0 right-0 z-30 border-t-2 border-[#D4AF37] bg-[#003D82] transition-transform duration-300 ${
-          hideOnThisPage || barHidden ? 'translate-y-full pointer-events-none' : 'translate-y-0'
-        }`}
-      >
+    <div className="mt-auto">
+      <div className="border-t-2 border-[#D4AF37] bg-[#003D82] text-white">
         <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-3 sm:py-4">
           <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center sm:justify-between gap-2 sm:gap-3 text-center sm:text-left">
             <p className="text-white text-sm font-semibold">
@@ -142,7 +114,7 @@ function Footer() {
               <MapPin className="w-4 h-4 shrink-0" />
               {OFFICE_NAME}, {OFFICE_CITY}
             </a>
-            <div className="flex items-center justify-center lg:justify-end gap-5 text-sm font-medium text-white">
+            <div className="flex flex-wrap items-center justify-center sm:justify-end gap-x-5 gap-y-2 text-sm font-medium text-white">
               <a href={`tel:${WHATSAPP_PHONE}`} className="inline-flex items-center gap-1.5 hover:text-[#D4AF37]">
                 <Phone className="w-4 h-4 text-[#D4AF37]" />
                 {CONTACT_PHONE_DISPLAY}
@@ -155,7 +127,11 @@ function Footer() {
           </div>
         </div>
       </div>
-    </footer>
+
+      <footer className="overflow-hidden bg-[#001f42]">
+        <MarqueeBand />
+      </footer>
+    </div>
   );
 }
 
