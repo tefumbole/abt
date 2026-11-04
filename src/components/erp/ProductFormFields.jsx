@@ -1,6 +1,6 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  ImagePlus, Loader2, RefreshCw, Save, X,
+  Loader2, RefreshCw, Save, UploadCloud, X,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -8,16 +8,15 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 import { num } from '@/lib/erpFormat';
-import { PRODUCT_IMAGE_BUCKET, productImageSrc } from '@/lib/erpImages';
+import { PRODUCT_IMAGE_BUCKET, imageFileFromClipboard, productImageSrc } from '@/lib/erpImages';
 import { nextProductCode } from '@/services/erpService';
 import RichTextField from '@/components/erp/RichTextField';
+import SearchSelect from '@/components/erp/SearchSelect';
 import { WarehouseSelect } from '@/components/erp/WarehouseBillerSelect';
 import PasteableImage from '@/components/erp/PasteableImage';
 
 const API_BASE = import.meta.env.VITE_API_URL || '/api';
 const IMAGE_BUCKET = PRODUCT_IMAGE_BUCKET;
-const SELECT_CLASS = 'w-full border rounded-md h-10 px-2 mt-1 text-sm bg-white';
-const ROW_CLASS = 'grid gap-4 md:grid-cols-3';
 
 export const PRODUCT_TYPES = [
   { value: 'standard', label: 'Standard' },
@@ -25,11 +24,21 @@ export const PRODUCT_TYPES = [
   { value: 'combo', label: 'Combo' },
   { value: 'donation', label: 'Donation' },
   { value: 'service', label: 'Service' },
+  { value: 'rental', label: 'Rentals' },
 ];
 
-/** Only standard products keep stock; digital / donation / service are stockless. */
+const TAX_METHODS = [
+  { value: 'exclusive', label: 'Exclusive' },
+  { value: 'inclusive', label: 'Inclusive' },
+];
+
+/** Only standard products keep stock; digital / donation / service / rental are stockless. */
 export function productTypeTracksStock(productType) {
   return String(productType || 'standard') === 'standard';
+}
+
+export function productTypeIsRental(productType) {
+  return String(productType || '') === 'rental';
 }
 
 function authHeaders() {
@@ -44,12 +53,11 @@ function authHeaders() {
 }
 
 async function uploadProductImage(file) {
-  const ext = (file.name.split('.').pop() || 'jpg').replace(/[^a-z0-9]/gi, '');
+  const ext = (file.name?.split('.').pop() || 'jpg').replace(/[^a-z0-9]/gi, '') || 'jpg';
   const filePath = `product_${Date.now()}_${Math.random().toString(16).slice(2)}.${ext}`;
   const form = new FormData();
   form.append('file', file);
   form.append('path', filePath);
-
   const res = await fetch(`${API_BASE}/upload/${IMAGE_BUCKET}?path=${encodeURIComponent(filePath)}`, {
     method: 'POST',
     headers: authHeaders(),
@@ -83,7 +91,7 @@ function emptyForm(defaultWarehouseId = '') {
     tax_method: 'exclusive',
     product_location: '',
     is_featured: false,
-    image_url: '',
+    images: [],
     description: '',
     has_warehouse_price: false,
     warehouse_rows: [],
@@ -109,6 +117,24 @@ function numOr(value, fallback) {
   return value === '' || value === null || value === undefined ? fallback : num(value);
 }
 
+function initialImages(product) {
+  if (!product) return [];
+  if (Array.isArray(product.images) && product.images.length) return product.images.filter(Boolean);
+  return product.image_url ? [product.image_url] : [];
+}
+
+function FieldCard({ title, hint, children }) {
+  return (
+    <section className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm">
+      <div className="mb-4">
+        <h3 className="text-sm font-semibold uppercase tracking-wide text-[#003D82]">{title}</h3>
+        {hint ? <p className="mt-1 text-xs text-slate-500">{hint}</p> : null}
+      </div>
+      {children}
+    </section>
+  );
+}
+
 /**
  * Beyond/Stocky-style product form used for both create and edit.
  * Emits the API payload through `onSubmit`; the page owns the request itself.
@@ -132,8 +158,8 @@ export default function ProductFormFields({
   const [codeLoading, setCodeLoading] = useState(false);
   const codeSeeded = useRef(mode !== 'create');
 
-  // Stockless types are intangible: no brand, units, cost or inventory either.
   const trackStock = productTypeTracksStock(form.product_type);
+  const isRental = productTypeIsRental(form.product_type);
   const showWarehousePrices = trackStock && form.has_warehouse_price;
 
   const patch = (changes) => setForm((prev) => ({ ...prev, ...changes }));
@@ -181,7 +207,6 @@ export default function ProductFormFields({
       purchase_unit_id: initialProduct.purchase_unit_id || '',
       cost: initialProduct.cost ?? '',
       price: initialProduct.price ?? '',
-      // Per-warehouse qty, never the multi-warehouse total: saving writes it back to one warehouse.
       qty: String(primary?.qty ?? initialProduct.stock_qty ?? 0),
       stock_warehouse_id: primary?.warehouse_id || defaultWarehouseId,
       rent_price_hour: initialProduct.rent_price_hour ?? '',
@@ -192,7 +217,7 @@ export default function ProductFormFields({
       tax_method: initialProduct.tax_method === 'inclusive' ? 'inclusive' : 'exclusive',
       product_location: initialProduct.product_location || '',
       is_featured: !!initialProduct.is_featured,
-      image_url: initialProduct.image_url || '',
+      images: initialImages(initialProduct),
       description: initialProduct.description || '',
       has_warehouse_price: !!initialProduct.has_warehouse_price,
       warehouse_rows: mergeWarehouseRows(warehouses, prices),
@@ -201,24 +226,35 @@ export default function ProductFormFields({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialProduct]);
 
-  const preview = useMemo(() => productImageSrc(form.image_url), [form.image_url]);
-
   const changeType = (productType) => {
+    const rentalCat = categories.find((c) => /rent/i.test(c.name || ''));
     setForm((prev) => ({
       ...prev,
       product_type: productType,
-      ...(productTypeTracksStock(productType)
-        ? {}
-        : {
+      ...(productType === 'rental'
+        ? {
           qty: '0',
           alert_quantity: '',
           has_warehouse_price: false,
-          brand_id: '',
           unit_id: '',
           sale_unit_id: '',
           purchase_unit_id: '',
           cost: '',
-        }),
+          rent_price_hour: '',
+          category_id: prev.category_id || rentalCat?.id || '',
+        }
+        : productTypeTracksStock(productType)
+          ? {}
+          : {
+            qty: '0',
+            alert_quantity: '',
+            has_warehouse_price: false,
+            brand_id: '',
+            unit_id: '',
+            sale_unit_id: '',
+            purchase_unit_id: '',
+            cost: '',
+          }),
     }));
   };
 
@@ -231,28 +267,71 @@ export default function ProductFormFields({
     }));
   };
 
-  const handleFile = async (file) => {
-    if (!file) return;
-    if (!String(file.type || '').startsWith('image/')) {
+  const addImages = useCallback(async (files) => {
+    const list = [...files].filter((file) => file && String(file.type || '').startsWith('image/'));
+    if (!list.length) {
       toast.error('Please choose an image file');
       return;
     }
     setUploading(true);
     try {
-      const path = await uploadProductImage(file);
-      patch({ image_url: path });
-      toast.success('Image uploaded');
+      const paths = [];
+      for (const file of list) paths.push(await uploadProductImage(file));
+      setForm((prev) => ({ ...prev, images: [...prev.images, ...paths] }));
+      toast.success(paths.length > 1 ? `${paths.length} images added` : 'Image added');
     } catch (err) {
       toast.error(err.message || 'Image upload failed');
     } finally {
       setUploading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    const onPaste = (event) => {
+      const target = event.target;
+      const tag = String(target?.tagName || '').toLowerCase();
+      if (tag === 'input' || tag === 'textarea' || target?.isContentEditable) return;
+      const files = [...(event.clipboardData?.items || [])]
+        .filter((item) => item.type.startsWith('image/'))
+        .map((item) => item.getAsFile())
+        .filter(Boolean);
+      if (!files.length) {
+        const single = imageFileFromClipboard(event);
+        if (single) files.push(single);
+      }
+      if (!files.length) return;
+      event.preventDefault();
+      addImages(files);
+    };
+    window.addEventListener('paste', onPaste);
+    return () => window.removeEventListener('paste', onPaste);
+  }, [addImages]);
 
   const onDrop = (event) => {
     event.preventDefault();
     setDragging(false);
-    handleFile(event.dataTransfer?.files?.[0]);
+    addImages(event.dataTransfer?.files || []);
+  };
+
+  const removeImage = (index) => {
+    setForm((prev) => ({ ...prev, images: prev.images.filter((_, i) => i !== index) }));
+  };
+
+  const replaceImage = async (index, file) => {
+    if (!file) return;
+    setUploading(true);
+    try {
+      const path = await uploadProductImage(file);
+      setForm((prev) => ({
+        ...prev,
+        images: prev.images.map((img, i) => (i === index ? path : img)),
+      }));
+      toast.success('Image updated');
+    } catch (err) {
+      toast.error(err.message || 'Image upload failed');
+    } finally {
+      setUploading(false);
+    }
   };
 
   const buildStocks = () => {
@@ -285,25 +364,32 @@ export default function ProductFormFields({
     if (trackStock && (form.cost === '' || num(form.cost) < 0)) {
       return toast.error('Product cost is required');
     }
-    if (form.price === '' || num(form.price) < 0) return toast.error('Product price is required');
+    if (isRental) {
+      if (num(form.rent_price_day) <= 0 && num(form.rent_price_month) <= 0) {
+        return toast.error('Enter a daily or monthly rental price');
+      }
+    } else if (form.price === '' || num(form.price) < 0) {
+      return toast.error('Product price is required');
+    }
     if (trackStock && (form.qty === '' || num(form.qty) < 0)) {
       return toast.error('Quantity is required for a standard product');
     }
     if (uploading) return toast.error('Wait for the image upload to finish');
 
+    const rentalPrice = num(form.rent_price_day) || num(form.rent_price_month);
     const body = {
       name: form.name.trim(),
       code: form.code.trim(),
       barcode: (form.barcode || form.code).trim() || null,
       product_type: form.product_type,
       category_id: form.category_id || null,
-      brand_id: trackStock ? form.brand_id || null : null,
+      brand_id: trackStock || isRental ? form.brand_id || null : null,
       unit_id: trackStock ? form.unit_id || null : null,
       sale_unit_id: trackStock ? form.sale_unit_id || null : null,
       purchase_unit_id: trackStock ? form.purchase_unit_id || null : null,
       cost: trackStock ? num(form.cost) : 0,
-      price: num(form.price),
-      rent_price_hour: numOr(form.rent_price_hour, 0),
+      price: isRental ? (num(form.price) || rentalPrice) : num(form.price),
+      rent_price_hour: isRental ? 0 : numOr(form.rent_price_hour, 0),
       rent_price_day: numOr(form.rent_price_day, 0),
       rent_price_month: numOr(form.rent_price_month, 0),
       alert_quantity: trackStock ? numOr(form.alert_quantity, 0) : 0,
@@ -312,380 +398,400 @@ export default function ProductFormFields({
       product_location: form.product_location.trim() || null,
       is_featured: !!form.is_featured,
       has_warehouse_price: showWarehousePrices,
-      image_url: form.image_url || null,
+      image_url: form.images[0] || null,
+      images: form.images,
       description: form.description || null,
       is_active: form.is_active !== false,
     };
     if (trackStock) body.stocks = buildStocks();
-
     return onSubmit?.(body);
   };
 
+  const unitOptions = units.map((u) => ({ value: u.id, label: u.name }));
+  const brandOptions = brands.map((b) => ({ value: b.id, label: b.name }));
+  const categoryOptions = categories.map((c) => ({ value: c.id, label: c.name }));
+  const taxOptions = [
+    { value: '', label: 'No Tax' },
+    ...taxes.map((t) => ({
+      value: t.id,
+      label: t.rate === undefined || t.rate === null ? t.name : `${t.name} (${num(t.rate)}%)`,
+    })),
+  ];
+
   return (
-    <form onSubmit={submit} className="rounded-xl border bg-white shadow-sm p-4 sm:p-5 space-y-5">
-      <div>
-        <h2 className="text-lg font-semibold text-slate-900">
-          {mode === 'edit' ? 'Edit Product' : 'Add Product'}
+    <form onSubmit={submit} className="space-y-5">
+      <div className="rounded-2xl bg-gradient-to-r from-[#003D82] to-[#0b5ed7] px-5 py-4 text-white shadow-sm">
+        <h2 className="text-xl font-semibold">
+          {mode === 'edit' ? 'Edit product' : 'Add product'}
         </h2>
-        <p className="mt-1 text-sm italic text-slate-500">
-          The field labels marked with * are required input fields.
+        <p className="mt-1 text-sm text-white/80">
+          Searchable fields, rental products without stock, and multiple images via click, drop, or Ctrl+V.
         </p>
       </div>
 
-      <div className={ROW_CLASS}>
-        <div>
-          <Label>Product Type *</Label>
-          <select
-            className={SELECT_CLASS}
-            value={form.product_type}
-            onChange={(e) => changeType(e.target.value)}
-          >
-            {PRODUCT_TYPES.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
-          </select>
-        </div>
-        <div>
-          <Label>Product Name *</Label>
-          <Input
-            className="mt-1"
-            value={form.name}
-            onChange={(e) => patch({ name: e.target.value })}
-          />
-        </div>
-        <div>
-          <Label>Product Code *</Label>
-          <div className="mt-1 flex gap-2">
-            <Input value={form.code} onChange={(e) => patch({ code: e.target.value })} />
-            <Button
-              type="button"
-              variant="outline"
-              size="icon"
-              className="shrink-0 text-[#003D82]"
-              title="Generate code"
-              disabled={codeLoading}
-              onClick={fillCode}
-            >
-              {codeLoading
-                ? <Loader2 className="h-4 w-4 animate-spin" />
-                : <RefreshCw className="h-4 w-4" />}
-            </Button>
-          </div>
-        </div>
-      </div>
-
-      <div className={ROW_CLASS}>
-        {trackStock && (
+      <FieldCard title="Basics" hint="Fields marked * are required.">
+        <div className="grid gap-4 md:grid-cols-3">
           <div>
-            <Label>Product Unit *</Label>
-            <select
-              className={SELECT_CLASS}
-              value={form.unit_id}
-              onChange={(e) => patch({ unit_id: e.target.value })}
-            >
-              <option value="">Select Product Unit…</option>
-              {units.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
-            </select>
-          </div>
-        )}
-        {trackStock && (
-          <div>
-            <Label>Brand</Label>
-            <select
-              className={SELECT_CLASS}
-              value={form.brand_id}
-              onChange={(e) => patch({ brand_id: e.target.value })}
-            >
-              <option value="">Select Brand…</option>
-              {brands.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
-            </select>
-          </div>
-        )}
-        <div>
-          <Label>Category *</Label>
-          <select
-            className={SELECT_CLASS}
-            value={form.category_id}
-            onChange={(e) => patch({ category_id: e.target.value })}
-          >
-            <option value="">Select Category…</option>
-            {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-          </select>
-        </div>
-        {!trackStock && (
-          <div>
-            <Label>Product Price *</Label>
-            <Input
-              type="number"
-              step="0.01"
-              min="0"
+            <Label>Product Type *</Label>
+            <SearchSelect
               className="mt-1"
-              value={form.price}
-              onChange={(e) => patch({ price: e.target.value })}
-            />
-          </div>
-        )}
-      </div>
-
-      {trackStock && (
-        <div className={ROW_CLASS}>
-          <div className="hidden md:block" />
-          <div>
-            <Label>Sale Unit</Label>
-            <select
-              className={SELECT_CLASS}
-              value={form.sale_unit_id}
-              onChange={(e) => patch({ sale_unit_id: e.target.value })}
-            >
-              <option value="">Nothing selected</option>
-              {units.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
-            </select>
-          </div>
-          <div>
-            <Label>Purchase Unit</Label>
-            <select
-              className={SELECT_CLASS}
-              value={form.purchase_unit_id}
-              onChange={(e) => patch({ purchase_unit_id: e.target.value })}
-            >
-              <option value="">Nothing selected</option>
-              {units.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
-            </select>
-          </div>
-        </div>
-      )}
-
-      {trackStock && (
-        <div className={ROW_CLASS}>
-          <div>
-            <Label>Product Cost *</Label>
-            <Input
-              type="number"
-              step="0.01"
-              min="0"
-              className="mt-1"
-              value={form.cost}
-              onChange={(e) => patch({ cost: e.target.value })}
-            />
-          </div>
-          <div>
-            <Label>Product Price *</Label>
-            <Input
-              type="number"
-              step="0.01"
-              min="0"
-              className="mt-1"
-              value={form.price}
-              onChange={(e) => patch({ price: e.target.value })}
-            />
-          </div>
-          <div>
-            <Label>Quantity *</Label>
-            <Input
-              type="number"
-              step="0.001"
-              min="0"
-              className="mt-1"
-              value={form.qty}
-              onChange={(e) => patch({ qty: e.target.value })}
-            />
-          </div>
-        </div>
-      )}
-
-      {trackStock && !showWarehousePrices && (
-        <div className={ROW_CLASS}>
-          <div>
-            <Label>Stock Warehouse</Label>
-            <WarehouseSelect
-              className="mt-1"
-              value={form.stock_warehouse_id}
-              onChange={(stock_warehouse_id) => patch({ stock_warehouse_id })}
-              warehouses={warehouses}
-              placeholder="Search warehouse…"
+              value={form.product_type}
+              onChange={changeType}
+              options={PRODUCT_TYPES}
+              placeholder="Search type…"
               allowClear={false}
             />
-            <p className="mt-1 text-xs text-slate-500">
-              The quantity above is recorded against this warehouse.
-            </p>
           </div>
-        </div>
-      )}
-
-      <div className={ROW_CLASS}>
-        <div>
-          <Label>Product Rent Price / Hour</Label>
-          <Input
-            type="number"
-            step="0.01"
-            min="0"
-            className="mt-1"
-            placeholder="Product Rent Price per Hour"
-            value={form.rent_price_hour}
-            onChange={(e) => patch({ rent_price_hour: e.target.value })}
-          />
-        </div>
-        <div>
-          <Label>Product Rent Price / Day</Label>
-          <Input
-            type="number"
-            step="0.01"
-            min="0"
-            className="mt-1"
-            placeholder="Product Rent Price per Day"
-            value={form.rent_price_day}
-            onChange={(e) => patch({ rent_price_day: e.target.value })}
-          />
-        </div>
-        <div>
-          <Label>Product Rent Price / Month</Label>
-          <Input
-            type="number"
-            step="0.01"
-            min="0"
-            className="mt-1"
-            placeholder="Product Rent Price per Month"
-            value={form.rent_price_month}
-            onChange={(e) => patch({ rent_price_month: e.target.value })}
-          />
-        </div>
-      </div>
-
-      <div className={ROW_CLASS}>
-        {trackStock && (
           <div>
-            <Label>Alert Quantity</Label>
+            <Label>Product Name *</Label>
             <Input
-              type="number"
-              step="1"
-              min="0"
               className="mt-1"
-              value={form.alert_quantity}
-              onChange={(e) => patch({ alert_quantity: e.target.value })}
+              value={form.name}
+              onChange={(e) => patch({ name: e.target.value })}
+              placeholder="Product name"
             />
           </div>
+          <div>
+            <Label>Product Code *</Label>
+            <div className="mt-1 flex gap-2">
+              <Input value={form.code} onChange={(e) => patch({ code: e.target.value })} />
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                className="shrink-0 text-[#003D82]"
+                title="Generate code"
+                disabled={codeLoading}
+                onClick={fillCode}
+              >
+                {codeLoading
+                  ? <Loader2 className="h-4 w-4 animate-spin" />
+                  : <RefreshCw className="h-4 w-4" />}
+              </Button>
+            </div>
+          </div>
+          {(trackStock || isRental) && (
+            <div>
+              <Label>Brand</Label>
+              <SearchSelect
+                className="mt-1"
+                value={form.brand_id}
+                onChange={(brand_id) => patch({ brand_id })}
+                options={brandOptions}
+                placeholder="Search brand…"
+              />
+            </div>
+          )}
+          <div>
+            <Label>Category *</Label>
+            <SearchSelect
+              className="mt-1"
+              value={form.category_id}
+              onChange={(category_id) => patch({ category_id })}
+              options={categoryOptions}
+              placeholder="Search category…"
+              allowClear={false}
+            />
+          </div>
+          {trackStock && (
+            <div>
+              <Label>Product Unit *</Label>
+              <SearchSelect
+                className="mt-1"
+                value={form.unit_id}
+                onChange={(unit_id) => patch({ unit_id })}
+                options={unitOptions}
+                placeholder="Search unit…"
+                allowClear={false}
+              />
+            </div>
+          )}
+        </div>
+        {trackStock && (
+          <div className="mt-4 grid gap-4 md:grid-cols-2">
+            <div>
+              <Label>Sale Unit</Label>
+              <SearchSelect
+                className="mt-1"
+                value={form.sale_unit_id}
+                onChange={(sale_unit_id) => patch({ sale_unit_id })}
+                options={unitOptions}
+                placeholder="Search sale unit…"
+              />
+            </div>
+            <div>
+              <Label>Purchase Unit</Label>
+              <SearchSelect
+                className="mt-1"
+                value={form.purchase_unit_id}
+                onChange={(purchase_unit_id) => patch({ purchase_unit_id })}
+                options={unitOptions}
+                placeholder="Search purchase unit…"
+              />
+            </div>
+          </div>
         )}
-        <div>
-          <Label>Product Tax</Label>
-          <select
-            className={SELECT_CLASS}
-            value={form.tax_id}
-            onChange={(e) => patch({ tax_id: e.target.value })}
-          >
-            <option value="">No Tax</option>
-            {taxes.map((t) => (
-              <option key={t.id} value={t.id}>
-                {t.rate === undefined || t.rate === null ? t.name : `${t.name} (${num(t.rate)}%)`}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <Label>Tax Method</Label>
-          <select
-            className={SELECT_CLASS}
-            value={form.tax_method}
-            onChange={(e) => patch({ tax_method: e.target.value })}
-          >
-            <option value="exclusive">Exclusive</option>
-            <option value="inclusive">Inclusive</option>
-          </select>
-        </div>
-      </div>
+      </FieldCard>
 
-      <div className={ROW_CLASS}>
-        <div>
-          <Label>Product Location</Label>
-          <Input
-            className="mt-1"
-            placeholder="Product location"
-            value={form.product_location}
-            onChange={(e) => patch({ product_location: e.target.value })}
-          />
-        </div>
-        <div className="md:pt-6">
-          <label className="flex items-center gap-2 text-sm font-medium text-slate-700">
+      {isRental ? (
+        <FieldCard title="Rental pricing" hint="No stock. Set a daily and/or monthly rental price.">
+          <div className="grid gap-4 md:grid-cols-2">
+            <div>
+              <Label>Daily rental price *</Label>
+              <Input
+                type="number"
+                step="0.01"
+                min="0"
+                className="mt-1"
+                placeholder="Price per day"
+                value={form.rent_price_day}
+                onChange={(e) => patch({ rent_price_day: e.target.value })}
+              />
+            </div>
+            <div>
+              <Label>Monthly rental price *</Label>
+              <Input
+                type="number"
+                step="0.01"
+                min="0"
+                className="mt-1"
+                placeholder="Price per month"
+                value={form.rent_price_month}
+                onChange={(e) => patch({ rent_price_month: e.target.value })}
+              />
+            </div>
+          </div>
+        </FieldCard>
+      ) : (
+        <FieldCard title="Pricing" hint={trackStock ? 'Cost, sell price, and opening quantity.' : 'Stockless product — sell price only.'}>
+          <div className="grid gap-4 md:grid-cols-3">
+            {trackStock && (
+              <div>
+                <Label>Product Cost *</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  className="mt-1"
+                  value={form.cost}
+                  onChange={(e) => patch({ cost: e.target.value })}
+                />
+              </div>
+            )}
+            <div>
+              <Label>Product Price *</Label>
+              <Input
+                type="number"
+                step="0.01"
+                min="0"
+                className="mt-1"
+                value={form.price}
+                onChange={(e) => patch({ price: e.target.value })}
+              />
+            </div>
+            {trackStock && (
+              <div>
+                <Label>Quantity *</Label>
+                <Input
+                  type="number"
+                  step="0.001"
+                  min="0"
+                  className="mt-1"
+                  value={form.qty}
+                  onChange={(e) => patch({ qty: e.target.value })}
+                />
+              </div>
+            )}
+          </div>
+          {trackStock && !showWarehousePrices && (
+            <div className="mt-4 max-w-md">
+              <Label>Stock Warehouse</Label>
+              <WarehouseSelect
+                className="mt-1"
+                value={form.stock_warehouse_id}
+                onChange={(stock_warehouse_id) => patch({ stock_warehouse_id })}
+                warehouses={warehouses}
+                placeholder="Search warehouse…"
+                allowClear={false}
+              />
+            </div>
+          )}
+          {!isRental && (
+            <div className="mt-4 grid gap-4 md:grid-cols-3">
+              <div>
+                <Label>Rent price / hour</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  className="mt-1"
+                  value={form.rent_price_hour}
+                  onChange={(e) => patch({ rent_price_hour: e.target.value })}
+                />
+              </div>
+              <div>
+                <Label>Rent price / day</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  className="mt-1"
+                  value={form.rent_price_day}
+                  onChange={(e) => patch({ rent_price_day: e.target.value })}
+                />
+              </div>
+              <div>
+                <Label>Rent price / month</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  className="mt-1"
+                  value={form.rent_price_month}
+                  onChange={(e) => patch({ rent_price_month: e.target.value })}
+                />
+              </div>
+            </div>
+          )}
+        </FieldCard>
+      )}
+
+      <FieldCard title="Tax & display">
+        <div className="grid gap-4 md:grid-cols-3">
+          {trackStock && (
+            <div>
+              <Label>Alert Quantity</Label>
+              <Input
+                type="number"
+                step="1"
+                min="0"
+                className="mt-1"
+                value={form.alert_quantity}
+                onChange={(e) => patch({ alert_quantity: e.target.value })}
+              />
+            </div>
+          )}
+          <div>
+            <Label>Product Tax</Label>
+            <SearchSelect
+              className="mt-1"
+              value={form.tax_id}
+              onChange={(tax_id) => patch({ tax_id })}
+              options={taxOptions}
+              placeholder="Search tax…"
+            />
+          </div>
+          <div>
+            <Label>Tax Method</Label>
+            <SearchSelect
+              className="mt-1"
+              value={form.tax_method}
+              onChange={(tax_method) => patch({ tax_method })}
+              options={TAX_METHODS}
+              allowClear={false}
+            />
+          </div>
+          <div>
+            <Label>Product Location</Label>
+            <Input
+              className="mt-1"
+              placeholder="Shelf, room, or site"
+              value={form.product_location}
+              onChange={(e) => patch({ product_location: e.target.value })}
+            />
+          </div>
+          <label className="flex items-center gap-2 text-sm font-medium text-slate-700 md:pt-7">
             <input
               type="checkbox"
               checked={form.is_featured}
               onChange={(e) => patch({ is_featured: e.target.checked })}
             />
-            Featured
+            Featured in POS
           </label>
-          <p className="mt-1 text-xs italic text-slate-500">
-            Featured product will be displayed in POS
-          </p>
         </div>
-      </div>
+      </FieldCard>
 
-      <div>
-        <Label>Product Image</Label>
-        <p className="mt-1 mb-2 text-xs text-slate-500">Click the picture to paste. Double-click to attach a file.</p>
+      <FieldCard
+        title="Product images"
+        hint="Click an image to paste, double-click to attach a file, or press Ctrl+V / ⌘V anywhere on this page."
+      >
         <div
           onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
           onDragLeave={() => setDragging(false)}
           onDrop={onDrop}
           className={cn(
-            'rounded-lg border-2 border-dashed p-3',
-            dragging ? 'border-[#003D82] bg-blue-50' : 'border-slate-300'
+            'grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 rounded-xl border-2 border-dashed p-3',
+            dragging ? 'border-[#003D82] bg-blue-50' : 'border-slate-200'
           )}
         >
-          <PasteableImage
-            src={preview}
-            uploading={uploading}
-            size="lg"
-            onFile={handleFile}
-          />
-        </div>
-        {preview && (
-          <div className="mt-3 flex items-center gap-3 rounded-lg border p-2">
-            <PasteableImage
-              src={preview}
-              uploading={uploading}
-              onFile={handleFile}
-            />
-            <div className="min-w-0 flex-1">
-              <p className="flex items-center gap-1 text-sm font-medium text-slate-700">
-                <ImagePlus className="h-4 w-4 text-slate-400" /> Product image
-              </p>
-              <p className="truncate text-xs text-slate-400">{form.image_url}</p>
+          {form.images.map((path, index) => (
+            <div key={`${path}-${index}`} className="relative">
+              <PasteableImage
+                src={productImageSrc(path)}
+                uploading={uploading}
+                size="lg"
+                onFile={(file) => replaceImage(index, file)}
+              />
+              <button
+                type="button"
+                className="absolute -right-1 -top-1 rounded-full bg-white p-1 shadow border"
+                title="Remove image"
+                onClick={() => removeImage(index)}
+              >
+                <X className="h-3.5 w-3.5 text-red-600" />
+              </button>
+              {index === 0 && (
+                <span className="absolute bottom-1 left-1 rounded bg-[#003D82] px-1.5 py-0.5 text-[10px] text-white">
+                  Main
+                </span>
+              )}
             </div>
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              title="Remove image"
-              onClick={() => patch({ image_url: '' })}
-            >
-              <X className="h-4 w-4 text-red-600" />
-            </Button>
-          </div>
-        )}
-      </div>
-
-      <div>
-        <Label>Product Details</Label>
-        <div className="mt-1">
-          <RichTextField
-            value={form.description}
-            resetKey={initialProduct?.id || 'new'}
-            placeholder="Describe the product…"
-            onChange={(html) => patch({ description: html })}
+          ))}
+          <button
+            type="button"
+            disabled={uploading}
+            onClick={() => document.getElementById('product-multi-images')?.click()}
+            className="flex min-h-[7rem] flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-slate-300 bg-slate-50 text-sm text-slate-500 hover:border-[#003D82] hover:bg-blue-50"
+          >
+            {uploading ? <Loader2 className="h-5 w-5 animate-spin text-[#003D82]" /> : <UploadCloud className="h-5 w-5" />}
+            <span>Add images</span>
+            <span className="text-[11px] text-slate-400">or Ctrl+V to paste</span>
+          </button>
+          <input
+            id="product-multi-images"
+            type="file"
+            accept="image/*"
+            multiple
+            className="hidden"
+            onChange={(e) => {
+              addImages(e.target.files || []);
+              e.target.value = '';
+            }}
           />
         </div>
-      </div>
+      </FieldCard>
+
+      <FieldCard title="Details">
+        <RichTextField
+          value={form.description}
+          resetKey={initialProduct?.id || 'new'}
+          placeholder="Describe the product…"
+          onChange={(html) => patch({ description: html })}
+        />
+      </FieldCard>
 
       {trackStock && (
-        <div className="space-y-3">
+        <FieldCard title="Warehouse prices">
           <label className="flex items-center gap-2 text-sm font-medium text-slate-700">
             <input
               type="checkbox"
               checked={form.has_warehouse_price}
               onChange={(e) => patch({ has_warehouse_price: e.target.checked })}
             />
-            This product has different price for different warehouse
+            This product has a different price per warehouse
           </label>
-
           {showWarehousePrices && (
-            <div className="overflow-x-auto rounded-lg border">
+            <div className="mt-3 overflow-x-auto rounded-lg border">
               <table className="w-full min-w-[620px] text-sm">
                 <thead className="bg-slate-50 text-left text-slate-600">
                   <tr>
@@ -730,21 +836,14 @@ export default function ProductFormFields({
                       </td>
                     </tr>
                   ))}
-                  {!form.warehouse_rows.length && (
-                    <tr>
-                      <td colSpan={4} className="p-6 text-center text-slate-500">
-                        No warehouses configured
-                      </td>
-                    </tr>
-                  )}
                 </tbody>
               </table>
             </div>
           )}
-        </div>
+        </FieldCard>
       )}
 
-      <div className="sticky bottom-0 -mx-4 -mb-4 flex flex-wrap justify-end gap-2 rounded-b-xl border-t bg-white/95 px-4 py-3 backdrop-blur sm:-mx-5 sm:-mb-5 sm:px-5">
+      <div className="sticky bottom-4 z-20 flex flex-wrap justify-end gap-2 rounded-2xl border bg-white/95 px-4 py-3 shadow-lg backdrop-blur">
         <Button type="button" variant="outline" onClick={onCancel}>Cancel</Button>
         <Button type="submit" className="bg-[#003D82] hover:bg-[#002855]" disabled={saving || uploading}>
           {saving

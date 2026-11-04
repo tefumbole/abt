@@ -48,7 +48,6 @@ import {
   Image as ImageIcon,
   Globe,
   Package,
-  PackagePlus,
   ShoppingCart,
   Truck,
   ArrowLeftRight,
@@ -343,7 +342,6 @@ const AdminLayout = () => {
           submenu: [
             { label: 'Category', path: '/admin/erp/products?tab=category', color: 'navy', icon: Tags },
             { label: 'Product List', path: '/admin/erp/products?tab=product-list', color: 'gold', icon: List },
-            { label: 'Add Product', path: '/admin/erp/products?tab=add-product', color: 'purple', icon: PackagePlus },
             { label: 'Print Barcode', path: '/admin/erp/products?tab=barcode', color: 'pink', icon: Printer },
             { label: 'Adjustment List', path: '/admin/erp/products?tab=adjustment-list', color: 'green', icon: ClipboardList },
             { label: 'Add Adjustment', path: '/admin/erp/products?tab=add-adjustment', color: 'orange', icon: PencilLine },

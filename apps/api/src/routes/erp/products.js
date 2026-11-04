@@ -8,7 +8,31 @@ import { bool, num, requireErpAdmin } from './helpers.js';
 
 const router = Router();
 
-const PRODUCT_TYPES = new Set(['standard', 'digital', 'combo', 'donation', 'service']);
+const PRODUCT_TYPES = new Set(['standard', 'digital', 'combo', 'donation', 'service', 'rental']);
+
+function parseProductImages(row = {}) {
+  let extras = [];
+  try {
+    extras = JSON.parse(row.images_json || '[]');
+    if (!Array.isArray(extras)) extras = [];
+  } catch {
+    extras = [];
+  }
+  return [...new Set([row.image_url, ...extras].filter(Boolean).map(String))];
+}
+
+function packProductImages(input, fallbackRow = {}) {
+  let images = [];
+  if (Array.isArray(input)) images = input;
+  else if (input) images = [input];
+  else images = parseProductImages(fallbackRow);
+  images = [...new Set(images.filter(Boolean).map(String))];
+  return {
+    image_url: images[0] || null,
+    images_json: JSON.stringify(images),
+    images,
+  };
+}
 const TAX_METHODS = new Set(['exclusive', 'inclusive']);
 
 const PRODUCT_SELECT = `SELECT p.*,
@@ -43,7 +67,8 @@ function mapProduct(r) {
     alert_quantity: num(r.alert_quantity),
     tax_rate: r.tax_rate == null ? null : num(r.tax_rate),
     tracks_stock: product_type === 'standard',
-    is_rentable: rent_price_hour > 0 || rent_price_day > 0 || rent_price_month > 0,
+    images: parseProductImages(r),
+    is_rentable: product_type === 'rental' || rent_price_hour > 0 || rent_price_day > 0 || rent_price_month > 0,
   };
 }
 
@@ -503,26 +528,31 @@ router.post('/', requireAuth, requireErpAdmin, async (req, res) => {
       if (u[0]) b.unit_id = b.sale_unit_id = b.purchase_unit_id = u[0].id;
       if (c[0]) b.category_id = c[0].id;
     }
-    if (productType === 'combo' || productType === 'digital') {
+    if (productType === 'combo' || productType === 'digital' || productType === 'rental') {
       b.cost = 0;
       b.unit_id = b.sale_unit_id = b.purchase_unit_id = null;
+    }
+    if (productType === 'rental') {
+      b.rent_price_hour = 0;
+      if (!num(b.price)) b.price = num(b.rent_price_day) || num(b.rent_price_month);
     }
     const tracksStock = productType === 'standard';
     const hasWarehousePrice = bool(b.has_warehouse_price, false);
     const price = num(b.price);
     const cost = num(b.cost);
+    const packedImages = packProductImages(b.images || b.image_url);
     await pool.query(
       `INSERT INTO products (id, name, code, barcode, category_id, brand_id, unit_id, sale_unit_id, purchase_unit_id,
         cost, price, rent_price_hour, rent_price_day, rent_price_month, alert_quantity, tax_id, tax_method,
-        product_location, is_featured, has_warehouse_price, image_url, description, product_type, is_active)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        product_location, is_featured, has_warehouse_price, image_url, images_json, description, product_type, is_active)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         id, b.name.trim(), code, b.barcode || null, b.category_id || null, b.brand_id || null, b.unit_id || null,
         b.sale_unit_id || null, b.purchase_unit_id || null,
         cost, price, num(b.rent_price_hour), num(b.rent_price_day), num(b.rent_price_month),
         tracksStock ? num(b.alert_quantity) : 0, b.tax_id || null, taxMethod,
         b.product_location || null, bool(b.is_featured, false) ? 1 : 0, hasWarehousePrice ? 1 : 0,
-        b.image_url || null, b.description || null, productType,
+        packedImages.image_url, packedImages.images_json, b.description || null, productType,
         bool(b.is_active, true) ? 1 : 0,
       ]
     );
@@ -570,12 +600,21 @@ router.put('/:id', requireAuth, requireErpAdmin, async (req, res) => {
       ? bool(b.has_warehouse_price, false)
       : Boolean(c.has_warehouse_price);
     const price = b.price !== undefined ? num(b.price) : num(c.price);
-    const cost = b.cost !== undefined ? num(b.cost) : num(c.cost);
+    const cost = productType === 'rental' || productType === 'digital' || productType === 'combo'
+      ? 0
+      : (b.cost !== undefined ? num(b.cost) : num(c.cost));
+    let packedImages = packProductImages(null, c);
+    if (b.images !== undefined) {
+      packedImages = packProductImages(b.images, c);
+    } else if (b.image_url !== undefined) {
+      const rest = parseProductImages(c).filter((path) => path !== c.image_url);
+      packedImages = packProductImages([b.image_url, ...rest]);
+    }
     await pool.query(
       `UPDATE products SET name=?, code=?, barcode=?, category_id=?, brand_id=?, unit_id=?, sale_unit_id=?,
         purchase_unit_id=?, cost=?, price=?, rent_price_hour=?, rent_price_day=?, rent_price_month=?,
         alert_quantity=?, tax_id=?, tax_method=?, product_location=?, is_featured=?, has_warehouse_price=?,
-        image_url=?, description=?, product_type=?, is_active=? WHERE id=?`,
+        image_url=?, images_json=?, description=?, product_type=?, is_active=? WHERE id=?`,
       [
         b.name?.trim() || c.name,
         code,
@@ -586,8 +625,8 @@ router.put('/:id', requireAuth, requireErpAdmin, async (req, res) => {
         b.sale_unit_id !== undefined ? b.sale_unit_id || null : c.sale_unit_id,
         b.purchase_unit_id !== undefined ? b.purchase_unit_id || null : c.purchase_unit_id,
         cost,
-        price,
-        b.rent_price_hour !== undefined ? num(b.rent_price_hour) : num(c.rent_price_hour),
+        productType === 'rental' && !num(price) ? (num(b.rent_price_day) || num(b.rent_price_month) || num(c.rent_price_day)) : price,
+        productType === 'rental' ? 0 : (b.rent_price_hour !== undefined ? num(b.rent_price_hour) : num(c.rent_price_hour)),
         b.rent_price_day !== undefined ? num(b.rent_price_day) : num(c.rent_price_day),
         b.rent_price_month !== undefined ? num(b.rent_price_month) : num(c.rent_price_month),
         tracksStock ? (b.alert_quantity !== undefined ? num(b.alert_quantity) : num(c.alert_quantity)) : 0,
@@ -596,7 +635,8 @@ router.put('/:id', requireAuth, requireErpAdmin, async (req, res) => {
         b.product_location !== undefined ? b.product_location || null : c.product_location,
         (b.is_featured !== undefined ? bool(b.is_featured, false) : Boolean(c.is_featured)) ? 1 : 0,
         hasWarehousePrice ? 1 : 0,
-        b.image_url !== undefined ? b.image_url : c.image_url,
+        packedImages.image_url,
+        packedImages.images_json,
         b.description !== undefined ? b.description : c.description,
         productType,
         (b.is_active !== undefined ? bool(b.is_active) : Boolean(c.is_active)) ? 1 : 0,

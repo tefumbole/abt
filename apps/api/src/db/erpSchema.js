@@ -84,6 +84,7 @@ export const ERP_CREATE_STATEMENTS = [
     is_featured TINYINT(1) NOT NULL DEFAULT 0,
     has_warehouse_price TINYINT(1) NOT NULL DEFAULT 0,
     image_url VARCHAR(1024) DEFAULT NULL,
+    images_json TEXT DEFAULT NULL,
     description TEXT DEFAULT NULL,
     product_type VARCHAR(32) NOT NULL DEFAULT 'standard',
     is_active TINYINT(1) NOT NULL DEFAULT 1,
