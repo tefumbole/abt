@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/components/ui/use-toast';
+import { QuickAddCustomerButton } from '@/components/erp/CustomerSelect';
 
 const TABS = [
   { id: 'awaiting', label: 'Awaiting Payment', all: true },
@@ -255,7 +256,20 @@ function WithdrawalsTab({ toast }) {
           <DialogContent className="max-w-2xl !top-6 !translate-y-0">
             <DialogHeader><DialogTitle>New Withdrawal</DialogTitle></DialogHeader>
             <div className="space-y-3">
-              <Input placeholder="Search customer or user" value={q} onChange={(e) => search(e.target.value)} />
+              <div className="flex gap-2 items-center">
+                <Input className="flex-1" placeholder="Search customer or user" value={q} onChange={(e) => search(e.target.value)} />
+                <QuickAddCustomerButton
+                  onCreated={(row) => {
+                    setLines((p) => [...p, {
+                      name: row.name,
+                      person_name: row.name,
+                      phone: row.phone,
+                      amount: 100,
+                      customer_id: row.id,
+                    }]);
+                  }}
+                />
+              </div>
               {hits.map((h) => (
                 <button key={`${h.kind}-${h.id}`} type="button" className="block w-full text-left px-3 py-2 hover:bg-gray-50 rounded" onClick={() => {
                   setLines((p) => [...p, { name: h.name, person_name: h.name, phone: h.phone, amount: 100, customer_id: h.kind === 'customer' ? h.id : null }]);
@@ -366,13 +380,24 @@ function DepositsTab({ toast, finance }) {
             <div className="space-y-3">
               <div>
                 <Label>Client</Label>
-                <select className="w-full border rounded-md h-10 px-3" value={form.customer_id} onChange={(e) => {
-                  const c = lookups.customers.find((x) => x.id === e.target.value);
-                  setForm({ ...form, customer_id: e.target.value, phone: c?.phone || form.phone });
-                }}>
-                  <option value="">Select client</option>
-                  {lookups.customers.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-                </select>
+                <div className="flex gap-2 items-center">
+                  <select className="flex-1 min-w-0 border rounded-md h-10 px-3" value={form.customer_id} onChange={(e) => {
+                    const c = lookups.customers.find((x) => x.id === e.target.value);
+                    setForm({ ...form, customer_id: e.target.value, phone: c?.phone || form.phone });
+                  }}>
+                    <option value="">Select client</option>
+                    {lookups.customers.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                  </select>
+                  <QuickAddCustomerButton
+                    onCreated={(row) => {
+                      setLookups((prev) => ({
+                        ...prev,
+                        customers: [row, ...(prev.customers || []).filter((c) => String(c.id) !== String(row.id))],
+                      }));
+                      setForm((prev) => ({ ...prev, customer_id: row.id, phone: row.phone || prev.phone }));
+                    }}
+                  />
+                </div>
               </div>
               <div>
                 <Label>Account</Label>

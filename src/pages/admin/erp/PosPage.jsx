@@ -14,7 +14,7 @@ import { openPrintWindow } from '@/lib/erpExport';
 import { getSystemSettings } from '@/services/settingsService';
 import { paymentService } from '@/services/commerceService';
 import {
-  closeRegister, createCustomer, createPosSale, createProduct, getPosSettings, getRegisterSummary, getSale,
+  closeRegister, createPosSale, createProduct, getPosSettings, getRegisterSummary, getSale,
   listBillers, listBrands, listCategories, listCustomers, listProducts, listRecentPosSales,
   listRegisters, listUnits, listWarehouses, openRegister,
 } from '@/services/erpService';
@@ -23,8 +23,7 @@ import SaleCompleteModal from '@/components/erp/pos/SaleCompleteModal';
 import RegisterCloseModal from '@/components/erp/pos/RegisterCloseModal';
 import PosVisaModal from '@/components/erp/pos/PosVisaModal';
 import SearchSelect from '@/components/erp/SearchSelect';
-import { COUNTRIES } from '@/lib/countries';
-import { acceptPhone } from '@/lib/phones';
+import CustomerSelect from '@/components/erp/CustomerSelect';
 import {
   buildCartReceiptDoc, buildRegisterReportHtml, lineSubtotal,
 } from '@/components/erp/pos/posDocs';
@@ -132,8 +131,6 @@ export default function PosPage() {
   const [discount, setDiscount] = useState(0);
   const [tax, setTax] = useState(0);
   const [shipping, setShipping] = useState(0);
-  const [showQuickCustomer, setShowQuickCustomer] = useState(false);
-  const [quickCustomer, setQuickCustomer] = useState({ name: '', phone: '', address: '', country: 'Rwanda' });
   const [visaOpen, setVisaOpen] = useState(false);
   const [cashInHand, setCashInHand] = useState('0');
   const [showRegisterModal, setShowRegisterModal] = useState(false);
@@ -679,7 +676,6 @@ export default function PosPage() {
     if (showShortcuts) return setShowShortcuts(false);
     if (starOpen) return setStarOpen(false);
     if (recentOpen) return setRecentOpen(false);
-    if (showQuickCustomer) return setShowQuickCustomer(false);
     if (payModal) return setPayModal(null);
     if (saleComplete) return setSaleComplete(null);
     if (closeReport) return setCloseReport(null);
@@ -691,7 +687,7 @@ export default function PosPage() {
   shortcutRef.current = {
     enabled: posSettings.enable_keyboard_shortcuts,
     modalOpen: Boolean(payModal || saleComplete || closeReport
-      || showRegisterModal || showQuickCustomer || starOpen || recentOpen),
+      || showRegisterModal || starOpen || recentOpen),
     focusSearch,
     openDefaultPay,
     cancelSale,
@@ -727,37 +723,6 @@ export default function PosPage() {
   }, []);
 
   /* ---------------------------------------------------------------- helpers */
-
-  const saveQuickCustomer = async (e) => {
-    e.preventDefault();
-    if (!quickCustomer.name.trim()) {
-      toast.error('Name required');
-      return;
-    }
-    const phone = acceptPhone(quickCustomer.phone);
-    if (quickCustomer.phone.trim() && !phone) {
-      toast.error('Enter a valid phone such as +250794… or 250794…');
-      return;
-    }
-    try {
-      const created = await createCustomer({
-        name: quickCustomer.name.trim(),
-        phone: phone || null,
-        address: quickCustomer.address || null,
-        country: quickCustomer.country || 'Rwanda',
-        is_active: true,
-      });
-      const row = created?.data || created;
-      toast.success('Customer added');
-      setShowQuickCustomer(false);
-      setQuickCustomer({ name: '', phone: '', address: '', country: 'Rwanda' });
-      const list = await listCustomers('?active=1');
-      setCustomers((list || []).filter((x) => x?.id && x?.name));
-      if (row?.id) setCustomerId(row.id);
-    } catch (err) {
-      toast.error(err.message);
-    }
-  };
 
   const toggleSearchAll = () => {
     const next = !searchAll;
@@ -861,17 +826,13 @@ export default function PosPage() {
             />
           </div>
 
-          <div className="px-4 pt-4 pb-2 flex gap-2 items-center">
-            <SearchSelect
-              className="flex-1"
+          <div className="px-4 pt-4 pb-2">
+            <CustomerSelect
               value={customerId}
               onChange={setCustomerId}
-              placeholder="Search customer…"
-              options={customers.map((c) => ({ value: c.id, label: c.name, hint: c.phone || '' }))}
+              customers={customers}
+              setCustomers={setCustomers}
             />
-            <Button type="button" size="icon" className="bg-[#003D82] h-11 w-11" title="Add customer" onClick={() => setShowQuickCustomer(true)}>
-              <Plus className="h-4 w-4" />
-            </Button>
           </div>
           {!customers.length && (
             <p className="px-4 pb-2 text-xs text-amber-700">
@@ -1285,43 +1246,6 @@ export default function PosPage() {
               </Button>
             </div>
           </div>
-        </div>
-      )}
-
-      {/* Quick customer */}
-      {showQuickCustomer && (
-        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4">
-          <form onSubmit={saveQuickCustomer} className="bg-white rounded-2xl shadow-xl w-full max-w-md p-5 space-y-3">
-            <div className="flex items-center justify-between">
-              <h3 className="text-lg font-bold text-[#003D82]">Add Customer</h3>
-              <button type="button" onClick={() => setShowQuickCustomer(false)}><X className="h-5 w-5" /></button>
-            </div>
-            <div><Label>Name *</Label><Input required value={quickCustomer.name} onChange={(e) => setQuickCustomer({ ...quickCustomer, name: e.target.value })} /></div>
-            <div>
-              <Label>Phone number</Label>
-              <Input
-                value={quickCustomer.phone}
-                placeholder="+250794… or 250794…"
-                onChange={(e) => setQuickCustomer({ ...quickCustomer, phone: e.target.value })}
-              />
-            </div>
-            <div><Label>Address</Label><Input value={quickCustomer.address} onChange={(e) => setQuickCustomer({ ...quickCustomer, address: e.target.value })} /></div>
-            <div>
-              <Label>Country</Label>
-              <SearchSelect
-                className="mt-1"
-                value={quickCustomer.country}
-                onChange={(country) => setQuickCustomer({ ...quickCustomer, country })}
-                options={COUNTRIES}
-                placeholder="Search country…"
-                allowClear={false}
-              />
-            </div>
-            <div className="flex justify-end gap-2">
-              <Button type="button" variant="outline" onClick={() => setShowQuickCustomer(false)}>Cancel</Button>
-              <Button type="submit" className="bg-[#003D82]">Save</Button>
-            </div>
-          </form>
         </div>
       )}
 

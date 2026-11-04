@@ -21,6 +21,7 @@ import {
 import { buildDocumentHtml, loadErpCompany } from '@/lib/erpDocuments';
 import { getSystemSettings } from '@/services/settingsService';
 import SearchSelect from '@/components/erp/SearchSelect';
+import CustomerSelect from '@/components/erp/CustomerSelect';
 import {
   acceptQuotationQuote, convertQuotation, createQuotation, deleteQuotation, getQuotation,
   listBillers, listCustomers, listProducts, listQuotations, listSuppliers,
@@ -846,13 +847,12 @@ export default function QuotationsPage() {
                 </div>
                 <div>
                   <Label>Customer</Label>
-                  <SearchSelect
+                  <CustomerSelect
                     className="mt-1"
                     value={form.customer_id}
                     onChange={(customer_id) => setForm({ ...form, customer_id })}
-                    placeholder="Search customer…"
-                    emptyLabel="No customer matches"
-                    options={customers.map((c) => ({ value: c.id, label: c.name, hint: c.phone || '' }))}
+                    customers={customers}
+                    setCustomers={setCustomers}
                   />
                 </div>
                 <div>

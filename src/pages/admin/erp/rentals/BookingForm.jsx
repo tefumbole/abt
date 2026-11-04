@@ -8,9 +8,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
-import {
-  Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle,
-} from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
 import {
   makeMoney, num, toDateTimeLocal, toMysqlDateTime,
@@ -21,8 +18,9 @@ import {
   normaliseBookingMethod, rentPriceFor,
 } from '@/lib/rentalFormat';
 import { getSystemSettings } from '@/services/settingsService';
+import { QuickAddCustomerButton } from '@/components/erp/CustomerSelect';
 import {
-  createBooking, createCustomer, getBooking, listBillers, listCustomers,
+  createBooking, getBooking, listBillers, listCustomers,
   listProducts, listWarehouses, updateBooking,
 } from '@/services/erpService';
 
@@ -201,10 +199,6 @@ export default function BookingForm({ bookingId = null, onSaved = () => {}, onCa
   const [productOpen, setProductOpen] = useState(false);
   const productRef = useRef(null);
   useDismiss(productRef, () => setProductOpen(false));
-
-  const [customerDialog, setCustomerDialog] = useState(false);
-  const [newCustomer, setNewCustomer] = useState({ name: '', phone: '', email: '' });
-  const [creatingCustomer, setCreatingCustomer] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -429,35 +423,6 @@ export default function BookingForm({ bookingId = null, onSaved = () => {}, onCa
     toast.success(`Rental period applied to ${form.items.length} item(s)`);
   };
 
-  const saveCustomer = async () => {
-    const name = newCustomer.name.trim();
-    if (!name) {
-      toast.error('Customer name is required');
-      return;
-    }
-    setCreatingCustomer(true);
-    try {
-      const res = await createCustomer({
-        name,
-        phone: newCustomer.phone.trim() || null,
-        email: newCustomer.email.trim() || null,
-      });
-      const created = (res && res.id) ? res : res?.data;
-      const row = created?.id
-        ? created
-        : { id: res?.id || res?.insertId, name, phone: newCustomer.phone.trim() };
-      setCustomers((prev) => [row, ...prev.filter((c) => String(c.id) !== String(row.id))]);
-      if (row.id) patch({ customer_id: row.id, customer_name: row.name || name });
-      setCustomerDialog(false);
-      setNewCustomer({ name: '', phone: '', email: '' });
-      toast.success('Customer created');
-    } catch (err) {
-      toast.error(err.message || 'Could not create the customer');
-    } finally {
-      setCreatingCustomer(false);
-    }
-  };
-
   const lineTotals = useMemo(() => form.items.reduce((acc, line) => ({
     qty: acc.qty + num(line.qty),
     discount: acc.discount + num(line.discount),
@@ -569,16 +534,12 @@ export default function BookingForm({ bookingId = null, onSaved = () => {}, onCa
                   onChange={(e) => { setCustomerQuery(e.target.value); setCustomerOpen(true); }}
                 />
               </div>
-              <Button
-                type="button"
-                variant="outline"
-                size="icon"
-                title="Create customer"
-                className="shrink-0 border-[#003D82] text-[#003D82]"
-                onClick={() => setCustomerDialog(true)}
-              >
-                <Plus className="h-4 w-4" />
-              </Button>
+              <QuickAddCustomerButton
+                onCreated={(row) => {
+                  setCustomers((prev) => [row, ...prev.filter((c) => String(c.id) !== String(row.id))]);
+                  patch({ customer_id: row.id, customer_name: row.name || '' });
+                }}
+              />
             </div>
             {customerOpen && (
               <div className="absolute z-30 mt-1 w-full max-h-72 overflow-y-auto rounded-md border bg-white shadow-lg">
@@ -1099,61 +1060,6 @@ export default function BookingForm({ bookingId = null, onSaved = () => {}, onCa
         </div>
       </div>
 
-      <Dialog open={customerDialog} onOpenChange={setCustomerDialog}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>New Customer</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-3">
-            <div>
-              <Label>Name *</Label>
-              <Input
-                className="mt-1"
-                value={newCustomer.name}
-                onChange={(e) => setNewCustomer((prev) => ({ ...prev, name: e.target.value }))}
-              />
-            </div>
-            <div>
-              <Label>Phone</Label>
-              <Input
-                className="mt-1"
-                value={newCustomer.phone}
-                onChange={(e) => setNewCustomer((prev) => ({ ...prev, phone: e.target.value }))}
-              />
-            </div>
-            <div>
-              <Label>Email</Label>
-              <Input
-                type="email"
-                className="mt-1"
-                value={newCustomer.email}
-                onChange={(e) => setNewCustomer((prev) => ({ ...prev, email: e.target.value }))}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setCustomerDialog(false)}
-              disabled={creatingCustomer}
-            >
-              Cancel
-            </Button>
-            <Button
-              type="button"
-              className="bg-[#003D82] hover:bg-[#002855]"
-              onClick={saveCustomer}
-              disabled={creatingCustomer}
-            >
-              {creatingCustomer
-                ? <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                : <UserPlus className="mr-2 h-4 w-4" />}
-              Save Customer
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </form>
   );
 }

@@ -18,6 +18,7 @@ import BookingDetailsModal, {
   bookingPeriod, downloadBookingSheet, printBookingSheet,
 } from '@/components/erp/rentals/BookingDetailsModal';
 import { formatErpDate, makeMoney, num } from '@/lib/erpFormat';
+import { QuickAddCustomerButton } from '@/components/erp/CustomerSelect';
 import {
   BOOKING_STATUSES, BOOKING_STATUS_META, REVIEW_STATUS_META, SIGNATURE_STATUS_META, statusMeta,
 } from '@/lib/rentalFormat';
@@ -456,14 +457,23 @@ export default function BookingListPanel({
               {warehouses.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
             </select>
 
-            <select
-              className="h-9 rounded-md border px-2 text-sm max-w-[200px]"
-              value={filters.customer_id}
-              onChange={(e) => setFilter({ customer_id: e.target.value })}
-            >
-              <option value="">All customers</option>
-              {customers.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-            </select>
+            <div className="flex items-center gap-2">
+              <select
+                className="h-9 rounded-md border px-2 text-sm max-w-[200px]"
+                value={filters.customer_id}
+                onChange={(e) => setFilter({ customer_id: e.target.value })}
+              >
+                <option value="">All customers</option>
+                {customers.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
+              <QuickAddCustomerButton
+                size="sm"
+                onCreated={(row) => {
+                  setCustomers((prev) => [row, ...prev.filter((c) => String(c.id) !== String(row.id))]);
+                  setFilter({ customer_id: row.id });
+                }}
+              />
+            </div>
 
             <Button type="button" size="sm" variant="outline" onClick={resetFilters}>
               <RotateCcw className="h-4 w-4 mr-1" /> Reset

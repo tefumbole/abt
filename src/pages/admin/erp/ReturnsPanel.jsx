@@ -9,6 +9,7 @@ import {
   listCustomers, listProducts, listPurchaseReturns, listPurchases, listSaleReturns,
   listSales, listSuppliers, listWarehouses,
 } from '@/services/erpService';
+import { QuickAddCustomerButton } from '@/components/erp/CustomerSelect';
 import ErpShell from './ErpShell';
 
 const emptySaleLine = () => ({ product_id: '', qty: 1, net_unit_price: 0 });
@@ -223,14 +224,22 @@ export default function ReturnsPanel() {
             </div>
             <div>
               <Label>Customer (optional)</Label>
-              <select
-                className="w-full border rounded-md h-10 px-2"
-                value={saleForm.customer_id}
-                onChange={(e) => setSaleForm({ ...saleForm, customer_id: e.target.value })}
-              >
-                <option value="">—</option>
-                {customers.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-              </select>
+              <div className="flex gap-2 items-center mt-1">
+                <select
+                  className="flex-1 min-w-0 border rounded-md h-10 px-2"
+                  value={saleForm.customer_id}
+                  onChange={(e) => setSaleForm({ ...saleForm, customer_id: e.target.value })}
+                >
+                  <option value="">—</option>
+                  {customers.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </select>
+                <QuickAddCustomerButton
+                  onCreated={(row) => {
+                    setCustomers((prev) => [row, ...prev.filter((c) => String(c.id) !== String(row.id))]);
+                    setSaleForm((prev) => ({ ...prev, customer_id: row.id }));
+                  }}
+                />
+              </div>
             </div>
           </div>
 

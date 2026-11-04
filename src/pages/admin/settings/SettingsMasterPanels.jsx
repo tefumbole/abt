@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { QuickAddCustomerButton } from '@/components/erp/CustomerSelect';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import {
@@ -1187,14 +1188,22 @@ export function PosSettingsPanel() {
           </div>
           <div className="space-y-2 md:col-span-2">
             <Label>Default walk-in customer</Label>
-            <select
-              className="w-full border rounded-md h-10 px-2 bg-white"
-              value={form.customer_id}
-              onChange={(e) => setField('customer_id', e.target.value)}
-            >
-              <option value="">—</option>
-              {customers.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-            </select>
+            <div className="flex gap-2 items-center">
+              <select
+                className="flex-1 min-w-0 border rounded-md h-10 px-2 bg-white"
+                value={form.customer_id}
+                onChange={(e) => setField('customer_id', e.target.value)}
+              >
+                <option value="">—</option>
+                {customers.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
+              <QuickAddCustomerButton
+                onCreated={(row) => {
+                  setCustomers((prev) => [row, ...prev.filter((c) => String(c.id) !== String(row.id))]);
+                  setField('customer_id', row.id);
+                }}
+              />
+            </div>
           </div>
         </CardContent>
       </Card>

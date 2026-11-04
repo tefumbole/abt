@@ -10,6 +10,7 @@ import {
   PAYING_METHODS, SALE_STATUS_META, num, toDateTimeLocal, toMysqlDateTime,
 } from '@/lib/erpFormat';
 import SearchSelect from '@/components/erp/SearchSelect';
+import CustomerSelect from '@/components/erp/CustomerSelect';
 
 const SALE_STATUS_OPTIONS = Object.entries(SALE_STATUS_META)
   .filter(([value]) => ['completed', 'pending', 'draft'].includes(value))
@@ -46,6 +47,7 @@ export default function SaleFormFields({
   initialSale = null,
   warehouses = [],
   customers = [],
+  setCustomers,
   billers = [],
   products = [],
   money,
@@ -237,12 +239,12 @@ export default function SaleFormFields({
         </div>
         <div>
           <Label>Customer *</Label>
-          <SearchSelect
+          <CustomerSelect
             className="mt-1"
             value={form.customer_id}
             onChange={(customer_id) => patch({ customer_id })}
-            placeholder="Search customer…"
-            options={customers.map((c) => ({ value: c.id, label: c.name, hint: c.phone || '' }))}
+            customers={customers}
+            setCustomers={setCustomers}
           />
         </div>
         <div>

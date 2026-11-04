@@ -15,6 +15,7 @@ import {
   listErpLetters, listFixedAssets, listLeaders, updateContract,
   updateFixedAsset, updateLeader,
 } from '@/services/erpService';
+import { QuickAddCustomerButton } from '@/components/erp/CustomerSelect';
 import ErpShell from './ErpShell';
 
 const CONTRACT_STATUSES = ['draft', 'awaiting_client', 'awaiting_admin', 'signed'];
@@ -74,10 +75,18 @@ export function ContractsPage() {
       }}>
         <div><Label>Title</Label><Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} required /></div>
         <div><Label>Customer</Label>
-          <select className="w-full border rounded-md h-10 px-2" value={form.customer_id} onChange={(e) => setForm({ ...form, customer_id: e.target.value })}>
-            <option value="">—</option>
-            {customers.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-          </select>
+          <div className="flex gap-2 items-center mt-1">
+            <select className="flex-1 min-w-0 border rounded-md h-10 px-2" value={form.customer_id} onChange={(e) => setForm({ ...form, customer_id: e.target.value })}>
+              <option value="">—</option>
+              {customers.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+            </select>
+            <QuickAddCustomerButton
+              onCreated={(row) => {
+                setCustomers((prev) => [row, ...prev.filter((c) => String(c.id) !== String(row.id))]);
+                setForm((prev) => ({ ...prev, customer_id: row.id }));
+              }}
+            />
+          </div>
         </div>
         <div><Label>Body</Label><Textarea rows={5} value={form.body_html} onChange={(e) => setForm({ ...form, body_html: e.target.value })} /></div>
         <Button type="submit">Create contract</Button>
@@ -134,10 +143,18 @@ export function ContractsPage() {
             <form className="space-y-3" onSubmit={saveEdit}>
               <div><Label>Title</Label><Input value={edit.title} onChange={(e) => setEdit({ ...edit, title: e.target.value })} required /></div>
               <div><Label>Customer</Label>
-                <select className="w-full border rounded-md h-10 px-2" value={edit.customer_id} onChange={(e) => setEdit({ ...edit, customer_id: e.target.value })}>
-                  <option value="">—</option>
-                  {customers.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-                </select>
+                <div className="flex gap-2 items-center mt-1">
+                  <select className="flex-1 min-w-0 border rounded-md h-10 px-2" value={edit.customer_id} onChange={(e) => setEdit({ ...edit, customer_id: e.target.value })}>
+                    <option value="">—</option>
+                    {customers.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                  </select>
+                  <QuickAddCustomerButton
+                    onCreated={(row) => {
+                      setCustomers((prev) => [row, ...prev.filter((c) => String(c.id) !== String(row.id))]);
+                      setEdit((prev) => ({ ...prev, customer_id: row.id }));
+                    }}
+                  />
+                </div>
               </div>
               <div><Label>Status</Label>
                 <select className="w-full border rounded-md h-10 px-2" value={edit.status} onChange={(e) => setEdit({ ...edit, status: e.target.value })}>

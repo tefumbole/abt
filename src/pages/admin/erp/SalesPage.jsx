@@ -17,6 +17,7 @@ import { COLORED_TAB_BASE, getTabTheme } from '@/components/admin/tabTheme';
 import SaleDetailsModal from '@/components/erp/SaleDetailsModal';
 import SaleFormFields from '@/components/erp/SaleFormFields';
 import SearchSelect from '@/components/erp/SearchSelect';
+import CustomerSelect from '@/components/erp/CustomerSelect';
 import { AddPaymentModal, ViewPaymentsModal } from '@/components/erp/SalePaymentModals';
 import {
   PAYMENT_STATUS_META, SALE_STATUS_META, formatErpDate, makeMoney, num,
@@ -529,13 +530,14 @@ export default function SalesPage() {
                   />
                 </div>
 
-                <SearchSelect
-                  className="w-[200px]"
+                <CustomerSelect
+                  className="w-[240px]"
                   size="sm"
                   value={filters.customer_id}
                   onChange={(customer_id) => { setPage(1); setFilters((f) => ({ ...f, customer_id })); }}
                   placeholder="All customers"
-                  options={customers.map((c) => ({ value: c.id, label: c.name, hint: c.phone || '' }))}
+                  customers={customers}
+                  setCustomers={setCustomers}
                 />
                 <SearchSelect
                   className="w-[180px]"
@@ -806,6 +808,7 @@ export default function SalesPage() {
           initialSale={editId ? editSale : null}
           warehouses={warehouses}
           customers={customers}
+          setCustomers={setCustomers}
           billers={billers}
           products={products}
           money={money}
