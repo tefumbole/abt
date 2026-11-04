@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  ImagePlus, Loader2, RefreshCw, Save, UploadCloud, X,
+  ImagePlus, Loader2, RefreshCw, Save, X,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -12,6 +12,7 @@ import { PRODUCT_IMAGE_BUCKET, productImageSrc } from '@/lib/erpImages';
 import { nextProductCode } from '@/services/erpService';
 import RichTextField from '@/components/erp/RichTextField';
 import { WarehouseSelect } from '@/components/erp/WarehouseBillerSelect';
+import PasteableImage from '@/components/erp/PasteableImage';
 
 const API_BASE = import.meta.env.VITE_API_URL || '/api';
 const IMAGE_BUCKET = PRODUCT_IMAGE_BUCKET;
@@ -129,7 +130,6 @@ export default function ProductFormFields({
   const [uploading, setUploading] = useState(false);
   const [dragging, setDragging] = useState(false);
   const [codeLoading, setCodeLoading] = useState(false);
-  const fileRef = useRef(null);
   const codeSeeded = useRef(mode !== 'create');
 
   // Stockless types are intangible: no brand, units, cost or inventory either.
@@ -246,7 +246,6 @@ export default function ProductFormFields({
       toast.error(err.message || 'Image upload failed');
     } finally {
       setUploading(false);
-      if (fileRef.current) fileRef.current.value = '';
     }
   };
 
@@ -619,51 +618,30 @@ export default function ProductFormFields({
 
       <div>
         <Label>Product Image</Label>
+        <p className="mt-1 mb-2 text-xs text-slate-500">Click the picture to paste. Double-click to attach a file.</p>
         <div
-          role="button"
-          tabIndex={0}
-          onClick={() => !uploading && fileRef.current?.click()}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' || e.key === ' ') {
-              e.preventDefault();
-              if (!uploading) fileRef.current?.click();
-            }
-          }}
           onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
           onDragLeave={() => setDragging(false)}
           onDrop={onDrop}
           className={cn(
-            'mt-1 flex min-h-[140px] cursor-pointer flex-col items-center justify-center gap-2',
-            'rounded-lg border-2 border-dashed p-6 text-sm transition-colors',
-            dragging ? 'border-[#003D82] bg-blue-50' : 'border-slate-300 hover:bg-slate-50',
-            uploading && 'cursor-wait opacity-70'
+            'rounded-lg border-2 border-dashed p-3',
+            dragging ? 'border-[#003D82] bg-blue-50' : 'border-slate-300'
           )}
         >
-          {uploading ? (
-            <>
-              <Loader2 className="h-6 w-6 animate-spin text-[#003D82]" />
-              <span className="text-slate-600">Uploading…</span>
-            </>
-          ) : (
-            <>
-              <UploadCloud className="h-6 w-6 text-slate-400" />
-              <span className="text-slate-500">Drop files here to upload</span>
-              <span className="text-xs text-slate-400">or click to browse (max 50MB)</span>
-            </>
-          )}
-          <input
-            ref={fileRef}
-            type="file"
-            accept="image/*"
-            className="hidden"
-            onChange={(e) => handleFile(e.target.files?.[0])}
+          <PasteableImage
+            src={preview}
+            uploading={uploading}
+            size="lg"
+            onFile={handleFile}
           />
         </div>
         {preview && (
           <div className="mt-3 flex items-center gap-3 rounded-lg border p-2">
-            <div className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-md border bg-slate-50">
-              <img src={preview} alt="Product" className="max-h-full max-w-full object-contain" />
-            </div>
+            <PasteableImage
+              src={preview}
+              uploading={uploading}
+              onFile={handleFile}
+            />
             <div className="min-w-0 flex-1">
               <p className="flex items-center gap-1 text-sm font-medium text-slate-700">
                 <ImagePlus className="h-4 w-4 text-slate-400" /> Product image

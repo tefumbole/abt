@@ -1,8 +1,8 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
   ChevronDown, FileSpreadsheet, FileText,
-  Loader2, Plus, Printer, Search, Eye, X, UploadCloud,
+  Loader2, Plus, Printer, Search, Eye, X,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -67,7 +67,6 @@ export default function ProductsPage() {
   const [catForm, setCatForm] = useState({ name: '', parent_id: '', image_url: '' });
   const [catUploading, setCatUploading] = useState(false);
   const [catDragging, setCatDragging] = useState(false);
-  const catFileRef = useRef(null);
   const [importText, setImportText] = useState('name,parent_category\n');
   const [imageBusy, setImageBusy] = useState('');
   const [pasteTarget, setPasteTarget] = useState(null);
@@ -237,7 +236,6 @@ export default function ProductsPage() {
       toast.error(err.message || 'Image upload failed');
     } finally {
       setCatUploading(false);
-      if (catFileRef.current) catFileRef.current.value = '';
     }
   };
 
@@ -810,10 +808,8 @@ export default function ProductsPage() {
             </div>
             <div>
               <Label>Category image</Label>
+              <p className="mt-1 mb-2 text-xs text-slate-500">Click the picture to paste. Double-click to attach a file.</p>
               <div
-                role="button"
-                tabIndex={0}
-                onClick={() => !catUploading && catFileRef.current?.click()}
                 onDragOver={(e) => { e.preventDefault(); setCatDragging(true); }}
                 onDragLeave={() => setCatDragging(false)}
                 onDrop={(e) => {
@@ -822,37 +818,24 @@ export default function ProductsPage() {
                   handleCategoryFile(e.dataTransfer?.files?.[0]);
                 }}
                 className={cn(
-                  'mt-1 flex min-h-[120px] cursor-pointer flex-col items-center justify-center gap-2',
-                  'rounded-lg border-2 border-dashed p-4 text-sm transition-colors',
-                  catDragging ? 'border-[#003D82] bg-blue-50' : 'border-slate-300 hover:bg-slate-50',
-                  catUploading && 'cursor-wait opacity-70'
+                  'rounded-lg border-2 border-dashed p-3',
+                  catDragging ? 'border-[#003D82] bg-blue-50' : 'border-slate-300'
                 )}
               >
-                {catUploading ? (
-                  <>
-                    <Loader2 className="h-6 w-6 animate-spin text-[#003D82]" />
-                    <span className="text-slate-600">Uploading…</span>
-                  </>
-                ) : (
-                  <>
-                    <UploadCloud className="h-6 w-6 text-slate-400" />
-                    <span className="text-slate-600">Drop, click, or paste an image</span>
-                    <span className="text-xs text-slate-400">PNG, JPG, or WebP</span>
-                  </>
-                )}
-                <input
-                  ref={catFileRef}
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={(e) => handleCategoryFile(e.target.files?.[0])}
+                <PasteableImage
+                  src={categoryImageSrc(catForm.image_url)}
+                  uploading={catUploading}
+                  size="lg"
+                  onFile={handleCategoryFile}
                 />
               </div>
               {catForm.image_url ? (
                 <div className="mt-3 flex items-center gap-3 rounded-lg border p-2">
-                  <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-md border bg-slate-50">
-                    <img src={categoryImageSrc(catForm.image_url)} alt="" className="max-h-full max-w-full object-contain" />
-                  </div>
+                  <PasteableImage
+                    src={categoryImageSrc(catForm.image_url)}
+                    uploading={catUploading}
+                    onFile={handleCategoryFile}
+                  />
                   <div className="min-w-0 flex-1 text-xs text-slate-500 truncate">{catForm.image_url}</div>
                   <Button type="button" variant="ghost" size="icon" onClick={() => setCatForm({ ...catForm, image_url: '' })}>
                     <X className="h-4 w-4 text-red-600" />
