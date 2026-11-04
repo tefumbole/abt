@@ -10,18 +10,22 @@ export function useSiteContent() {
 
   useEffect(() => {
     let cancelled = false;
-    (async () => {
+    const load = async ({ force = false } = {}) => {
       try {
-        const next = await getPublicSiteContent();
+        const next = await getPublicSiteContent({ force });
         if (!cancelled) setData(next || { landingMenu: [], pages: {} });
       } catch (err) {
         console.warn('Site content unavailable, using defaults', err?.message);
       } finally {
         if (!cancelled) setLoading(false);
       }
-    })();
+    };
+    load();
+    const onUpdated = () => load({ force: true });
+    window.addEventListener('alphabridge:site-content-updated', onUpdated);
     return () => {
       cancelled = true;
+      window.removeEventListener('alphabridge:site-content-updated', onUpdated);
     };
   }, []);
 

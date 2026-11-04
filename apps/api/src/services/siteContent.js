@@ -278,13 +278,6 @@ export function contentTabItems() {
   return Object.fromEntries(Object.entries(PAGE_SCHEMA).map(([k, p]) => [k, p.label]));
 }
 
-function placeReviewsAfterEvents(keys) {
-  const next = keys.filter((key) => key !== 'reviews');
-  const eventsAt = next.indexOf('events');
-  next.splice(eventsAt >= 0 ? eventsAt + 1 : 2, 0, 'reviews');
-  return next;
-}
-
 export function mergeOrder(saved, items) {
   const keys = Object.keys(items);
   const ordered = [];
@@ -402,12 +395,12 @@ export async function getPublicSiteContent(pool) {
   const menus = await getMenuBundle(pool);
   const pages = await getAllPageContent(pool);
   return {
-    landingMenu: placeReviewsAfterEvents(
-      menus.landing.order.filter((key) => key !== 'register' && LANDING_MENU_ITEMS[key])
-    ).map((key) => ({
-      key,
-      ...LANDING_MENU_ITEMS[key],
-    })),
+    landingMenu: menus.landing.order
+      .filter((key) => key !== 'register' && LANDING_MENU_ITEMS[key])
+      .map((key) => ({
+        key,
+        ...LANDING_MENU_ITEMS[key],
+      })),
     pages,
   };
 }

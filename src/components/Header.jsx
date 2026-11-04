@@ -38,7 +38,7 @@ const DEFAULT_LANDING_MENU = [
 
 function normalizeLandingMenu(items) {
   const source = Array.isArray(items) && items.length ? items : DEFAULT_LANDING_MENU;
-  const next = source
+  return source
     .filter((item) => item?.key && !REMOVED_LANDING_KEYS.has(item.key) && item.icon !== 'scan')
     .map((item) => {
       if (item.key === 'about') {
@@ -54,15 +54,6 @@ function normalizeLandingMenu(items) {
       }
       return item;
     });
-  if (!next.some((item) => item.key === 'reviews')) {
-    const eventsAt = next.findIndex((item) => item.key === 'events');
-    next.splice(eventsAt >= 0 ? eventsAt + 1 : 2, 0, {
-      key: 'reviews',
-      label: 'Reviews',
-      path: '/reviews',
-    });
-  }
-  return next;
 }
 
 function Header() {
