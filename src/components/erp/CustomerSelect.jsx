@@ -161,6 +161,8 @@ export default function CustomerSelect({
         }))}
         placeholder="Search customer…"
         emptyLabel="No customer matches"
+        requireQuery
+        typeHint="Start typing a name or phone"
         {...selectProps}
       />
       <QuickAddCustomerButton size={size} className={buttonClassName} onCreated={handleCreated} />

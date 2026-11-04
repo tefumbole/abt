@@ -15,6 +15,8 @@ export default function SearchSelect({
   className,
   allowClear = true,
   size = 'md',
+  requireQuery = false,
+  typeHint = 'Start typing to search',
 }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
@@ -25,12 +27,12 @@ export default function SearchSelect({
 
   const matches = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return options.slice(0, 80);
+    if (!q) return requireQuery ? [] : options.slice(0, 80);
     return options.filter((o) => (
       String(o.label || '').toLowerCase().includes(q)
       || String(o.hint || '').toLowerCase().includes(q)
     )).slice(0, 80);
-  }, [options, query]);
+  }, [options, query, requireQuery]);
 
   useEffect(() => {
     const close = (event) => {
@@ -100,10 +102,12 @@ export default function SearchSelect({
             />
           </div>
           <div className="max-h-64 overflow-y-auto">
-            {!matches.length && (
+            {requireQuery && !query.trim() ? (
+              <div className="px-3 py-6 text-center text-sm text-slate-500">{typeHint}</div>
+            ) : !matches.length ? (
               <div className="px-3 py-6 text-center text-sm text-slate-500">{emptyLabel}</div>
-            )}
-            {matches.map((option) => {
+            ) : null}
+            {(!requireQuery || query.trim()) && matches.map((option) => {
               const active = String(option.value) === String(value);
               return (
                 <button

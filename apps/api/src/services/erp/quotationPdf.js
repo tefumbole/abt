@@ -6,7 +6,12 @@ import { getPool } from '../../db/pool.js';
 import { money, stampDate } from './quotationStatus.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const uploadRoot = path.resolve(process.env.UPLOAD_DIR || path.join(__dirname, '../../../uploads'));
+const uploadRoots = [
+  process.env.UPLOAD_DIR ? path.resolve(process.env.UPLOAD_DIR) : null,
+  path.resolve(path.join(__dirname, '../../../uploads')),
+  path.resolve(path.join(__dirname, '../../uploads')),
+  path.resolve('./uploads'),
+].filter(Boolean);
 
 const NAVY = '#003D82';
 const SLATE = '#475569';
@@ -27,15 +32,36 @@ async function loadSettings() {
   }
 }
 
+function sanitizeStorageKey(input) {
+  return String(input || 'file').replace(/[^a-zA-Z0-9._-]/g, '_');
+}
+
+function appOrigin() {
+  return String(
+    process.env.APP_URL || process.env.APP_BASE_URL || process.env.PUBLIC_URL || 'https://alpha-bridge.net'
+  ).replace(/\/$/, '');
+}
+
+function supabasePublicUrl(filePath) {
+  const base = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || 'https://xnfurysmtmxkfsdjghow.supabase.co';
+  if (!base || !filePath) return null;
+  return `${String(base).replace(/\/$/, '')}/storage/v1/object/public/system-assets/${String(filePath).replace(/^\/+/, '')}`;
+}
+
 function resolveLocalFile(filePath) {
   if (!filePath) return null;
   const raw = String(filePath);
   if (path.isAbsolute(raw) && fs.existsSync(raw)) return raw;
-  const candidates = [
-    path.join(uploadRoot, raw),
-    path.join(uploadRoot, path.basename(raw)),
-    path.resolve(raw),
-  ];
+  const base = path.basename(raw);
+  const names = [raw, base, sanitizeStorageKey(raw), sanitizeStorageKey(base)];
+  const candidates = [];
+  uploadRoots.forEach((root) => {
+    names.forEach((name) => {
+      candidates.push(path.join(root, name));
+      candidates.push(path.join(root, 'system-assets', name));
+    });
+  });
+  candidates.push(path.resolve(raw));
   return candidates.find((p) => fs.existsSync(p)) || null;
 }
 
@@ -57,6 +83,25 @@ async function loadImage(source) {
     } catch {
       return null;
     }
+  }
+  return null;
+}
+
+async function loadBrandingImage(filePath, publicUrl) {
+  const tries = [];
+  const add = (value) => {
+    if (value && !tries.includes(value)) tries.push(value);
+  };
+  add(publicUrl);
+  add(filePath);
+  if (filePath) {
+    add(supabasePublicUrl(filePath));
+    add(`${appOrigin()}/api/upload/system-assets/${encodeURIComponent(sanitizeStorageKey(filePath))}`);
+    add(`${appOrigin()}/api/upload/system-assets/${encodeURIComponent(sanitizeStorageKey(path.basename(filePath)))}`);
+  }
+  for (const src of tries) {
+    const img = await loadImage(src);
+    if (img) return img;
   }
   return null;
 }
@@ -109,12 +154,12 @@ export async function buildQuotationPdfBuffer(quotation) {
     : quotation.client_signature_data
       ? Buffer.from(String(quotation.client_signature_data).split(',').pop() || '', 'base64')
       : null;
-  const headerImg = await loadImage(settings.pdf_header_file_path || settings.pdf_header_url);
-  const footerImg = await loadImage(settings.pdf_footer_file_path || settings.pdf_footer_url);
-  const logoImg = await loadImage(settings.logo_file_path || settings.logo_url);
-  const watermarkImg = await loadImage(settings.pdf_watermark_file_path || settings.pdf_watermark_url);
+  const headerImg = await loadBrandingImage(settings.pdf_header_file_path, settings.pdf_header_url);
+  const footerImg = await loadBrandingImage(settings.pdf_footer_file_path, settings.pdf_footer_url);
+  const logoImg = await loadBrandingImage(settings.logo_file_path, settings.logo_url);
+  const watermarkImg = await loadBrandingImage(settings.pdf_watermark_file_path, settings.pdf_watermark_url);
 
-  const doc = new PDFDocument({ size: 'A4', margin: 42, info: { Title: `Quotation ${quotation.reference}`, Author: company } });
+  const doc = new PDFDocument({ size: 'A4', margin: 36, info: { Title: `Quotation ${quotation.reference}`, Author: company } });
   const chunks = [];
   doc.on('data', (c) => chunks.push(c));
   const done = new Promise((resolve, reject) => {
@@ -127,42 +172,67 @@ export async function buildQuotationPdfBuffer(quotation) {
   const left = 42;
   const right = pageW - 42;
   const width = right - left;
+  const HEADER_H = 100;
+  const FOOTER_H = 56;
 
-  if (watermarkImg) {
-    try {
+  function drawWatermark() {
+    if (watermarkImg) {
+      try {
+        doc.save();
+        doc.opacity(0.07);
+        doc.image(watermarkImg, pageW / 2 - 140, pageH / 2 - 140, { fit: [280, 280], align: 'center' });
+        doc.restore();
+      } catch { /* ignore */ }
+    } else {
       doc.save();
-      doc.opacity(0.07);
-      doc.image(watermarkImg, pageW / 2 - 140, pageH / 2 - 140, { fit: [280, 280], align: 'center' });
+      doc.fillColor('#e2e8f0').opacity(0.35);
+      doc.fontSize(42);
+      doc.rotate(-32, { origin: [pageW / 2, pageH / 2] });
+      doc.text(company, 80, pageH / 2 - 20, { width: pageW - 160, align: 'center' });
+      doc.rotate(32, { origin: [pageW / 2, pageH / 2] });
       doc.restore();
-    } catch { /* ignore */ }
-  } else {
-    doc.save();
-    doc.fillColor('#e2e8f0').opacity(0.35);
-    doc.fontSize(42);
-    doc.rotate(-32, { origin: [pageW / 2, pageH / 2] });
-    doc.text(company, 80, pageH / 2 - 20, { width: pageW - 160, align: 'center' });
-    doc.rotate(32, { origin: [pageW / 2, pageH / 2] });
-    doc.restore();
+    }
   }
 
-  let y = 42;
-  if (headerImg) {
-    try {
-      doc.image(headerImg, left, y, { fit: [width, 70] });
-      y += 78;
-    } catch { /* ignore */ }
+  function drawLetterhead() {
+    if (headerImg) {
+      try {
+        doc.image(headerImg, left, 16, { fit: [width, HEADER_H], align: 'center' });
+      } catch { /* ignore */ }
+    }
+    if (footerImg) {
+      try {
+        doc.image(footerImg, left, pageH - FOOTER_H - 12, { fit: [width, FOOTER_H], align: 'center' });
+      } catch { /* ignore */ }
+    } else if (settings.pdf_footer_text || settings.copyright_text) {
+      doc.font('Helvetica').fontSize(8).fillColor(MUTED);
+      doc.text(settings.pdf_footer_text || settings.copyright_text, left, pageH - 36, { width, align: 'center' });
+    }
   }
 
-  if (logoImg) {
-    try {
-      doc.image(logoImg, left, y, { fit: [56, 56] });
-    } catch { /* ignore */ }
-  }
-  doc.fillColor(NAVY).font('Helvetica-Bold').fontSize(16);
-  doc.text(company, left + (logoImg ? 68 : 0), y, { width: width / 2 });
-  if (settings.pdf_header_text) {
+  drawWatermark();
+  drawLetterhead();
+  doc.on('pageAdded', () => {
+    drawWatermark();
+    drawLetterhead();
+  });
+
+  let y = headerImg ? 16 + HEADER_H + 8 : 42;
+  if (!headerImg) {
+    if (logoImg) {
+      try {
+        doc.image(logoImg, left, y, { fit: [56, 56] });
+      } catch { /* ignore */ }
+    }
+    doc.fillColor(NAVY).font('Helvetica-Bold').fontSize(16);
+    doc.text(company, left + (logoImg ? 68 : 0), y, { width: width / 2 });
+    if (settings.pdf_header_text) {
+      doc.font('Helvetica').fontSize(9).fillColor(SLATE);
+      doc.text(String(settings.pdf_header_text), left + (logoImg ? 68 : 0), y + 20, { width: width / 2 });
+    }
+  } else if (settings.pdf_header_text) {
     doc.font('Helvetica').fontSize(9).fillColor(SLATE);
-    doc.text(String(settings.pdf_header_text), left + (logoImg ? 68 : 0), y + 20, { width: width / 2 });
+    doc.text(String(settings.pdf_header_text), left, y, { width: width / 2 });
   }
 
   doc.fillColor(NAVY).font('Helvetica-Bold').fontSize(20);
@@ -170,7 +240,7 @@ export async function buildQuotationPdfBuffer(quotation) {
   doc.font('Helvetica').fontSize(10).fillColor(SLATE);
   doc.text(quotation.reference || '', left + width / 2, y + 24, { width: width / 2, align: 'right' });
   doc.text(stampDate(quotation.created_at), left + width / 2, y + 38, { width: width / 2, align: 'right' });
-  y += 78;
+  y += headerImg ? 58 : 78;
 
   doc.moveTo(left, y).lineTo(right, y).strokeColor(NAVY).lineWidth(2).stroke();
   y += 16;
@@ -214,9 +284,9 @@ export async function buildQuotationPdfBuffer(quotation) {
   y += 22;
 
   items.forEach((item, i) => {
-    if (y > pageH - 180) {
+    if (y > pageH - (footerImg ? 220 : 180)) {
       doc.addPage();
-      y = 42;
+      y = headerImg ? 16 + HEADER_H + 12 : 42;
     }
     const qty = Number(item.qty || 0);
     const unit = Number(item.net_unit_price || 0);
@@ -268,7 +338,7 @@ export async function buildQuotationPdfBuffer(quotation) {
     y += doc.heightOfString(String(quotation.note), { width }) + 10;
   }
 
-  y = Math.max(y + 20, pageH - 200);
+  y = Math.max(y + 20, pageH - (footerImg ? 230 : 200));
   const colW = (width - 24) / 2;
   const creatorName = creator?.name || creator?.full_name || 'Staff';
   const creatorEmail = creator?.email || '';
@@ -303,15 +373,6 @@ export async function buildQuotationPdfBuffer(quotation) {
     }
     doc.font('Helvetica').fontSize(8).fillColor(SLATE);
     doc.text(stampDate(quotation.client_signed_at), rightX, rightY, { width: colW });
-  }
-
-  if (footerImg) {
-    try {
-      doc.image(footerImg, left, pageH - 70, { fit: [width, 40] });
-    } catch { /* ignore */ }
-  } else if (settings.pdf_footer_text || settings.copyright_text) {
-    doc.font('Helvetica').fontSize(8).fillColor(MUTED);
-    doc.text(settings.pdf_footer_text || settings.copyright_text, left, pageH - 52, { width, align: 'center' });
   }
 
   doc.end();

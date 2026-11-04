@@ -372,14 +372,16 @@ export async function previewAnnouncementPayload(body, files = []) {
     };
     const headerPlain = personalize(body.header_html || body.header || '', data);
     const bodyPlain = personalize(body.body_html || body.body || '', data);
+    const footerPlain = personalize(body.footer_html || body.footer || '', data);
     return {
       name: recipient.name || '',
       email: recipient.email || null,
       phone: recipient.phone || recipient.phone_number || null,
       address: recipient.address || null,
-      personalized_message: [headerPlain, bodyPlain].filter(Boolean).join('\n\n'),
+      personalized_message: [headerPlain, bodyPlain, footerPlain].filter(Boolean).join('\n\n'),
       body_html: bodyPlain,
       header_html: headerPlain,
+      footer_html: footerPlain,
     };
   });
 
@@ -415,7 +417,7 @@ export async function createAnnouncementFromRequest(body, files = [], userId = n
     subject: body.title || body.subject || '',
     header: stripHtml(body.header_html || body.header || defaultHeader),
     body: stripHtml(body.body_html || body.body || ''),
-    footer: stripHtml(body.footer || ''),
+    footer: stripHtml(body.footer_html || body.footer || settings.defaultFooter || ''),
     category: body.category || 'general',
     people_type: body.audience_type || body.peopleType || 'customers',
     recipient_ids: recipients.map((r) => r.recipient_id || r.id || r.email).filter(Boolean).join(','),
@@ -589,6 +591,7 @@ export async function listAnnouncementTemplates(search = '') {
     subject: t.subject,
     header_html: t.header_html,
     body_html: t.body_html,
+    footer_html: t.footer_html || t.footer || '',
   }));
 
   if (search.trim()) {
@@ -602,18 +605,19 @@ export async function listAnnouncementTemplates(search = '') {
 }
 
 export async function createAnnouncementTemplate(payload) {
-  const { data, error } = await supabase
-    .from('announcement_templates')
-    .insert({
-      name: payload.name,
-      category: payload.category || 'general',
-      subject: payload.subject || '',
-      header_html: payload.header_html || COMPANY_NAME,
-      body_html: payload.body_html || '',
-    })
-    .select()
-    .single();
-
+  const row = {
+    name: payload.name,
+    category: payload.category || 'general',
+    subject: payload.subject || '',
+    header_html: payload.header_html || COMPANY_NAME,
+    body_html: payload.body_html || '',
+    footer_html: payload.footer_html || payload.footer || '',
+  };
+  let { data, error } = await supabase.from('announcement_templates').insert(row).select().single();
+  if (error && /footer_html|footer/i.test(error.message || '')) {
+    delete row.footer_html;
+    ({ data, error } = await supabase.from('announcement_templates').insert(row).select().single());
+  }
   if (error) throw error;
   return data;
 }

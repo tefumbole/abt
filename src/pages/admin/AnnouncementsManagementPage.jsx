@@ -104,6 +104,7 @@ const AnnouncementsManagementPage = ({ mode: modeProp }) => {
 	const [title, setTitle] = useState('');
 	const [headerHtml, setHeaderHtml] = useState('Alpha Bridge');
 	const [bodyHtml, setBodyHtml] = useState('Dear {name},');
+	const [footerHtml, setFooterHtml] = useState('');
 	const [attachments, setAttachments] = useState([]);
 	const [recipientTab, setRecipientTab] = useState('customers');
 	const [searchQuery, setSearchQuery] = useState('');
@@ -148,6 +149,7 @@ const AnnouncementsManagementPage = ({ mode: modeProp }) => {
 		setTitle(incoming.subject || '');
 		setHeaderHtml(incoming.header_html || 'Alpha Bridge');
 		setBodyHtml(incoming.body_html || 'Dear {name},');
+		setFooterHtml(incoming.footer_html || incoming.footer || '');
 		setCategory(incoming.category || 'general');
 		setTemplateKey('blank');
 		toast.success('Template loaded into compose form.');
@@ -170,6 +172,7 @@ const AnnouncementsManagementPage = ({ mode: modeProp }) => {
 			.then((res) => res.json())
 			.then((data) => {
 				if (data.settings?.defaultHeader) setHeaderHtml(data.settings.defaultHeader);
+				if (data.settings?.defaultFooter) setFooterHtml(data.settings.defaultFooter);
 			})
 			.catch(() => {});
 	}, []);
@@ -178,6 +181,10 @@ const AnnouncementsManagementPage = ({ mode: modeProp }) => {
 		if (recipientTab === 'custom') {
 			setSearchResults([]);
 			return;
+		}
+		if (!searchQuery.trim()) {
+			setSearchResults([]);
+			return undefined;
 		}
 		const timer = setTimeout(async () => {
 			try {
@@ -189,7 +196,7 @@ const AnnouncementsManagementPage = ({ mode: modeProp }) => {
 			} catch {
 				setSearchResults([]);
 			}
-		}, searchQuery.trim() ? 250 : 0);
+		}, 250);
 		return () => clearTimeout(timer);
 	}, [recipientTab, searchQuery]);
 
@@ -199,6 +206,7 @@ const AnnouncementsManagementPage = ({ mode: modeProp }) => {
 		setTitle('');
 		setHeaderHtml('Alpha Bridge');
 		setBodyHtml('Dear {name}');
+		setFooterHtml('');
 		setAttachments([]);
 		setRecipients([]);
 		setScheduleLater(false);
@@ -224,6 +232,8 @@ const AnnouncementsManagementPage = ({ mode: modeProp }) => {
 		payload.append('category', category);
 		payload.append('header_html', headerHtml.trim());
 		payload.append('body_html', bodyHtml);
+		payload.append('footer_html', footerHtml.trim());
+		payload.append('footer', footerHtml.trim());
 		payload.append('audience_type', recipientTab === 'custom' ? 'custom' : recipientTab);
 		payload.append('recipients', JSON.stringify(recipients.map((r) => ({
 			name: r.name,
@@ -294,8 +304,8 @@ const AnnouncementsManagementPage = ({ mode: modeProp }) => {
 		setCustomPhone('');
 	}
 
-	function addAttachments(files) {
-		const incoming = Array.from(files);
+	const addAttachments = useCallback((files) => {
+		const incoming = Array.from(files || []);
 		const valid = incoming.filter((file) => {
 			if (file.size > MAX_ATTACHMENT_BYTES) {
 				toast.error(`${file.name} exceeds 10MB and was skipped.`);
@@ -311,6 +321,43 @@ const AnnouncementsManagementPage = ({ mode: modeProp }) => {
 			});
 			return next;
 		});
+	}, []);
+
+	useEffect(() => {
+		if (mode !== 'compose') return undefined;
+		const onPaste = (event) => {
+			const files = Array.from(event.clipboardData?.files || []).filter((file) => file.type.startsWith('image/'));
+			if (!files.length) return;
+			event.preventDefault();
+			addAttachments(files);
+			toast.success(`Pasted ${files.length} image${files.length === 1 ? '' : 's'}.`);
+		};
+		window.addEventListener('paste', onPaste);
+		return () => window.removeEventListener('paste', onPaste);
+	}, [mode, addAttachments]);
+
+	async function pasteFromClipboard() {
+		try {
+			if (navigator.clipboard?.read) {
+				const items = await navigator.clipboard.read();
+				const files = [];
+				for (const item of items) {
+					const type = item.types.find((t) => t.startsWith('image/'));
+					if (!type) continue;
+					const blob = await item.getType(type);
+					const ext = type.split('/')[1] || 'png';
+					files.push(new File([blob], `pasted-${Date.now()}.${ext}`, { type }));
+				}
+				if (files.length) {
+					addAttachments(files);
+					toast.success(`Pasted ${files.length} image${files.length === 1 ? '' : 's'}.`);
+					return;
+				}
+			}
+		} catch {
+			/* clipboard API denied — fall through to Ctrl+V hint */
+		}
+		toast.message('Press Ctrl+V or ⌘V to paste an image');
 	}
 
 	function insertPlaceholder(token) {
@@ -332,6 +379,7 @@ const AnnouncementsManagementPage = ({ mode: modeProp }) => {
 			setBodyHtml('Dear {name}');
 			setCategory('general');
 			setHeaderHtml('Alpha Bridge');
+			setFooterHtml('');
 			return;
 		}
 		const tmpl = templates.find((item) => String(item.id) === key);
@@ -339,6 +387,7 @@ const AnnouncementsManagementPage = ({ mode: modeProp }) => {
 			setTitle(tmpl.subject || '');
 			setHeaderHtml(tmpl.header_html || 'Alpha Bridge');
 			setBodyHtml(tmpl.body_html || 'Dear {name}');
+			setFooterHtml(tmpl.footer_html || tmpl.footer || '');
 			setCategory(tmpl.category || 'general');
 			toast.success(`Template "${tmpl.name}" loaded.`);
 		}
@@ -416,6 +465,7 @@ const AnnouncementsManagementPage = ({ mode: modeProp }) => {
 					subject: tmpl.subject,
 					header_html: tmpl.header_html,
 					body_html: tmpl.body_html,
+					footer_html: tmpl.footer_html || tmpl.footer,
 					category: tmpl.category,
 				},
 			},
@@ -436,6 +486,7 @@ const AnnouncementsManagementPage = ({ mode: modeProp }) => {
 					subject: title.trim(),
 					header_html: headerHtml.trim(),
 					body_html: bodyHtml,
+					footer_html: footerHtml.trim(),
 				}),
 			});
 			const data = await res.json();
@@ -580,9 +631,14 @@ const AnnouncementsManagementPage = ({ mode: modeProp }) => {
 											<Textarea ref={bodyRef} rows={10} value={bodyHtml} onChange={(e) => setBodyHtml(e.target.value)} className="font-mono text-sm" />
 										</div>
 										<div className="space-y-2">
+											<Label>Footer (WhatsApp closing line)</Label>
+											<Input value={footerHtml} onChange={(e) => setFooterHtml(e.target.value)} placeholder="e.g. Alpha Bridge Technologies Ltd — Kigali" />
+										</div>
+										<div className="space-y-2">
 											<Label>Attachments (max 10MB each)</Label>
 											<div className="rounded-2xl border-2 border-dashed bg-slate-50/60 px-6 py-6 text-center">
 												<Paperclip className="mx-auto mb-2 h-6 w-6 text-muted-foreground" />
+												<p className="mb-3 text-xs text-muted-foreground">Paste an image with Ctrl+V / ⌘V, click Paste, or browse files.</p>
 												{attachments.length > 0 && (
 													<ul className="mb-3 space-y-1 text-sm text-left">
 														{attachments.map((file, index) => (
@@ -593,8 +649,11 @@ const AnnouncementsManagementPage = ({ mode: modeProp }) => {
 														))}
 													</ul>
 												)}
-												<input ref={fileInputRef} type="file" multiple className="hidden" onChange={(e) => { if (e.target.files?.length) addAttachments(e.target.files); e.target.value = ''; }} />
-												<Button type="button" variant="outline" onClick={() => fileInputRef.current?.click()}>Browse Files</Button>
+												<input ref={fileInputRef} type="file" accept="image/*,.pdf,.doc,.docx" multiple className="hidden" onChange={(e) => { if (e.target.files?.length) addAttachments(e.target.files); e.target.value = ''; }} />
+												<div className="flex flex-wrap items-center justify-center gap-2">
+													<Button type="button" variant="outline" onClick={pasteFromClipboard}>Paste image</Button>
+													<Button type="button" variant="outline" onClick={() => fileInputRef.current?.click()}>Browse Files</Button>
+												</div>
 											</div>
 										</div>
 									</CardContent>
@@ -663,7 +722,9 @@ const AnnouncementsManagementPage = ({ mode: modeProp }) => {
 											) : (
 												<div className="max-h-48 overflow-auto rounded-xl border">
 													{searchResults.length === 0 ? (
-														<div className="px-3 py-6 text-center text-sm text-muted-foreground">No results</div>
+														<div className="px-3 py-6 text-center text-sm text-muted-foreground">
+															{searchQuery.trim() ? 'No results' : 'Start typing to search'}
+														</div>
 													) : searchResults.map((item) => (
 														<button key={`${item.id}-${item.name}`} type="button" onClick={() => addRecipient({ ...item, recipient_id: item.id })} className="block w-full border-b px-3 py-2.5 text-left text-sm hover:bg-slate-50">
 															<div className="font-semibold">{item.name}</div>
