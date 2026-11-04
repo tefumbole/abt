@@ -19,6 +19,8 @@ import {
   GraduationCap,
   Globe,
   Image as ImageIcon,
+  ShoppingCart,
+  Package,
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -167,6 +169,8 @@ const AdminDashboard = () => {
       : 0;
 
   const quickLinks = [
+    { to: '/admin/erp/sales', title: 'Sales', desc: 'Invoices and POS sales', icon: ShoppingCart },
+    { to: '/admin/erp/products', title: 'Products', desc: 'Stock and catalogue', icon: Package },
     { to: '/admin/applications', title: 'Applications', desc: 'All job applications', icon: FileText },
     { to: '/admin/jobs', title: 'Recruitment', desc: 'Jobs & openings', icon: Briefcase },
     { to: '/admin/shareholders/dashboard', title: 'Shareholders', desc: 'Equity management', icon: TrendingUp },
@@ -307,6 +311,24 @@ const AdminDashboard = () => {
               delay={0.2}
               to="/admin/shareholders/dashboard"
             />
+            <KpiCard
+              title="Sales"
+              value={numberFmt(kpis?.salesCount)}
+              subtitle={`${numberFmt(kpis?.salesTotal)} total · ${numberFmt(kpis?.salesDue)} due`}
+              icon={ShoppingCart}
+              tone="green"
+              delay={0.25}
+              to="/admin/erp/sales"
+            />
+            <KpiCard
+              title="Products"
+              value={numberFmt(kpis?.productCount)}
+              subtitle={`${numberFmt(kpis?.productQty)} in stock · ${numberFmt(kpis?.productValue)} value`}
+              icon={Package}
+              tone="blue"
+              delay={0.3}
+              to="/admin/erp/products"
+            />
           </div>
 
           <div className="grid gap-4 lg:grid-cols-3">
@@ -404,6 +426,80 @@ const AdminDashboard = () => {
                     </AreaChart>
                   </ResponsiveContainer>
                 </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          <div className="grid gap-4 lg:grid-cols-3">
+            <Card className="lg:col-span-2 border-slate-200 shadow-sm hover:border-[#003D82]/30 transition-colors">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base flex items-center gap-2 text-[#003D82]">
+                  <ShoppingCart className="h-4 w-4" />
+                  <SectionLink to="/admin/erp/sales">Sales report</SectionLink>
+                </CardTitle>
+                <CardDescription>Completed sales over the last 6 months</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="h-[260px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={data?.salesTrend || []} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+                      <defs>
+                        <linearGradient id="saleFill" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#16a34a" stopOpacity={0.35} />
+                          <stop offset="95%" stopColor="#16a34a" stopOpacity={0.02} />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                      <XAxis dataKey="month" tick={{ fontSize: 12 }} stroke="#94a3b8" />
+                      <YAxis allowDecimals={false} tick={{ fontSize: 12 }} stroke="#94a3b8" />
+                      <Tooltip content={<CustomTooltip />} />
+                      <Area
+                        type="monotone"
+                        dataKey="total"
+                        name="Sales value"
+                        stroke="#16a34a"
+                        strokeWidth={2.5}
+                        fill="url(#saleFill)"
+                      />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="border-slate-200 shadow-sm hover:border-[#003D82]/30 transition-colors">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base flex items-center gap-2 text-[#003D82]">
+                  <Package className="h-4 w-4" />
+                  <SectionLink to="/admin/erp/products">Product report</SectionLink>
+                </CardTitle>
+                <CardDescription>Highest stock value</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {(data?.topProducts?.length || 0) === 0 ? (
+                  <p className="text-sm text-slate-500 py-16 text-center">
+                    No product stock yet.{' '}
+                    <Link to="/admin/erp/products" className="text-[#003D82] font-medium hover:underline">
+                      Open products
+                    </Link>
+                  </p>
+                ) : (
+                  <div className="h-[260px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart
+                        data={data.topProducts}
+                        layout="vertical"
+                        margin={{ top: 4, right: 12, left: 4, bottom: 4 }}
+                      >
+                        <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" horizontal={false} />
+                        <XAxis type="number" allowDecimals={false} tick={{ fontSize: 11 }} stroke="#94a3b8" />
+                        <YAxis type="category" dataKey="name" width={110} tick={{ fontSize: 11 }} stroke="#94a3b8" />
+                        <Tooltip content={<CustomTooltip />} />
+                        <Bar dataKey="value" name="Stock value" fill="#003D82" radius={[0, 6, 6, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>

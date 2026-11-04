@@ -2,6 +2,7 @@ import { supabase } from '@/lib/customSupabaseClient';
 import { getApplicationStats } from '@/services/applicationStatusService';
 import { getShareholderStats } from '@/services/shareholderService';
 import { getAllMembers } from '@/services/membersService';
+import { listReportSalesSummary, listReportStockSummary } from '@/services/erpService';
 
 function monthKey(date) {
   const d = new Date(date);
@@ -38,7 +39,7 @@ async function safeCount(table) {
  * Aggregate analytics for the main admin dashboard.
  */
 export async function getAdminDashboardAnalytics() {
-  const [applications, shareStats, members, appRows, students, courses, jobs] = await Promise.all([
+  const [applications, shareStats, members, appRows, students, courses, jobs, salesReport, stockReport] = await Promise.all([
     getApplicationStats().catch(() => ({ total: 0, pending: 0, rejected: 0, shortlisted: 0 })),
     getShareholderStats().catch(() => null),
     getAllMembers().catch(() => []),
@@ -53,6 +54,8 @@ export async function getAdminDashboardAnalytics() {
     safeCount('students'),
     safeCount('courses'),
     safeCount('jobs'),
+    listReportSalesSummary().catch(() => null),
+    listReportStockSummary().catch(() => null),
   ]);
 
   const shares = shareStats || {
@@ -110,6 +113,35 @@ export async function getAdminDashboardAnalytics() {
       applications: value,
     }));
 
+  const salesSummary = salesReport?.summary || { count: 0, grand_total: 0, paid_amount: 0, due_amount: 0 };
+  const salesByDay = Array.isArray(salesReport?.by_day) ? salesReport.by_day : [];
+  const salesMonthCounts = Object.fromEntries(monthKeys.map((k) => [k, { count: 0, total: 0 }]));
+  salesByDay.forEach((row) => {
+    const key = monthKey(row.day);
+    if (key && salesMonthCounts[key]) {
+      salesMonthCounts[key].count += Number(row.count) || 0;
+      salesMonthCounts[key].total += Number(row.grand_total) || 0;
+    }
+  });
+  const salesTrend = monthKeys.map((key) => ({
+    month: monthLabel(key),
+    sales: salesMonthCounts[key].count,
+    total: Math.round(salesMonthCounts[key].total),
+  }));
+
+  const stockItems = Array.isArray(stockReport?.items) ? stockReport.items : [];
+  const stockSummary = stockReport?.summary || { product_count: stockItems.length, total_qty: 0, total_value: 0 };
+  const topProducts = [...stockItems]
+    .sort((a, b) => Number(b.stock_value || 0) - Number(a.stock_value || 0))
+    .slice(0, 6)
+    .map((item) => ({
+      name: String(item.name || item.code || 'Product').length > 22
+        ? `${String(item.name || item.code).slice(0, 20)}…`
+        : (item.name || item.code || 'Product'),
+      qty: Number(item.qty) || 0,
+      value: Math.round(Number(item.stock_value) || 0),
+    }));
+
   return {
     kpis: {
       applicationsTotal: applications.total || 0,
@@ -132,10 +164,19 @@ export async function getAdminDashboardAnalytics() {
       totalCompanyWorth: totalCompanyShares * pricePerShare,
       completedPayments: shares.completedPayments || 0,
       pendingPayments: shares.pendingPayments || 0,
+      salesCount: Number(salesSummary.count) || 0,
+      salesTotal: Number(salesSummary.grand_total) || 0,
+      salesPaid: Number(salesSummary.paid_amount) || 0,
+      salesDue: Number(salesSummary.due_amount) || 0,
+      productCount: Number(stockSummary.product_count) || 0,
+      productQty: Number(stockSummary.total_qty) || 0,
+      productValue: Number(stockSummary.total_value) || 0,
     },
     applicationsByStatus,
     applicationsTrend,
     shareAllocation,
     topJobs,
+    salesTrend,
+    topProducts,
   };
 }

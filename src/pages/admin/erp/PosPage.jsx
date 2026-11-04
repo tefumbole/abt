@@ -1,9 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  Clock, Fullscreen, Loader2, Lock, Menu, Minus, Package,
-  Plus, Printer, ScanLine, Search, Settings2, Star, Trash2, X,
+  Clock, Loader2, Menu, Minus, Package, Plus, ScanLine, Search, Star, Tags, Trash2, X,
 } from 'lucide-react';
-import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -343,16 +341,16 @@ export default function PosPage() {
   const filteredProducts = useMemo(() => {
     const q = search.trim().toLowerCase();
     if (q) return searchMatches;
-    let list = products;
-    if (filterMode === 'category' && filterId) {
-      list = list.filter((p) => String(p.category_id) === String(filterId));
-    } else if (filterMode === 'brand' && filterId) {
-      list = list.filter((p) => String(p.brand_id) === String(filterId));
-    } else if (filterMode === 'featured') {
-      const featured = list.filter((p) => p.is_featured);
-      if (featured.length) list = featured;
+    if (filterMode === 'featured') return products.filter((p) => p.is_featured);
+    if (filterMode === 'category') {
+      if (!filterId) return [];
+      return products.filter((p) => String(p.category_id) === String(filterId));
     }
-    return list;
+    if (filterMode === 'brand') {
+      if (!filterId) return [];
+      return products.filter((p) => String(p.brand_id) === String(filterId));
+    }
+    return products;
   }, [products, search, searchMatches, filterMode, filterId]);
 
   /**
@@ -761,11 +759,6 @@ export default function PosPage() {
     }
   };
 
-  const toggleFullscreen = () => {
-    if (!document.fullscreenElement) document.documentElement.requestFullscreen?.();
-    else document.exitFullscreen?.();
-  };
-
   const toggleSearchAll = () => {
     const next = !searchAll;
     setSearchAll(next);
@@ -808,15 +801,19 @@ export default function PosPage() {
     setStarSaving(true);
     try {
       const defaultUnit = units.find((u) => u.is_default) || units[0];
+      const rentalCat = categories.find((c) => /rent/i.test(c.name || ''));
       const created = await createProduct({
         name,
         price,
         cost: price,
-        category_id: starForm.category_id || categories[0]?.id || null,
+        category_id: starForm.category_id || rentalCat?.id || null,
         unit_id: defaultUnit?.id || null,
         sale_unit_id: defaultUnit?.id || null,
         purchase_unit_id: defaultUnit?.id || null,
         product_type: 'standard',
+        rent_price_hour: 0,
+        rent_price_day: price,
+        rent_price_month: 0,
         is_featured: true,
         is_active: true,
         stocks: warehouseId ? [{ warehouse_id: warehouseId, qty: 1 }] : [],
@@ -884,7 +881,8 @@ export default function PosPage() {
 
           <div className="px-3 py-2 flex flex-wrap items-center gap-2 border-b bg-white">
             <Button type="button" variant="outline" className="h-9" onClick={() => {
-              setStarForm({ name: '', price: '', category_id: categories[0]?.id || '' });
+              const rentalCat = categories.find((c) => /rent/i.test(c.name || ''));
+              setStarForm({ name: '', price: '', category_id: rentalCat?.id || '' });
               setStarOpen(true);
             }}>
               <Star className="h-4 w-4 mr-1.5 text-[#D4AF37] fill-[#D4AF37]" /> Star Sale
@@ -895,26 +893,6 @@ export default function PosPage() {
             <Button type="button" variant="outline" className="h-9" onClick={toggleExpand}>
               <Menu className="h-4 w-4 mr-1.5" /> {expanded ? 'Collapse' : 'Expand'}
             </Button>
-            <div className="ml-auto flex items-center gap-1">
-              <Button size="icon" variant="ghost" className="h-8 w-8" title="Print last receipt" disabled={!lastReceipt} onClick={() => printReceipt(lastReceipt)}>
-                <Printer className="h-4 w-4" />
-              </Button>
-              <Button size="icon" variant="ghost" className="h-8 w-8" title="Fullscreen" onClick={toggleFullscreen}>
-                <Fullscreen className="h-4 w-4" />
-              </Button>
-              <Button size="icon" variant="ghost" className="h-8 w-8" asChild>
-                <Link to="/admin/general-settings?tab=pos"><Settings2 className="h-4 w-4" /></Link>
-              </Button>
-              {register ? (
-                <Button size="sm" variant="ghost" className="h-8 text-amber-700" onClick={startCloseRegister}>
-                  <Lock className="h-4 w-4 mr-1" /> Close
-                </Button>
-              ) : (
-                <Button size="sm" className="h-8 bg-[#D4AF37] text-[#003D82]" onClick={() => setShowRegisterModal(true)}>
-                  Open register
-                </Button>
-              )}
-            </div>
           </div>
 
           <div className="px-4 py-3 border-y bg-slate-50/80">
@@ -1052,85 +1030,96 @@ export default function PosPage() {
         {/* RIGHT: products */}
         {!expanded && (
         <div className="bg-white rounded-xl border border-slate-200 shadow-sm flex flex-col min-h-[520px]">
-          <div className="bg-[#003D82] text-white px-2 py-1 flex flex-wrap gap-1.5 items-center justify-between min-h-0">
-            <div className="flex gap-1.5">
+          <div className="bg-[#003D82] text-white px-3 py-2 flex flex-wrap gap-2 items-center justify-between">
+            <div className="flex gap-2">
               <Button
-                size="sm"
-                className={cn('h-7 px-2.5 text-xs', filterMode === 'category' ? 'bg-white text-[#003D82]' : 'bg-blue-500 hover:bg-blue-600 text-white')}
-                onClick={() => { setFilterMode('category'); setFilterId(''); }}
+                className={cn('h-11 px-5 text-sm font-bold', filterMode === 'category' ? 'bg-white text-[#003D82]' : 'bg-blue-500 hover:bg-blue-600 text-white')}
+                onClick={() => { setFilterMode('category'); setFilterId(''); setSearch(''); }}
               >
                 Category
               </Button>
               <Button
-                size="sm"
-                className={cn('h-7 px-2.5 text-xs', filterMode === 'brand' ? 'bg-white text-[#003D82]' : 'bg-blue-500 hover:bg-blue-600 text-white')}
-                onClick={() => { setFilterMode('brand'); setFilterId(''); }}
+                className={cn('h-11 px-5 text-sm font-bold', filterMode === 'brand' ? 'bg-white text-[#003D82]' : 'bg-blue-500 hover:bg-blue-600 text-white')}
+                onClick={() => { setFilterMode('brand'); setFilterId(''); setSearch(''); }}
               >
                 Brand
               </Button>
               <Button
-                size="sm"
-                className={cn('h-7 px-2.5 text-xs', filterMode === 'featured' ? 'bg-red-500 text-white' : 'bg-red-400 hover:bg-red-500 text-white')}
-                onClick={() => { setFilterMode('featured'); setFilterId(''); }}
+                className={cn('h-11 px-5 text-sm font-bold', filterMode === 'featured' ? 'bg-red-500 text-white' : 'bg-red-400 hover:bg-red-500 text-white')}
+                onClick={() => { setFilterMode('featured'); setFilterId(''); setSearch(''); }}
               >
                 Featured
               </Button>
             </div>
-            <span className="text-[10px] text-blue-100 leading-none">{register ? 'Register open' : 'No open register'}</span>
           </div>
-
-          {(filterMode === 'category' || filterMode === 'brand') && (
-            <div className="px-2 py-2 border-b">
-              <SearchSelect
-                size="sm"
-                value={filterId}
-                onChange={setFilterId}
-                placeholder={filterMode === 'category' ? 'Search category…' : 'Search brand…'}
-                emptyLabel={filterMode === 'category' ? 'No categories match' : 'No brands match'}
-                options={[
-                  { value: '', label: filterMode === 'category' ? 'All categories' : 'All brands' },
-                  ...(filterMode === 'category' ? categories : brands).map((x) => ({
-                    value: String(x.id),
-                    label: x.name,
-                  })),
-                ]}
-              />
-            </div>
-          )}
 
           <div className="flex-1 overflow-auto p-3">
             {loading ? (
               <div className="p-12 flex justify-center"><Loader2 className="animate-spin text-[#003D82]" /></div>
+            ) : search.trim() || filterMode === 'featured' || filterId ? (
+              <>
+                {filterId && (filterMode === 'category' || filterMode === 'brand') && (
+                  <button
+                    type="button"
+                    className="mb-3 text-sm font-semibold text-[#003D82]"
+                    onClick={() => setFilterId('')}
+                  >
+                    ← {filterMode === 'category' ? 'All categories' : 'All brands'}
+                  </button>
+                )}
+                <div className={cn('grid gap-2', gridCols)}>
+                  {filteredProducts.map((p) => {
+                    const stock = stockById.get(p.id);
+                    const soldOut = !searchAll && posSettings.block_out_of_stock && stock !== null && stock !== undefined && stock <= 0;
+                    return (
+                      <button
+                        key={p.id}
+                        type="button"
+                        disabled={soldOut}
+                        onClick={() => addToCart(p)}
+                        className={cn(
+                          'rounded-xl border border-slate-200 bg-[#f5f7fb] p-2 text-left transition',
+                          soldOut ? 'opacity-50 grayscale cursor-not-allowed' : 'hover:border-[#D4AF37] hover:shadow'
+                        )}
+                      >
+                        <div className="h-20 flex items-center justify-center bg-white rounded-lg border mb-2 overflow-hidden">
+                          {p.image_url ? (
+                            <img src={productImageSrc(p.image_url)} alt="" className="max-h-full max-w-full object-contain" />
+                          ) : (
+                            <Package className="h-8 w-8 text-slate-300" />
+                          )}
+                        </div>
+                        <div className="text-xs font-semibold text-slate-800 line-clamp-2 min-h-[2.5em]">{p.name}</div>
+                        <div className="text-sm font-bold text-[#003D82] mt-1">{money(p.price)}</div>
+                      </button>
+                    );
+                  })}
+                  {!filteredProducts.length && (
+                    <div className="col-span-full p-10 text-center text-slate-400">
+                      {filterMode === 'featured' ? 'No featured products' : 'No products found'}
+                    </div>
+                  )}
+                </div>
+              </>
             ) : (
               <div className={cn('grid gap-2', gridCols)}>
-                {filteredProducts.map((p) => {
-                  const stock = stockById.get(p.id);
-                  const soldOut = !searchAll && posSettings.block_out_of_stock && stock !== null && stock !== undefined && stock <= 0;
-                  return (
-                    <button
-                      key={p.id}
-                      type="button"
-                      disabled={soldOut}
-                      onClick={() => addToCart(p)}
-                      className={cn(
-                        'rounded-xl border border-slate-200 bg-[#f5f7fb] p-2 text-left transition',
-                        soldOut ? 'opacity-50 grayscale cursor-not-allowed' : 'hover:border-[#D4AF37] hover:shadow'
-                      )}
-                    >
-                      <div className="h-20 flex items-center justify-center bg-white rounded-lg border mb-2 overflow-hidden">
-                        {p.image_url ? (
-                          <img src={productImageSrc(p.image_url)} alt="" className="max-h-full max-w-full object-contain" />
-                        ) : (
-                          <Package className="h-8 w-8 text-slate-300" />
-                        )}
-                      </div>
-                      <div className="text-xs font-semibold text-slate-800 line-clamp-2 min-h-[2.5em]">{p.name}</div>
-                      <div className="text-sm font-bold text-[#003D82] mt-1">{money(p.price)}</div>
-                    </button>
-                  );
-                })}
-                {!filteredProducts.length && (
-                  <div className="col-span-full p-10 text-center text-slate-400">No products found</div>
+                {(filterMode === 'brand' ? brands : categories).map((item) => (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => setFilterId(String(item.id))}
+                    className="rounded-xl border border-slate-200 bg-[#f5f7fb] p-4 text-left hover:border-[#D4AF37] hover:shadow transition min-h-[110px]"
+                  >
+                    <div className="h-12 flex items-center justify-center mb-2">
+                      <Tags className="h-8 w-8 text-[#003D82]" />
+                    </div>
+                    <div className="text-sm font-bold text-slate-800 text-center">{item.name}</div>
+                  </button>
+                ))}
+                {!(filterMode === 'brand' ? brands : categories).length && (
+                  <div className="col-span-full p-10 text-center text-slate-400">
+                    {filterMode === 'brand' ? 'No brands yet' : 'No categories yet'}
+                  </div>
                 )}
               </div>
             )}
