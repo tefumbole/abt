@@ -13,7 +13,9 @@ import {
   deliverOfficialPdf,
   acceptClientQuote,
   rejectClientQuote,
+  sendWhatsAppSafe,
 } from '../../services/erp/quotationApproval.js';
+import { withShareUrl } from '../../services/erp/documentToken.js';
 
 const router = Router();
 
@@ -112,7 +114,7 @@ router.get('/', requireAuth, requireErpAdmin, async (req, res) => {
     );
     const c = counts[0] || {};
     res.json({
-      data: rows,
+      data: rows.map((r) => withShareUrl('quotation', r)),
       statusCounts: {
         all: Number(c.all_count) || 0,
         awaiting: Number(c.awaiting) || 0,
@@ -133,7 +135,7 @@ router.get('/:id', requireAuth, requireErpAdmin, async (req, res) => {
   try {
     const q = await loadQuotation(req.params.id);
     if (!q) return res.status(404).json({ error: 'Not found' });
-    res.json({ data: q });
+    res.json({ data: withShareUrl('quotation', q) });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -322,6 +324,34 @@ router.post('/:id/send-whatsapp', requireAuth, requireErpAdmin, async (req, res)
   }
 });
 
+router.post('/:id/send-link', requireAuth, requireErpAdmin, async (req, res) => {
+  try {
+    const q = await loadQuotation(req.params.id);
+    if (!q) return res.status(404).json({ error: 'Not found' });
+    if (Number(q.quotation_status) === QSTATUS.REJECTED) {
+      return res.status(400).json({ error: 'A rejected quotation cannot be sent' });
+    }
+    const share = withShareUrl('quotation', q);
+    if (!q.customer_phone) return res.status(400).json({ error: 'Customer has no phone number' });
+    const company = process.env.COMPANY_NAME || 'Alpha Bridge';
+    const text = `${company}\nQuotation ${q.reference}\nView: ${share.share_url}`;
+    if (Number(q.quotation_status) === QSTATUS.APPROVED || Number(q.quotation_status) === QSTATUS.NO_SIGNATURE) {
+      await deliverOfficialPdf(req, q, {
+        context: Number(q.quotation_status) === QSTATUS.NO_SIGNATURE ? 'no_signature' : 'signed',
+        actorId: actorId(req),
+      });
+    } else {
+      const sent = await sendWhatsAppSafe(q.customer_phone, text, 'quotation-link');
+      if (!sent.success && !sent.skipped) {
+        return res.status(502).json({ error: sent.error || 'WhatsApp failed', link: share.share_url });
+      }
+    }
+    res.json({ ok: true, link: share.share_url });
+  } catch (err) {
+    res.status(err.status || 500).json({ error: err.message });
+  }
+});
+
 router.post('/:id/send-pdf', requireAuth, requireErpAdmin, async (req, res) => {
   try {
     const q = await loadQuotation(req.params.id);
@@ -343,8 +373,9 @@ router.get('/:id/pdf', requireAuth, requireErpAdmin, async (req, res) => {
     const { buildQuotationPdfBuffer } = await import('../../services/erp/quotationPdf.js');
     const buffer = await buildQuotationPdfBuffer(q);
     const fileName = `${q.reference || 'quotation'}.pdf`;
+    const asDownload = String(req.query.download || '') === '1';
     res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `inline; filename="${fileName}"`);
+    res.setHeader('Content-Disposition', `${asDownload ? 'attachment' : 'inline'}; filename="${fileName}"`);
     res.send(buffer);
   } catch (err) {
     res.status(500).json({ error: err.message });

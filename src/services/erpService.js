@@ -158,6 +158,25 @@ export const setQuotationStatus = (id, status) =>
 export const sendQuotationWhatsApp = (id, body = {}) => erpApi.post(`/quotations/${id}/send-whatsapp`, body);
 export const sendQuotationForSignature = (id, body = {}) => erpApi.post(`/quotations/${id}/send-for-signature`, body);
 export const sendQuotationPdf = (id, body = {}) => erpApi.post(`/quotations/${id}/send-pdf`, body);
+export const sendQuotationLink = (id, body = {}) => erpApi.post(`/quotations/${id}/send-link`, body);
+export const sendSaleWhatsApp = (id, body = {}) => erpApi.post(`/sales/${id}/send-whatsapp`, body);
+
+export async function downloadErpPdf(path, filename) {
+  const res = await fetch(`${API_BASE}/erp${path}`, { headers: authHeaders() });
+  if (!res.ok) {
+    const json = await res.json().catch(() => ({}));
+    throw new Error(json.error || json.message || `Download failed (${res.status})`);
+  }
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename || 'document.pdf';
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
 export const acceptQuotationQuote = (id, body = {}) => erpApi.post(`/quotations/${id}/accept-quote`, body);
 export const rejectQuotationQuote = (id, body = {}) => erpApi.post(`/quotations/${id}/reject-quote`, body);
 export const convertQuotation = (id) => erpApi.post(`/quotations/${id}/convert-sale`, {});

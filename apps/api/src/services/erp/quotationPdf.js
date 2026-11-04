@@ -140,9 +140,13 @@ function lineItemsSubtotal(items) {
 }
 
 /**
- * A4 portrait quotation PDF with Alpha letterhead and signature blocks. No QR.
+ * A4 portrait quotation or invoice PDF with Settings letterhead and signature blocks.
  */
-export async function buildQuotationPdfBuffer(quotation) {
+export async function buildQuotationPdfBuffer(quotation, options = {}) {
+  const kind = options.kind === 'invoice' ? 'invoice' : 'quotation';
+  const isInvoice = kind === 'invoice';
+  const heading = isInvoice ? 'INVOICE' : 'QUOTATION';
+  const forLabel = isInvoice ? 'BILL TO' : 'QUOTATION FOR';
   const settings = await loadSettings();
   const company = process.env.COMPANY_NAME || settings.application_name || 'Alpha Bridge';
   const items = quotation.items || [];
@@ -159,7 +163,7 @@ export async function buildQuotationPdfBuffer(quotation) {
   const logoImg = await loadBrandingImage(settings.logo_file_path, settings.logo_url);
   const watermarkImg = await loadBrandingImage(settings.pdf_watermark_file_path, settings.pdf_watermark_url);
 
-  const doc = new PDFDocument({ size: 'A4', margin: 36, info: { Title: `Quotation ${quotation.reference}`, Author: company } });
+  const doc = new PDFDocument({ size: 'A4', margin: 36, info: { Title: `${heading} ${quotation.reference || ''}`, Author: company } });
   const chunks = [];
   doc.on('data', (c) => chunks.push(c));
   const done = new Promise((resolve, reject) => {
@@ -236,16 +240,16 @@ export async function buildQuotationPdfBuffer(quotation) {
   }
 
   doc.fillColor(NAVY).font('Helvetica-Bold').fontSize(20);
-  doc.text('QUOTATION', left + width / 2, y, { width: width / 2, align: 'right' });
+  doc.text(heading, left + width / 2, y, { width: width / 2, align: 'right' });
   doc.font('Helvetica').fontSize(10).fillColor(SLATE);
   doc.text(quotation.reference || '', left + width / 2, y + 24, { width: width / 2, align: 'right' });
-  doc.text(stampDate(quotation.created_at), left + width / 2, y + 38, { width: width / 2, align: 'right' });
+  doc.text(stampDate(quotation.sale_date || quotation.created_at), left + width / 2, y + 38, { width: width / 2, align: 'right' });
   y += headerImg ? 58 : 78;
 
   doc.moveTo(left, y).lineTo(right, y).strokeColor(NAVY).lineWidth(2).stroke();
   y += 16;
 
-  doc.font('Helvetica-Bold').fontSize(9).fillColor(MUTED).text('QUOTATION FOR', left, y);
+  doc.font('Helvetica-Bold').fontSize(9).fillColor(MUTED).text(forLabel, left, y);
   doc.font('Helvetica-Bold').fontSize(12).fillColor('#0f172a');
   doc.text(quotation.customer_name || 'Customer', left, y + 14);
   doc.font('Helvetica').fontSize(9).fillColor(SLATE);
@@ -263,6 +267,8 @@ export async function buildQuotationPdfBuffer(quotation) {
     quotation.biller_name ? `Biller: ${quotation.biller_name}` : null,
     quotation.warehouse_name ? `Warehouse: ${quotation.warehouse_name}` : null,
     quotation.supplier_name ? `Supplier: ${quotation.supplier_name}` : null,
+    isInvoice && quotation.payment_status ? `Payment: ${quotation.payment_status}` : null,
+    isInvoice && quotation.sale_status ? `Status: ${quotation.sale_status}` : null,
   ].filter(Boolean);
   if (details.length) doc.text(details.join('\n'), left + width / 2, y + 14, { width: width / 2 });
   y += 78;
@@ -318,7 +324,13 @@ export async function buildQuotationPdfBuffer(quotation) {
   if (discount > 0.009) totals.push(['Discount', `-${money(discount)}`]);
   if (tax > 0) totals.push(['Tax', money(tax)]);
   if (shipping > 0) totals.push(['Shipping', money(shipping)]);
-  totals.push(['Total due', money(quotation.grand_total)]);
+  totals.push([isInvoice ? 'Grand total' : 'Total due', money(quotation.grand_total)]);
+  if (isInvoice) {
+    const paid = Number(quotation.paid_amount || 0);
+    const due = Number(quotation.grand_total || 0) - paid;
+    totals.push(['Paid', money(paid)]);
+    totals.push(['Balance due', money(due > 0 ? due : 0)]);
+  }
 
   const boxW = 220;
   totals.forEach(([label, value], i) => {
@@ -377,4 +389,8 @@ export async function buildQuotationPdfBuffer(quotation) {
 
   doc.end();
   return done;
+}
+
+export async function buildInvoicePdfBuffer(sale) {
+  return buildQuotationPdfBuffer(sale, { kind: 'invoice' });
 }

@@ -5,6 +5,10 @@ import { requireAuth } from '../../middleware/auth.js';
 import { nextErpReference } from '../../services/erp/referenceNumbers.js';
 import { adjustStock, getNonStockProductIds, getStock } from '../../services/erp/stock.js';
 import { bool, mysqlDateTime, num, requireErpAdmin } from './helpers.js';
+import { withShareUrl } from '../../services/erp/documentToken.js';
+import { sendWhatsAppSafe } from '../../services/erp/quotationApproval.js';
+import { sendTextThenDocumentBuffer } from '../../services/wasenderWhatsAppService.js';
+import { buildInvoicePdfBuffer } from '../../services/erp/quotationPdf.js';
 
 const router = Router();
 
@@ -23,10 +27,14 @@ function paymentStatusFor(paid, grand) {
 async function loadSale(id) {
   const pool = getPool();
   const [rows] = await pool.query(
-    `SELECT s.*, w.name AS warehouse_name, c.name AS customer_name
+    `SELECT s.*, w.name AS warehouse_name,
+      c.name AS customer_name, c.phone AS customer_phone, c.email AS customer_email,
+      c.address AS customer_address, c.company_name AS customer_company,
+      b.name AS biller_name
      FROM sales s
      LEFT JOIN warehouses w ON w.id = s.warehouse_id
      LEFT JOIN erp_customers c ON c.id = s.customer_id
+     LEFT JOIN erp_billers b ON b.id = s.biller_id
      WHERE s.id = ?`,
     [id]
   );
@@ -36,7 +44,7 @@ async function loadSale(id) {
      LEFT JOIN products p ON p.id = ps.product_id WHERE ps.sale_id = ?`,
     [id]
   );
-  return { ...rows[0], items };
+  return withShareUrl('invoice', { ...rows[0], items });
 }
 
 async function listSalePayments(db, saleId) {
@@ -160,7 +168,8 @@ router.get('/', requireAuth, requireErpAdmin, async (req, res) => {
     }
 
     const [rows] = await pool.query(
-      `SELECT s.*, w.name AS warehouse_name, c.name AS customer_name, b.name AS biller_name,
+      `SELECT s.*, w.name AS warehouse_name, c.name AS customer_name, c.phone AS customer_phone,
+        b.name AS biller_name,
         (SELECT COUNT(*) FROM product_sales ps WHERE ps.sale_id = s.id) AS items_count
        ${joins}
        WHERE ${where}
@@ -169,7 +178,7 @@ router.get('/', requireAuth, requireErpAdmin, async (req, res) => {
     );
 
     res.json({
-      data: rows.map((r) => ({
+      data: rows.map((r) => withShareUrl('invoice', {
         ...r,
         grand_total: num(r.grand_total),
         paid_amount: num(r.paid_amount),
@@ -230,7 +239,7 @@ router.get('/:id', requireAuth, requireErpAdmin, async (req, res) => {
     );
     const payments = await listSalePayments(pool, req.params.id);
     res.json({
-      data: {
+      data: withShareUrl('invoice', {
         ...sale,
         grand_total: num(sale.grand_total),
         paid_amount: num(sale.paid_amount),
@@ -251,10 +260,52 @@ router.get('/:id', requireAuth, requireErpAdmin, async (req, res) => {
           subtotal: num(i.subtotal),
         })),
         payments,
-      },
+      }),
     });
   } catch (err) {
     res.status(500).json({ error: err.message });
+  }
+});
+
+router.get('/:id/pdf', requireAuth, requireErpAdmin, async (req, res) => {
+  try {
+    const sale = await loadSale(req.params.id);
+    if (!sale) return res.status(404).json({ error: 'Not found' });
+    const buffer = await buildInvoicePdfBuffer(sale);
+    const fileName = `${sale.reference || 'invoice'}.pdf`;
+    const asDownload = String(req.query.download || '') === '1';
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `${asDownload ? 'attachment' : 'inline'}; filename="${fileName}"`);
+    res.send(buffer);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.post('/:id/send-whatsapp', requireAuth, requireErpAdmin, async (req, res) => {
+  try {
+    const sale = await loadSale(req.params.id);
+    if (!sale) return res.status(404).json({ error: 'Not found' });
+    if (!sale.customer_phone) return res.status(400).json({ error: 'Customer has no phone number' });
+    const company = process.env.COMPANY_NAME || 'Alpha Bridge';
+    const url = sale.share_url;
+    const text = `${company}\nInvoice ${sale.reference}\nTotal: ${sale.grand_total}\nView: ${url}`;
+    const buffer = await buildInvoicePdfBuffer(sale);
+    const sent = await sendTextThenDocumentBuffer(
+      sale.customer_phone,
+      text,
+      buffer,
+      `${sale.reference || 'invoice'}.pdf`
+    );
+    if (!sent?.success) {
+      const fallback = await sendWhatsAppSafe(sale.customer_phone, text, 'invoice-link');
+      if (!fallback.success && !fallback.skipped) {
+        return res.status(502).json({ error: sent?.error || fallback.error || 'WhatsApp failed', link: url });
+      }
+    }
+    res.json({ ok: true, link: url });
+  } catch (err) {
+    res.status(err.status || 500).json({ error: err.message });
   }
 });
 

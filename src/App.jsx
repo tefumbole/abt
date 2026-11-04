@@ -152,6 +152,7 @@ import RentalsPage from '@/pages/admin/erp/RentalsPage';
 import PublicQuotationPage from '@/pages/erp/PublicQuotationPage';
 import PublicDeliveryPage from '@/pages/erp/PublicDeliveryPage';
 import PublicBookingPage from '@/pages/erp/PublicBookingPage';
+import PublicDocumentPage from '@/pages/erp/PublicDocumentPage';
 
 // Time Sheet Admin Pages
 import AdminTimeSheetManagementPage from '@/pages/admin/AdminTimeSheetManagementPage';
@@ -385,6 +386,8 @@ const AppContent = () => {
           <Route path="erp/public/quotation/:token" element={<PublicQuotationPage />} />
           <Route path="erp/public/delivery/:token" element={<PublicDeliveryPage />} />
           <Route path="erp/public/booking/:token" element={<PublicBookingPage />} />
+          <Route path="quotation/:id/:token" element={<PublicDocumentPage kind="quotation" />} />
+          <Route path="invoice/:id/:token" element={<PublicDocumentPage kind="invoice" />} />
 
           {/* Audio Mixing Assistant User Routes */}
           <Route path="audio/templates" element={<MixingTemplatesLibrary />} />

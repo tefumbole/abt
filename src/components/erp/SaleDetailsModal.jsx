@@ -1,5 +1,5 @@
 import React from 'react';
-import { Download, Pencil, Printer, Wallet } from 'lucide-react';
+import { Download, MessageCircle, Pencil, Printer, Wallet } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -27,6 +27,7 @@ export default function SaleDetailsModal({
   onClose,
   onPrint,
   onDownload,
+  onSendWhatsApp,
   onAddPayment,
   onEdit,
 }) {
@@ -185,6 +186,9 @@ export default function SaleDetailsModal({
           </Button>
           <Button type="button" variant="outline" onClick={() => onDownload?.(sale)}>
             <Download className="h-4 w-4 mr-2" /> Download PDF
+          </Button>
+          <Button type="button" variant="outline" onClick={() => onSendWhatsApp?.(sale)}>
+            <MessageCircle className="h-4 w-4 mr-2" /> Send via WhatsApp
           </Button>
           <Button type="button" variant="outline" onClick={() => onAddPayment?.(sale)}>
             <Wallet className="h-4 w-4 mr-2" /> Add Payment

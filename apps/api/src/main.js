@@ -26,6 +26,7 @@ import paymentsRoutes from './routes/payments.js';
 import systemTestRoutes from './routes/systemTest.js';
 import reviewsRoutes from './routes/reviews.js';
 import quotationApprovalRoutes from './routes/quotationApproval.js';
+import publicDocumentsRoutes from './routes/publicDocuments.js';
 import { APP_VERSION } from './constants/appVersion.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -101,6 +102,7 @@ app.use('/payments', paymentsRoutes);
 app.use('/system-test', systemTestRoutes);
 app.use('/reviews', reviewsRoutes);
 app.use('/quotation-approval', quotationApprovalRoutes);
+app.use('/public/documents', publicDocumentsRoutes);
 
 app.use((err, _req, res, next) => {
   if (err?.code === 'LIMIT_FILE_SIZE') {

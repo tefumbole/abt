@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
   ChevronDown, ChevronLeft, ChevronRight, Columns3, Download, FileSpreadsheet,
-  FileText, Loader2, Plus, Printer, RotateCcw, Search, Trash2, Wallet,
+  FileText, Loader2, MessageCircle, Plus, Printer, RotateCcw, Search, Trash2, Wallet,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
@@ -28,8 +28,8 @@ import {
 import { DOCUMENT_STYLES, buildDocumentHtml, loadErpCompany } from '@/lib/erpDocuments';
 import { getSystemSettings } from '@/services/settingsService';
 import {
-  createSale, deleteSale, getSale, listBillers, listCustomers, listProducts,
-  listWarehouses, querySales, updateSale,
+  createSale, deleteSale, downloadErpPdf, getSale, listBillers, listCustomers, listProducts,
+  listWarehouses, querySales, sendSaleWhatsApp, updateSale,
 } from '@/services/erpService';
 
 const COLUMN_STORAGE_KEY = 'erp.sales.columns';
@@ -303,6 +303,10 @@ export default function SalesPage() {
 
   const printInvoice = async (row) => {
     try {
+      if (row?.share_url) {
+        window.open(row.share_url, '_blank', 'noopener');
+        return;
+      }
       const { sale, html } = await buildInvoiceHtml(row);
       openPrintWindow(html, { title: `Invoice ${sale.reference || ''}`, styles: DOCUMENT_STYLES });
     } catch (err) {
@@ -312,11 +316,17 @@ export default function SalesPage() {
 
   const downloadInvoice = async (row) => {
     try {
-      const { sale, html } = await buildInvoiceHtml(row);
-      await downloadHtmlPdf(html, {
-        filename: `invoice-${sale.reference || sale.id}.pdf`,
-        styles: DOCUMENT_STYLES,
-      });
+      await downloadErpPdf(`/sales/${row.id}/pdf?download=1`, `${row.reference || 'invoice'}.pdf`);
+      toast.success('Invoice downloaded');
+    } catch (err) {
+      toast.error(err.message);
+    }
+  };
+
+  const sendInvoiceWhatsApp = async (row) => {
+    try {
+      const res = await sendSaleWhatsApp(row.id);
+      toast.success(res.link ? 'WhatsApp sent with invoice link' : 'WhatsApp sent');
     } catch (err) {
       toast.error(err.message);
     }
@@ -702,13 +712,28 @@ export default function SalesPage() {
                               </td>
                             );
                           }
+                          if (c.key === 'reference') {
+                            return (
+                              <td key={c.key} className="p-3 whitespace-nowrap font-medium">
+                                {row.share_url ? (
+                                  <a
+                                    href={row.share_url}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="text-[#003D82] underline underline-offset-2 hover:text-[#002855]"
+                                  >
+                                    {row.reference}
+                                  </a>
+                                ) : row.reference}
+                              </td>
+                            );
+                          }
                           return (
                             <td
                               key={c.key}
                               className={cn(
                                 'p-3 whitespace-nowrap',
-                                c.align === 'right' && 'text-right',
-                                c.key === 'reference' && 'font-medium text-[#003D82]'
+                                c.align === 'right' && 'text-right'
                               )}
                             >
                               {cellText(row, c.key)}
@@ -736,6 +761,9 @@ export default function SalesPage() {
                               </DropdownMenuItem>
                               <DropdownMenuItem onClick={() => downloadInvoice(row)}>
                                 <Download className="h-4 w-4 mr-2" /> Download PDF
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => sendInvoiceWhatsApp(row)}>
+                                <MessageCircle className="h-4 w-4 mr-2" /> Send via WhatsApp
                               </DropdownMenuItem>
                               <DropdownMenuSeparator />
                               <DropdownMenuItem className="text-red-600" onClick={() => removeSale(row)}>
@@ -827,6 +855,7 @@ export default function SalesPage() {
           onClose={() => setDetailSale(null)}
           onPrint={printInvoice}
           onDownload={downloadInvoice}
+          onSendWhatsApp={sendInvoiceWhatsApp}
           onAddPayment={(sale) => { setDetailSale(null); setPaymentSale(sale); }}
           onEdit={(sale) => { setDetailSale(null); goTab('add', sale.id); }}
         />

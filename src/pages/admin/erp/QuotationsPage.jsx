@@ -23,10 +23,10 @@ import { getSystemSettings } from '@/services/settingsService';
 import SearchSelect from '@/components/erp/SearchSelect';
 import CustomerSelect from '@/components/erp/CustomerSelect';
 import {
-  acceptQuotationQuote, convertQuotation, createQuotation, deleteQuotation, getQuotation,
-  listBillers, listCustomers, listProducts, listQuotations, listSuppliers,
-  listWarehouses, rejectQuotationQuote, sendQuotationForSignature, sendQuotationPdf,
-  updateQuotation,
+  acceptQuotationQuote, convertQuotation, createQuotation, deleteQuotation, downloadErpPdf,
+  getQuotation, listBillers, listCustomers, listProducts, listQuotations, listSuppliers,
+  listWarehouses, rejectQuotationQuote, sendQuotationForSignature, sendQuotationLink,
+  sendQuotationPdf, updateQuotation,
 } from '@/services/erpService';
 
 const STATUS_META = {
@@ -463,6 +463,10 @@ export default function QuotationsPage() {
   const printQuotation = async (source) => {
     setDocBusy(true);
     try {
+      if (source?.share_url) {
+        window.open(source.share_url, '_blank', 'noopener');
+        return;
+      }
       const { html, reference } = await buildQuotationHtml(source);
       openPrintWindow(html, { title: `Quotation ${reference}` });
     } catch (e) {
@@ -475,13 +479,23 @@ export default function QuotationsPage() {
   const downloadQuotationPdf = async (source) => {
     setDocBusy(true);
     try {
-      const { html, reference } = await buildQuotationHtml(source);
-      await downloadHtmlPdf(html, { filename: `${reference}.pdf` });
+      const id = source?.id || source;
+      const reference = source?.reference || 'quotation';
+      await downloadErpPdf(`/quotations/${id}/pdf?download=1`, `${reference}.pdf`);
       toast.success('PDF downloaded');
     } catch (e) {
       toast.error(e.message);
     } finally {
       setDocBusy(false);
+    }
+  };
+
+  const sendQuotationWhatsApp = async (source) => {
+    try {
+      const res = await sendQuotationLink(source.id);
+      toast.success(res.link ? 'WhatsApp sent with document link' : 'WhatsApp sent');
+    } catch (e) {
+      toast.error(e.message);
     }
   };
 
@@ -694,7 +708,18 @@ export default function QuotationsPage() {
                             <input type="checkbox" checked={selected.includes(r.id)} onChange={() => toggleSelect(r.id)} />
                           </td>
                           <td className="p-3 whitespace-nowrap">{showDate(r.created_at)}</td>
-                          <td className="p-3 font-medium text-[#003D82]">{r.reference}</td>
+                          <td className="p-3 font-medium">
+                            {r.share_url ? (
+                              <a
+                                href={r.share_url}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="text-[#003D82] underline underline-offset-2 hover:text-[#002855]"
+                              >
+                                {r.reference}
+                              </a>
+                            ) : r.reference}
+                          </td>
                           <td className="p-3">{r.biller_name || '—'}</td>
                           <td className="p-3">{r.customer_name || '—'}</td>
                           <td className="p-3">{r.supplier_name || '—'}</td>
@@ -722,6 +747,9 @@ export default function QuotationsPage() {
                                 </DropdownMenuItem>
                                 <DropdownMenuItem onClick={() => downloadQuotationPdf(r)}>
                                   <Download className="h-4 w-4 mr-2" /> Download PDF
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => sendQuotationWhatsApp(r)}>
+                                  <MessageCircle className="h-4 w-4 mr-2" /> Send via WhatsApp
                                 </DropdownMenuItem>
                                 <DropdownMenuSeparator />
                                 {rowStatusKey(r) === 'client_quote' && (
@@ -1064,6 +1092,9 @@ export default function QuotationsPage() {
               <Button type="button" variant="outline" disabled={docBusy} onClick={() => downloadQuotationPdf(detail)}>
                 {docBusy ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Download className="h-4 w-4 mr-1" />}
                 Download PDF
+              </Button>
+              <Button type="button" variant="outline" onClick={() => sendQuotationWhatsApp(detail)}>
+                <MessageCircle className="h-4 w-4 mr-1" /> Send via WhatsApp
               </Button>
               {rowStatusKey(detail) === 'client_quote' && (
                 <Button type="button" variant="outline" onClick={() => { const id = detail.id; setDetail(null); openReview(id); }}>
