@@ -341,7 +341,7 @@ export default function PosPage() {
   const filteredProducts = useMemo(() => {
     const q = search.trim().toLowerCase();
     if (q) return searchMatches;
-    if (filterMode === 'featured') return products.filter((p) => p.is_featured);
+    if (filterMode === 'featured') return products;
     if (filterMode === 'category') {
       if (!filterId) return [];
       return products.filter((p) => String(p.category_id) === String(filterId));
@@ -1096,7 +1096,7 @@ export default function PosPage() {
                   })}
                   {!filteredProducts.length && (
                     <div className="col-span-full p-10 text-center text-slate-400">
-                      {filterMode === 'featured' ? 'No featured products' : 'No products found'}
+                      No products found
                     </div>
                   )}
                 </div>
