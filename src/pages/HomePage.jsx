@@ -33,7 +33,7 @@ function HomePage() {
         <meta name="description" content={`${COMPANY_NAME} — IT consultancy, networks, CCTV security, and professional sound/screen/lighting solutions. Chat with us on WhatsApp for a quote.`} />
       </Helmet>
 
-      <section className="relative min-h-screen flex flex-col items-center justify-center overflow-hidden py-20 md:py-0">
+      <section className="relative min-h-[calc(100svh-5.75rem)] sm:min-h-[calc(100svh-4.75rem)] flex flex-col items-center justify-center overflow-hidden py-20 md:py-0">
         <motion.div
           className="absolute inset-0 bg-cover bg-center bg-no-repeat"
           style={{
