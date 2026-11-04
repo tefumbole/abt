@@ -9,6 +9,7 @@ import {
   listReportExpensesSummary, listReportProfitLoss, listReportPurchasesSummary,
   listReportSalesSummary, listReportStockSummary, listWarehouses,
 } from '@/services/erpService';
+import { WarehouseSelect } from '@/components/erp/WarehouseBillerSelect';
 import ErpShell from './ErpShell';
 
 const TABS = [
@@ -185,14 +186,14 @@ export default function ReportsPage() {
         {(tab === 'sales' || tab === 'purchases' || tab === 'stock') && (
           <div>
             <Label>Warehouse</Label>
-            <select
-              className="w-full border rounded-md h-10 px-2 min-w-[180px]"
+            <WarehouseSelect
+              className="mt-1 min-w-[180px]"
               value={filters.warehouse_id}
-              onChange={(e) => setFilters({ ...filters, warehouse_id: e.target.value })}
-            >
-              <option value="">All</option>
-              {warehouses.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
-            </select>
+              onChange={(warehouse_id) => setFilters({ ...filters, warehouse_id })}
+              warehouses={warehouses}
+              placeholder="Search warehouse…"
+              allLabel="All"
+            />
           </div>
         )}
         <Button type="submit">Apply</Button>

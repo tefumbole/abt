@@ -1,15 +1,21 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
-  ChevronDown, FileSpreadsheet, FileText, Image as ImageIcon,
+  ChevronDown, FileSpreadsheet, FileText,
   Loader2, Plus, Printer, Search, Eye, X, UploadCloud,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { getStoragePublicUrl } from '@/utils/storageUrl';
 import { cn } from '@/lib/utils';
+import SearchSelect from '@/components/erp/SearchSelect';
+import { WarehouseSelect } from '@/components/erp/WarehouseBillerSelect';
+import PasteableImage from '@/components/erp/PasteableImage';
+import {
+  categoryImageSrc, imageFileFromClipboard, productImageSrc,
+  uploadCategoryImage, uploadProductImage,
+} from '@/lib/erpImages';
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
@@ -30,38 +36,6 @@ function money(n, currency = 'XAF') {
   return `${currency} ${Number(n || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
 }
 
-function categoryImageSrc(value) {
-  if (!value) return null;
-  if (/^(https?:|data:|blob:|\/)/i.test(value)) return value;
-  return getStoragePublicUrl('categories', value);
-}
-
-function authHeaders() {
-  try {
-    const raw = localStorage.getItem('alpha_supabase_auth');
-    const parsed = raw ? JSON.parse(raw) : null;
-    const token = parsed?.access_token;
-    return token ? { Authorization: `Bearer ${token}` } : {};
-  } catch {
-    return {};
-  }
-}
-
-async function uploadCategoryImage(file) {
-  const ext = (file.name?.split('.').pop() || 'jpg').replace(/[^a-z0-9]/gi, '') || 'jpg';
-  const filePath = `category_${Date.now()}_${Math.random().toString(16).slice(2)}.${ext}`;
-  const form = new FormData();
-  form.append('file', file);
-  form.append('path', filePath);
-  const res = await fetch(`/api/upload/categories?path=${encodeURIComponent(filePath)}`, {
-    method: 'POST',
-    headers: authHeaders(),
-    body: form,
-  });
-  const json = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(json.error || 'Upload failed');
-  return json.path || filePath;
-}
 
 export default function ProductsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -95,6 +69,8 @@ export default function ProductsPage() {
   const [catDragging, setCatDragging] = useState(false);
   const catFileRef = useRef(null);
   const [importText, setImportText] = useState('name,parent_category\n');
+  const [imageBusy, setImageBusy] = useState('');
+  const [pasteTarget, setPasteTarget] = useState(null);
   const [editProduct, setEditProduct] = useState(null);
   const [savingProduct, setSavingProduct] = useState(false);
   const [adjForm, setAdjForm] = useState({ warehouse_id: '', product_id: '', qty: 0, note: '' });
@@ -205,6 +181,47 @@ export default function ProductsPage() {
     setShowAddCategory(true);
   };
 
+  const saveCategoryField = async (id, patch) => {
+    try {
+      await updateCategory(id, patch);
+      toast.success('Saved');
+      reload();
+    } catch (err) {
+      toast.error(err.message);
+    }
+  };
+
+  const saveProductField = async (id, patch) => {
+    try {
+      await updateProduct(id, patch);
+      toast.success('Saved');
+      reload();
+    } catch (err) {
+      toast.error(err.message);
+    }
+  };
+
+  const handleRowImage = async (kind, id, file) => {
+    if (!file) return;
+    if (!String(file.type || '').startsWith('image/')) {
+      toast.error('Please choose an image file');
+      return;
+    }
+    const key = `${kind}:${id}`;
+    setImageBusy(key);
+    try {
+      const path = kind === 'category' ? await uploadCategoryImage(file) : await uploadProductImage(file);
+      if (kind === 'category') await updateCategory(id, { image_url: path });
+      else await updateProduct(id, { image_url: path });
+      toast.success('Image saved');
+      reload();
+    } catch (err) {
+      toast.error(err.message || 'Image upload failed');
+    } finally {
+      setImageBusy('');
+    }
+  };
+
   const handleCategoryFile = async (file) => {
     if (!file) return;
     if (!String(file.type || '').startsWith('image/')) {
@@ -223,6 +240,18 @@ export default function ProductsPage() {
       if (catFileRef.current) catFileRef.current.value = '';
     }
   };
+
+  useEffect(() => {
+    if (!pasteTarget) return undefined;
+    const onPaste = (event) => {
+      const file = imageFileFromClipboard(event);
+      if (!file) return;
+      event.preventDefault();
+      handleRowImage(pasteTarget.kind, pasteTarget.id, file);
+    };
+    window.addEventListener('paste', onPaste);
+    return () => window.removeEventListener('paste', onPaste);
+  }, [pasteTarget]);
 
   useEffect(() => {
     if (!showAddCategory) return undefined;
@@ -312,13 +341,14 @@ export default function ProductsPage() {
           <h1 className="text-2xl font-bold text-slate-900">PRODUCT</h1>
           <p className="text-sm text-slate-600 mt-1">Categories, catalog & stock</p>
         </div>
-        <select
-          className="border rounded-md px-2 text-sm h-9"
+        <WarehouseSelect
+          className="w-56"
           value={warehouseId}
-          onChange={(e) => setWarehouseId(e.target.value)}
-        >
-          {warehouses.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
-        </select>
+          onChange={setWarehouseId}
+          warehouses={warehouses}
+          placeholder="Search warehouse…"
+          allowClear={false}
+        />
       </div>
 
       {loading ? <div className="p-8 flex justify-center"><Loader2 className="animate-spin text-[#003D82]" /></div> : null}
@@ -400,18 +430,40 @@ export default function ProductsPage() {
                       <input type="checkbox" checked={selected.includes(c.id)} onChange={() => toggleSelect(c.id)} />
                     </td>
                     <td className="p-3">
-                      <div className="w-14 h-14 rounded-lg bg-slate-100 border flex items-center justify-center overflow-hidden">
-                        {c.image_url ? (
-                          <img src={categoryImageSrc(c.image_url)} alt="" className="max-w-full max-h-full object-contain" />
-                        ) : (
-                          <ImageIcon className="h-6 w-6 text-slate-300" />
-                        )}
-                      </div>
+                      <PasteableImage
+                        src={categoryImageSrc(c.image_url)}
+                        uploading={imageBusy === `category:${c.id}`}
+                        onActivate={() => setPasteTarget({ kind: 'category', id: c.id })}
+                        onFile={(file) => handleRowImage('category', c.id, file)}
+                      />
                     </td>
-                    <td className="p-3 font-medium">{c.name}</td>
-                    <td className="p-3">{c.parent_name || 'N/A'}</td>
-                    <td className="p-3">{c.product_count || 0}</td>
-                    <td className="p-3">{Number(c.stock_qty || 0)}</td>
+                    <td className="p-3 font-medium">
+                      <Input
+                        className="h-8"
+                        defaultValue={c.name || ''}
+                        onBlur={(e) => {
+                          const name = e.target.value.trim();
+                          if (!name || name === c.name) return;
+                          saveCategoryField(c.id, { name });
+                        }}
+                      />
+                    </td>
+                    <td className="p-3 min-w-[180px]">
+                      <SearchSelect
+                        value={c.parent_id || ''}
+                        onChange={(parent_id) => saveCategoryField(c.id, { parent_id: parent_id || null })}
+                        options={categories
+                          .filter((row) => row.id !== c.id)
+                          .map((row) => ({ value: row.id, label: row.name }))}
+                        placeholder="Parent…"
+                      />
+                    </td>
+                    <td className="p-3">
+                      <Input className="h-8 w-20" readOnly value={c.product_count || 0} title="Counted from products" />
+                    </td>
+                    <td className="p-3">
+                      <Input className="h-8 w-24" readOnly value={Number(c.stock_qty || 0)} title="Sum of product stock" />
+                    </td>
                     <td className="p-3">
                       {money(c.stock_price, currency)} / {money(c.stock_cost, currency)}
                     </td>
@@ -476,6 +528,7 @@ export default function ProductsPage() {
           <table className="w-full text-sm">
             <thead className="bg-slate-50 text-left">
               <tr>
+                <th className="p-3">Image</th>
                 <th className="p-3">Name</th>
                 <th className="p-3">Code</th>
                 <th className="p-3">Brand</th>
@@ -489,32 +542,63 @@ export default function ProductsPage() {
             <tbody>
               {products.map((p) => (
                 <tr key={p.id} className="border-t">
+                  <td className="p-3">
+                    <PasteableImage
+                      src={productImageSrc(p.image_url)}
+                      uploading={imageBusy === `product:${p.id}`}
+                        onActivate={() => setPasteTarget({ kind: 'product', id: p.id })}
+                        onFile={(file) => handleRowImage('product', p.id, file)}
+                    />
+                  </td>
                   <td className="p-3 font-medium">
                     <Input
                       defaultValue={p.name}
                       className="h-8"
-                      onBlur={async (e) => {
+                      onBlur={(e) => {
                         if (e.target.value === p.name) return;
-                        try { await updateProduct(p.id, { name: e.target.value }); toast.success('Name saved'); reload(); }
-                        catch (err) { toast.error(err.message); }
+                        saveProductField(p.id, { name: e.target.value });
                       }}
                     />
                   </td>
                   <td className="p-3">{p.code || '—'}</td>
-                  <td className="p-3">{p.brand_name || '—'}</td>
-                  <td className="p-3">{p.category_name || '—'}</td>
+                  <td className="p-3 min-w-[160px]">
+                    <SearchSelect
+                      value={p.brand_id || ''}
+                      onChange={(brand_id) => saveProductField(p.id, { brand_id: brand_id || null })}
+                      options={brands.map((b) => ({ value: b.id, label: b.name }))}
+                      placeholder="Brand…"
+                    />
+                  </td>
+                  <td className="p-3 min-w-[160px]">
+                    <SearchSelect
+                      value={p.category_id || ''}
+                      onChange={(category_id) => saveProductField(p.id, { category_id: category_id || null })}
+                      options={categories.map((c) => ({ value: c.id, label: c.name }))}
+                      placeholder="Category…"
+                    />
+                  </td>
                   <td className="p-3">
                     <Input
                       type="number"
                       defaultValue={p.price}
                       className="h-8 w-28"
-                      onBlur={async (e) => {
-                        try { await updateProduct(p.id, { price: e.target.value }); toast.success('Price saved'); }
-                        catch (err) { toast.error(err.message); }
+                      onBlur={(e) => {
+                        if (Number(e.target.value) === Number(p.price)) return;
+                        saveProductField(p.id, { price: e.target.value });
                       }}
                     />
                   </td>
-                  <td className="p-3">{Number(p.cost).toFixed(2)}</td>
+                  <td className="p-3">
+                    <Input
+                      type="number"
+                      defaultValue={p.cost}
+                      className="h-8 w-28"
+                      onBlur={(e) => {
+                        if (Number(e.target.value) === Number(p.cost)) return;
+                        saveProductField(p.id, { cost: e.target.value });
+                      }}
+                    />
+                  </td>
                   <td className="p-3">
                     {p.tracks_stock === false ? '—' : (
                       <Input
@@ -568,7 +652,7 @@ export default function ProductsPage() {
                 </tr>
               ))}
               {!products.length && (
-                <tr><td colSpan={8} className="p-8 text-center text-slate-500">No products yet</td></tr>
+                <tr><td colSpan={9} className="p-8 text-center text-slate-500">No products yet</td></tr>
               )}
             </tbody>
           </table>
@@ -631,9 +715,13 @@ export default function ProductsPage() {
           } catch (err) { toast.error(err.message); }
         }}>
           <div><Label>Warehouse</Label>
-            <select className="w-full border rounded-md h-10 px-2" value={adjForm.warehouse_id} onChange={(e) => setAdjForm({ ...adjForm, warehouse_id: e.target.value })}>
-              {warehouses.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
-            </select>
+            <WarehouseSelect
+              className="mt-1"
+              value={adjForm.warehouse_id}
+              onChange={(warehouse_id) => setAdjForm({ ...adjForm, warehouse_id })}
+              warehouses={warehouses}
+              allowClear={false}
+            />
           </div>
           <div><Label>Product</Label>
             <select className="w-full border rounded-md h-10 px-2" value={adjForm.product_id} onChange={(e) => setAdjForm({ ...adjForm, product_id: e.target.value })} required>
@@ -710,16 +798,15 @@ export default function ProductsPage() {
             </div>
             <div>
               <Label>Parent Category</Label>
-              <select
-                className="w-full border rounded-md h-10 px-2"
+              <SearchSelect
+                className="mt-1"
                 value={catForm.parent_id}
-                onChange={(e) => setCatForm({ ...catForm, parent_id: e.target.value })}
-              >
-                <option value="">No Parent Category</option>
-                {categories.filter((c) => c.id !== editCategory?.id).map((c) => (
-                  <option key={c.id} value={c.id}>{c.name}</option>
-                ))}
-              </select>
+                onChange={(parent_id) => setCatForm({ ...catForm, parent_id })}
+                options={categories
+                  .filter((c) => c.id !== editCategory?.id)
+                  .map((c) => ({ value: c.id, label: c.name }))}
+                placeholder="Search parent…"
+              />
             </div>
             <div>
               <Label>Category image</Label>

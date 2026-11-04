@@ -9,6 +9,7 @@ import { cn } from '@/lib/utils';
 import { formatErpDate, makeMoney, num } from '@/lib/erpFormat';
 import { BOOKING_STATUS_META, SIGNATURE_STATUS_META, statusMeta } from '@/lib/rentalFormat';
 import { listBookingCalendar, listWarehouses } from '@/services/erpService';
+import { WarehouseSelect } from '@/components/erp/WarehouseBillerSelect';
 
 const WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 const MONTHS = [
@@ -425,15 +426,14 @@ export default function BookingCalendar({ money, dateFormat = 'd-m-Y', onOpenBoo
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          <select
-            className="h-8 rounded-md border px-2 text-sm"
+          <WarehouseSelect
+            className="w-48"
             value={warehouseId}
-            onChange={(e) => setWarehouseId(e.target.value)}
-            aria-label="Filter by warehouse"
-          >
-            <option value="">All warehouses</option>
-            {warehouses.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
-          </select>
+            onChange={setWarehouseId}
+            warehouses={warehouses}
+            placeholder="Search warehouse…"
+            allLabel="All warehouses"
+          />
           <div className="flex items-center gap-1 rounded-lg border bg-slate-50 p-1">
             {viewButton('month', 'Month', CalendarDays)}
             {viewButton('week', 'Week', CalendarRange)}

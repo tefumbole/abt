@@ -19,6 +19,7 @@ import {
 } from '@/lib/rentalFormat';
 import { getSystemSettings } from '@/services/settingsService';
 import { QuickAddCustomerButton } from '@/components/erp/CustomerSelect';
+import { BillerSelect, WarehouseSelect } from '@/components/erp/WarehouseBillerSelect';
 import {
   createBooking, getBooking, listBillers, listCustomers,
   listProducts, listWarehouses, updateBooking,
@@ -570,26 +571,26 @@ export default function BookingForm({ bookingId = null, onSaved = () => {}, onCa
 
           <div>
             <Label>Warehouse *</Label>
-            <select
-              className={SELECT_CLASS}
+            <WarehouseSelect
+              className="mt-1"
               value={form.warehouse_id}
-              onChange={(e) => patch({ warehouse_id: e.target.value })}
-            >
-              <option value="">Select warehouse…</option>
-              {warehouses.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
-            </select>
+              onChange={(warehouse_id) => patch({ warehouse_id })}
+              warehouses={warehouses}
+              placeholder="Search warehouse…"
+              allowClear={false}
+            />
           </div>
 
           <div>
             <Label>Biller *</Label>
-            <select
-              className={SELECT_CLASS}
+            <BillerSelect
+              className="mt-1"
               value={form.biller_id}
-              onChange={(e) => patch({ biller_id: e.target.value })}
-            >
-              <option value="">Select biller…</option>
-              {billers.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
-            </select>
+              onChange={(biller_id) => patch({ biller_id })}
+              billers={billers}
+              placeholder="Search biller…"
+              allowClear={false}
+            />
           </div>
         </div>
 

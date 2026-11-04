@@ -18,6 +18,7 @@ import {
   updateWarehouse,
   updateBiller,
 } from '@/services/erpService';
+import { BillerSelect, WarehouseSelect } from '@/components/erp/WarehouseBillerSelect';
 
 const TIMEZONES = [
   { zone: 'Africa/Douala', offset: '+01:00', label: '(GMT+01:00) Africa/Douala' },
@@ -373,14 +374,13 @@ export default function GeneralSettingPanel() {
 
             <div className="space-y-2">
               <Label>Default Biller</Label>
-              <select
-                className="w-full border rounded-md h-10 px-2 bg-white"
+              <BillerSelect
                 value={form.default_biller_id}
-                onChange={(e) => setField('default_biller_id', e.target.value)}
-              >
-                <option value="">No default (auto: first active biller)</option>
-                {billers.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
-              </select>
+                onChange={(default_biller_id) => setField('default_biller_id', default_biller_id)}
+                billers={billers}
+                placeholder="Search biller…"
+                allLabel="No default (auto: first active biller)"
+              />
               <p className="text-xs text-slate-500">Used by POS and sales when no POS biller is configured.</p>
             </div>
 
@@ -480,14 +480,13 @@ export default function GeneralSettingPanel() {
 
             <div className="space-y-2">
               <Label>Default Warehouse</Label>
-              <select
-                className="w-full border rounded-md h-10 px-2 bg-white"
+              <WarehouseSelect
                 value={form.default_warehouse_id}
-                onChange={(e) => setField('default_warehouse_id', e.target.value)}
-              >
-                <option value="">No default (auto: warehouse with most items)</option>
-                {warehouses.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
-              </select>
+                onChange={(default_warehouse_id) => setField('default_warehouse_id', default_warehouse_id)}
+                warehouses={warehouses}
+                placeholder="Search warehouse…"
+                allLabel="No default (auto: warehouse with most items)"
+              />
               <p className="text-xs text-slate-500">Used by POS and sales when no POS warehouse is configured.</p>
             </div>
 

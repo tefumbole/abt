@@ -9,6 +9,7 @@ import { cn } from '@/lib/utils';
 import { formatErpDate, makeMoney, num } from '@/lib/erpFormat';
 import { exportCsv, exportExcel, exportTablePdf, printTable } from '@/lib/erpExport';
 import { listBookedProducts, listWarehouses } from '@/services/erpService';
+import { WarehouseSelect } from '@/components/erp/WarehouseBillerSelect';
 
 function isoDate(offsetDays = 0) {
   const date = new Date();
@@ -133,14 +134,14 @@ export default function BookedProductsPanel({ money, dateFormat = 'd-m-Y' }) {
                 onChange={(e) => setDraft((d) => ({ ...d, to: e.target.value }))}
               />
             </div>
-            <select
-              className="h-9 rounded-md border px-2 text-sm"
+            <WarehouseSelect
+              className="w-48"
               value={draft.warehouse_id}
-              onChange={(e) => setDraft((d) => ({ ...d, warehouse_id: e.target.value }))}
-            >
-              <option value="">All warehouses</option>
-              {warehouses.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
-            </select>
+              onChange={(warehouse_id) => setDraft((d) => ({ ...d, warehouse_id }))}
+              warehouses={warehouses}
+              placeholder="Search warehouse…"
+              allLabel="All warehouses"
+            />
             <Button type="submit" size="sm" className="bg-[#003D82] hover:bg-[#002855]">
               <Search className="h-4 w-4 mr-1" /> Submit
             </Button>

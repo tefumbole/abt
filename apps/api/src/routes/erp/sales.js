@@ -286,8 +286,10 @@ router.post('/', requireAuth, requireErpAdmin, async (req, res) => {
       subtotal += line;
     }
     const grand = subtotal - num(b.discount) + num(b.shipping) + num(b.tax);
-    const paid = num(b.paid_amount);
-    const payment_status = paymentStatusFor(paid, grand);
+    const method = String(b.paying_method || 'cash').toLowerCase();
+    const isDue = method === 'due' || method === 'pay_later';
+    const paid = isDue ? 0 : num(b.paid_amount);
+    const payment_status = isDue ? 'due' : paymentStatusFor(paid, grand);
     const sale_date = mysqlDateTime(b.sale_date);
 
     await conn.query(
@@ -315,7 +317,7 @@ router.post('/', requireAuth, requireErpAdmin, async (req, res) => {
       }
     }
 
-    if (paid > 0) {
+    if (paid > 0 && !isDue) {
       await conn.query(
         `INSERT INTO erp_payments (id, reference, payable_type, payable_id, amount, paying_method, note, created_by)
          VALUES (?, ?, 'sale', ?, ?, ?, ?, ?)`,

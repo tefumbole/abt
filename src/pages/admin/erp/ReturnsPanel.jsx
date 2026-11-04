@@ -10,6 +10,7 @@ import {
   listSales, listSuppliers, listWarehouses,
 } from '@/services/erpService';
 import { QuickAddCustomerButton } from '@/components/erp/CustomerSelect';
+import { WarehouseSelect } from '@/components/erp/WarehouseBillerSelect';
 import ErpShell from './ErpShell';
 
 const emptySaleLine = () => ({ product_id: '', qty: 1, net_unit_price: 0 });
@@ -200,14 +201,13 @@ export default function ReturnsPanel() {
           <div className="grid md:grid-cols-3 gap-3">
             <div>
               <Label>Warehouse</Label>
-              <select
-                className="w-full border rounded-md h-10 px-2"
+              <WarehouseSelect
+                className="mt-1"
                 value={saleForm.warehouse_id}
-                onChange={(e) => setSaleForm({ ...saleForm, warehouse_id: e.target.value })}
-                required
-              >
-                {warehouses.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
-              </select>
+                onChange={(warehouse_id) => setSaleForm({ ...saleForm, warehouse_id })}
+                warehouses={warehouses}
+                allowClear={false}
+              />
             </div>
             <div>
               <Label>Link sale (optional)</Label>
@@ -310,14 +310,13 @@ export default function ReturnsPanel() {
           <div className="grid md:grid-cols-3 gap-3">
             <div>
               <Label>Warehouse</Label>
-              <select
-                className="w-full border rounded-md h-10 px-2"
+              <WarehouseSelect
+                className="mt-1"
                 value={purchaseForm.warehouse_id}
-                onChange={(e) => setPurchaseForm({ ...purchaseForm, warehouse_id: e.target.value })}
-                required
-              >
-                {warehouses.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
-              </select>
+                onChange={(warehouse_id) => setPurchaseForm({ ...purchaseForm, warehouse_id })}
+                warehouses={warehouses}
+                allowClear={false}
+              />
             </div>
             <div>
               <Label>Link purchase (optional)</Label>

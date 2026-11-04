@@ -19,6 +19,7 @@ import BookingDetailsModal, {
 } from '@/components/erp/rentals/BookingDetailsModal';
 import { formatErpDate, makeMoney, num } from '@/lib/erpFormat';
 import { QuickAddCustomerButton } from '@/components/erp/CustomerSelect';
+import { WarehouseSelect } from '@/components/erp/WarehouseBillerSelect';
 import {
   BOOKING_STATUSES, BOOKING_STATUS_META, REVIEW_STATUS_META, SIGNATURE_STATUS_META, statusMeta,
 } from '@/lib/rentalFormat';
@@ -448,14 +449,14 @@ export default function BookingListPanel({
               />
             </div>
 
-            <select
-              className="h-9 rounded-md border px-2 text-sm"
+            <WarehouseSelect
+              className="w-48"
               value={filters.warehouse_id}
-              onChange={(e) => setFilter({ warehouse_id: e.target.value })}
-            >
-              <option value="">All warehouses</option>
-              {warehouses.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
-            </select>
+              onChange={(warehouse_id) => setFilter({ warehouse_id })}
+              warehouses={warehouses}
+              placeholder="Search warehouse…"
+              allLabel="All warehouses"
+            />
 
             <div className="flex items-center gap-2">
               <select

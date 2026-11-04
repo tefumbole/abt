@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
 import {
-  PAYING_METHODS, SALE_STATUS_META, num, toDateTimeLocal, toMysqlDateTime,
+  SALE_PAYING_METHODS, SALE_STATUS_META, num, toDateTimeLocal, toMysqlDateTime,
 } from '@/lib/erpFormat';
 import SearchSelect from '@/components/erp/SearchSelect';
 import CustomerSelect from '@/components/erp/CustomerSelect';
@@ -35,7 +35,7 @@ function emptyForm() {
 }
 
 function lineSubtotal(line) {
-  return num(line.qty) * num(line.net_unit_price) - num(line.discount) + num(line.tax);
+  return num(line.qty) * num(line.net_unit_price);
 }
 
 /**
@@ -89,11 +89,9 @@ export default function SaleFormFields({
         product_code: item.product_code || '',
         qty: num(item.qty, 1),
         net_unit_price: num(item.net_unit_price),
-        discount: num(item.discount),
-        tax: num(item.tax),
       })),
-      discount: num(initialSale.discount),
-      tax: num(initialSale.tax),
+      discount: 0,
+      tax: 0,
       shipping: num(initialSale.shipping),
       note: initialSale.note || '',
       paid_amount: num(initialSale.paid_amount),
@@ -122,8 +120,10 @@ export default function SaleFormFields({
     () => form.items.reduce((sum, line) => sum + lineSubtotal(line), 0),
     [form.items]
   );
-  const grandTotal = itemsSubtotal - num(form.discount) + num(form.tax) + num(form.shipping);
-  const balance = grandTotal - num(form.paid_amount);
+  const isDue = form.paying_method === 'due';
+  const paidAmount = isDue ? 0 : num(form.paid_amount);
+  const grandTotal = itemsSubtotal + num(form.shipping);
+  const balance = grandTotal - paidAmount;
 
   const patch = (changes) => setForm((prev) => ({ ...prev, ...changes }));
 
@@ -158,8 +158,6 @@ export default function SaleFormFields({
           product_code: product.code || product.barcode || '',
           qty: 1,
           net_unit_price: num(product.price),
-          discount: 0,
-          tax: 0,
         }],
       };
     });
@@ -197,20 +195,21 @@ export default function SaleFormFields({
       biller_id: form.biller_id || null,
       sale_status: form.sale_status,
       sale_date: toMysqlDateTime(form.sale_date),
-      discount: num(form.discount),
+      discount: 0,
       shipping: num(form.shipping),
-      tax: num(form.tax),
+      tax: 0,
       note: form.note || null,
       items: items.map((line) => ({
         product_id: line.product_id,
         qty: num(line.qty),
         net_unit_price: num(line.net_unit_price),
-        discount: num(line.discount),
-        tax: num(line.tax),
+        discount: 0,
+        tax: 0,
       })),
     };
     if (mode === 'create') {
-      body.paid_amount = num(form.paid_amount);
+      const due = form.paying_method === 'due';
+      body.paid_amount = due ? 0 : num(form.paid_amount);
       body.paying_method = form.paying_method || 'cash';
     }
     return onSubmit?.(body);
@@ -325,15 +324,13 @@ export default function SaleFormFields({
         </div>
 
         <div className="overflow-x-auto rounded-lg border">
-          <table className="w-full min-w-[820px] text-sm">
+          <table className="w-full min-w-[640px] text-sm">
             <thead className="bg-slate-50 text-left text-slate-600">
               <tr>
                 <th className="p-2 w-10">#</th>
                 <th className="p-2">Product</th>
                 <th className="p-2 w-28">Qty</th>
-                <th className="p-2 w-32">Net Unit Price</th>
-                <th className="p-2 w-28">Discount</th>
-                <th className="p-2 w-28">Tax</th>
+                <th className="p-2 w-36">Net Unit Price</th>
                 <th className="p-2 w-32 text-right">Subtotal</th>
                 <th className="p-2 w-12" />
               </tr>
@@ -341,7 +338,7 @@ export default function SaleFormFields({
             <tbody>
               {form.items.length === 0 && (
                 <tr>
-                  <td colSpan={8} className="p-6 text-center text-slate-500">No products added</td>
+                  <td colSpan={6} className="p-6 text-center text-slate-500">No products added</td>
                 </tr>
               )}
               {form.items.map((line, index) => (
@@ -371,24 +368,6 @@ export default function SaleFormFields({
                       onChange={(e) => updateLine(index, { net_unit_price: e.target.value })}
                     />
                   </td>
-                  <td className="p-2">
-                    <Input
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      value={line.discount}
-                      onChange={(e) => updateLine(index, { discount: e.target.value })}
-                    />
-                  </td>
-                  <td className="p-2">
-                    <Input
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      value={line.tax}
-                      onChange={(e) => updateLine(index, { tax: e.target.value })}
-                    />
-                  </td>
                   <td className="p-2 text-right font-medium whitespace-nowrap">
                     {money ? money(lineSubtotal(line)) : lineSubtotal(line).toFixed(2)}
                   </td>
@@ -411,21 +390,7 @@ export default function SaleFormFields({
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
-        <div className="grid gap-4 sm:grid-cols-3 content-start">
-          <div>
-            <Label>Order Discount</Label>
-            <Input
-              type="number" step="0.01" className="mt-1" value={form.discount}
-              onChange={(e) => patch({ discount: e.target.value })}
-            />
-          </div>
-          <div>
-            <Label>Order Tax</Label>
-            <Input
-              type="number" step="0.01" className="mt-1" value={form.tax}
-              onChange={(e) => patch({ tax: e.target.value })}
-            />
-          </div>
+        <div className="grid gap-4 sm:grid-cols-2 content-start">
           <div>
             <Label>Shipping</Label>
             <Input
@@ -439,14 +404,6 @@ export default function SaleFormFields({
           <div className="flex justify-between">
             <span className="text-slate-600">Items Subtotal</span>
             <span className="font-medium">{money ? money(itemsSubtotal) : itemsSubtotal.toFixed(2)}</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-slate-600">Order Discount</span>
-            <span>- {money ? money(form.discount) : num(form.discount).toFixed(2)}</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-slate-600">Order Tax</span>
-            <span>{money ? money(form.tax) : num(form.tax).toFixed(2)}</span>
           </div>
           <div className="flex justify-between">
             <span className="text-slate-600">Shipping</span>
@@ -483,7 +440,8 @@ export default function SaleFormFields({
           <div>
             <Label>Paid Amount</Label>
             <Input
-              type="number" step="0.01" className="mt-1" value={form.paid_amount}
+              type="number" step="0.01" className="mt-1" value={isDue ? 0 : form.paid_amount}
+              disabled={isDue}
               onChange={(e) => patch({ paid_amount: e.target.value })}
             />
           </div>
@@ -492,9 +450,12 @@ export default function SaleFormFields({
             <SearchSelect
               className="mt-1"
               value={form.paying_method}
-              onChange={(paying_method) => patch({ paying_method })}
+              onChange={(paying_method) => patch({
+                paying_method,
+                paid_amount: paying_method === 'due' ? 0 : form.paid_amount,
+              })}
               placeholder="Payment method…"
-              options={PAYING_METHODS}
+              options={SALE_PAYING_METHODS}
               allowClear={false}
             />
           </div>

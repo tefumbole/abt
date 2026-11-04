@@ -11,6 +11,7 @@ import { num } from '@/lib/erpFormat';
 import { PRODUCT_IMAGE_BUCKET, productImageSrc } from '@/lib/erpImages';
 import { nextProductCode } from '@/services/erpService';
 import RichTextField from '@/components/erp/RichTextField';
+import { WarehouseSelect } from '@/components/erp/WarehouseBillerSelect';
 
 const API_BASE = import.meta.env.VITE_API_URL || '/api';
 const IMAGE_BUCKET = PRODUCT_IMAGE_BUCKET;
@@ -495,14 +496,14 @@ export default function ProductFormFields({
         <div className={ROW_CLASS}>
           <div>
             <Label>Stock Warehouse</Label>
-            <select
-              className={SELECT_CLASS}
+            <WarehouseSelect
+              className="mt-1"
               value={form.stock_warehouse_id}
-              onChange={(e) => patch({ stock_warehouse_id: e.target.value })}
-            >
-              <option value="">Select warehouse…</option>
-              {warehouses.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
-            </select>
+              onChange={(stock_warehouse_id) => patch({ stock_warehouse_id })}
+              warehouses={warehouses}
+              placeholder="Search warehouse…"
+              allowClear={false}
+            />
             <p className="mt-1 text-xs text-slate-500">
               The quantity above is recorded against this warehouse.
             </p>

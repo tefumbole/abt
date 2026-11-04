@@ -8,6 +8,7 @@ import {
   createExpense, createExpenseCategory, createErpPayment, deleteExpense,
   listAccounts, listExpenseCategories, listExpenses, listErpPayments, listWarehouses,
 } from '@/services/erpService';
+import { WarehouseSelect } from '@/components/erp/WarehouseBillerSelect';
 import AccountingPanels from './AccountingPanels';
 import ErpShell from './ErpShell';
 import TransfersPanel from './TransfersPanel';
@@ -87,10 +88,13 @@ export function ExpensesPage() {
           </select>
         </div>
         <div><Label>Warehouse</Label>
-          <select className="w-full border rounded-md h-10 px-2" value={form.warehouse_id} onChange={(e) => setForm({ ...form, warehouse_id: e.target.value })}>
-            <option value="">—</option>
-            {warehouses.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
-          </select>
+          <WarehouseSelect
+            className="mt-1"
+            value={form.warehouse_id}
+            onChange={(warehouse_id) => setForm({ ...form, warehouse_id })}
+            warehouses={warehouses}
+            placeholder="Search warehouse…"
+          />
         </div>
         <div><Label>Category</Label>
           <select className="w-full border rounded-md h-10 px-2" value={form.category_id} onChange={(e) => setForm({ ...form, category_id: e.target.value })}>

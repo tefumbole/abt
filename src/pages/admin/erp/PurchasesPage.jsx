@@ -21,6 +21,7 @@ import {
   formatErpDate, makeMoney, num, payingMethodLabel, toDateTimeLocal, toMysqlDateTime,
 } from '@/lib/erpFormat';
 import { getSystemSettings } from '@/services/settingsService';
+import { WarehouseSelect } from '@/components/erp/WarehouseBillerSelect';
 import {
   createPurchase, createPurchasePayment, deletePurchase, deletePurchasePayment,
   getPurchase, listProducts, listPurchasePayments, listPurchases, listSuppliers,
@@ -353,14 +354,13 @@ export default function PurchasesPage() {
               </div>
               <div className="w-40">
                 <Label>Warehouse</Label>
-                <select
-                  className={SELECT_CLASS}
+                <WarehouseSelect
+                  className="mt-1"
                   value={filters.warehouse_id}
-                  onChange={(e) => setFilters((f) => ({ ...f, warehouse_id: e.target.value }))}
-                >
-                  <option value="">All</option>
-                  {warehouses.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
-                </select>
+                  onChange={(warehouse_id) => setFilters((f) => ({ ...f, warehouse_id }))}
+                  warehouses={warehouses}
+                  allLabel="All"
+                />
               </div>
               <div className="w-36">
                 <Label>Status</Label>
@@ -509,18 +509,16 @@ export default function PurchasesPage() {
               </div>
               <div>
                 <Label>Warehouse *</Label>
-                <select
-                  className={SELECT_CLASS}
+                <WarehouseSelect
+                  className="mt-1"
                   value={form.warehouse_id}
-                  onChange={(e) => {
-                    patch({ warehouse_id: e.target.value });
-                    loadProducts(e.target.value);
+                  onChange={(warehouse_id) => {
+                    patch({ warehouse_id });
+                    loadProducts(warehouse_id);
                   }}
-                  required
-                >
-                  <option value="">Select warehouse…</option>
-                  {warehouses.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
-                </select>
+                  warehouses={warehouses}
+                  allowClear={false}
+                />
               </div>
               <div>
                 <Label>Supplier</Label>

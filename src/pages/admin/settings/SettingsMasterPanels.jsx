@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { QuickAddCustomerButton } from '@/components/erp/CustomerSelect';
+import { BillerSelect, WarehouseSelect } from '@/components/erp/WarehouseBillerSelect';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import {
@@ -256,10 +257,13 @@ export function BillersSettingsPanel() {
         <div className="md:col-span-2"><Label>Address</Label><Input value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} /></div>
         <div>
           <Label>Warehouse</Label>
-          <select className="w-full border rounded-md h-10 px-2 bg-white" value={form.warehouse_id} onChange={(e) => setForm({ ...form, warehouse_id: e.target.value })}>
-            <option value="">—</option>
-            {warehouses.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
-          </select>
+          <WarehouseSelect
+            className="mt-1"
+            value={form.warehouse_id}
+            onChange={(warehouse_id) => setForm({ ...form, warehouse_id })}
+            warehouses={warehouses}
+            placeholder="Search warehouse…"
+          />
         </div>
         <label className="flex items-center gap-2 text-sm self-end pb-2">
           <input type="checkbox" checked={form.is_default} onChange={(e) => setForm({ ...form, is_default: e.target.checked })} />
@@ -1166,25 +1170,21 @@ export function PosSettingsPanel() {
         <CardContent className="grid gap-4 md:grid-cols-2">
           <div className="space-y-2">
             <Label>Default warehouse</Label>
-            <select
-              className="w-full border rounded-md h-10 px-2 bg-white"
+            <WarehouseSelect
               value={form.warehouse_id}
-              onChange={(e) => setField('warehouse_id', e.target.value)}
-            >
-              <option value="">—</option>
-              {warehouses.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
-            </select>
+              onChange={(warehouse_id) => setField('warehouse_id', warehouse_id)}
+              warehouses={warehouses}
+              placeholder="Search warehouse…"
+            />
           </div>
           <div className="space-y-2">
             <Label>Default biller</Label>
-            <select
-              className="w-full border rounded-md h-10 px-2 bg-white"
+            <BillerSelect
               value={form.biller_id}
-              onChange={(e) => setField('biller_id', e.target.value)}
-            >
-              <option value="">—</option>
-              {billers.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
-            </select>
+              onChange={(biller_id) => setField('biller_id', biller_id)}
+              billers={billers}
+              placeholder="Search biller…"
+            />
           </div>
           <div className="space-y-2 md:col-span-2">
             <Label>Default walk-in customer</Label>

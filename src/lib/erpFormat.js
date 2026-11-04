@@ -113,6 +113,12 @@ export const PAYING_METHODS = [
   { value: 'visa', label: 'Visa' },
 ];
 
+/** Sale create methods — Due payment leaves the balance on Payments → Awaiting. */
+export const SALE_PAYING_METHODS = [
+  ...PAYING_METHODS,
+  { value: 'due', label: 'Due payment' },
+];
+
 const PAYING_METHOD_LABELS = {
   cash: 'Cash',
   visa: 'Visa',
@@ -126,6 +132,7 @@ const PAYING_METHOD_LABELS = {
   credit: 'Credit',
   group_credit: 'Group Credit',
   pay_later: 'Pay Later',
+  due: 'Due payment',
 };
 
 export function payingMethodLabel(value) {

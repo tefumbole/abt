@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import {
   completeTransfer, createTransfer, deleteTransfer, listProducts, listTransfers, listWarehouses,
 } from '@/services/erpService';
+import { WarehouseSelect } from '@/components/erp/WarehouseBillerSelect';
 import ErpShell from './ErpShell';
 
 const emptyLine = () => ({ product_id: '', qty: 1 });
@@ -115,25 +116,23 @@ export default function TransfersPanel() {
         <div className="grid md:grid-cols-2 gap-3">
           <div>
             <Label>From warehouse</Label>
-            <select
-              className="w-full border rounded-md h-10 px-2"
+            <WarehouseSelect
+              className="mt-1"
               value={form.from_warehouse_id}
-              onChange={(e) => setForm({ ...form, from_warehouse_id: e.target.value })}
-              required
-            >
-              {warehouses.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
-            </select>
+              onChange={(from_warehouse_id) => setForm({ ...form, from_warehouse_id })}
+              warehouses={warehouses}
+              allowClear={false}
+            />
           </div>
           <div>
             <Label>To warehouse</Label>
-            <select
-              className="w-full border rounded-md h-10 px-2"
+            <WarehouseSelect
+              className="mt-1"
               value={form.to_warehouse_id}
-              onChange={(e) => setForm({ ...form, to_warehouse_id: e.target.value })}
-              required
-            >
-              {warehouses.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
-            </select>
+              onChange={(to_warehouse_id) => setForm({ ...form, to_warehouse_id })}
+              warehouses={warehouses}
+              allowClear={false}
+            />
           </div>
         </div>
 
