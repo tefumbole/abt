@@ -20,6 +20,7 @@ import {
 } from '@/lib/erpExport';
 import { buildDocumentHtml, loadErpCompany } from '@/lib/erpDocuments';
 import { getSystemSettings } from '@/services/settingsService';
+import SearchSelect from '@/components/erp/SearchSelect';
 import {
   convertQuotation, createQuotation, deleteQuotation, getQuotation,
   listBillers, listCustomers, listProducts, listQuotations, listSuppliers,
@@ -249,7 +250,7 @@ export default function QuotationsPage() {
     () => form.items.reduce((sum, item) => sum + lineSubtotal(item), 0),
     [form.items]
   );
-  const formGrand = itemsTotal - num(form.discount) + num(form.shipping) + num(form.tax);
+  const formGrand = itemsTotal + num(form.shipping);
 
   const toggleSelect = (id) => {
     setSelected((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
@@ -299,9 +300,9 @@ export default function QuotationsPage() {
         customer_id: form.customer_id || null,
         biller_id: form.biller_id || null,
         supplier_id: form.supplier_id || null,
-        discount: num(form.discount),
+        discount: 0,
         shipping: num(form.shipping),
-        tax: num(form.tax),
+        tax: 0,
         note: form.note || null,
         cc_phones: form.cc_phones || null,
         status: form.status || 'draft',
@@ -309,8 +310,8 @@ export default function QuotationsPage() {
           product_id: i.product_id,
           qty: num(i.qty),
           net_unit_price: num(i.net_unit_price),
-          discount: num(i.discount),
-          tax: num(i.tax),
+          discount: 0,
+          tax: 0,
         })),
       };
       if (isEdit) await updateQuotation(editId, body);
@@ -747,45 +748,66 @@ export default function QuotationsPage() {
                 )}
                 <div>
                   <Label>Warehouse</Label>
-                  <select className="w-full border rounded-md h-10 px-2 mt-1" required value={form.warehouse_id}
-                    onChange={(e) => setForm({ ...form, warehouse_id: e.target.value })}>
-                    <option value="">Select…</option>
-                    {warehouses.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
-                  </select>
+                  <SearchSelect
+                    className="mt-1"
+                    value={form.warehouse_id}
+                    onChange={(warehouse_id) => setForm({ ...form, warehouse_id })}
+                    placeholder="Search warehouse…"
+                    emptyLabel="No warehouse matches"
+                    allowClear={false}
+                    options={warehouses.map((w) => ({ value: w.id, label: w.name }))}
+                  />
                 </div>
                 <div>
                   <Label>Biller</Label>
-                  <select className="w-full border rounded-md h-10 px-2 mt-1" value={form.biller_id}
-                    onChange={(e) => setForm({ ...form, biller_id: e.target.value })}>
-                    <option value="">—</option>
-                    {billers.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
-                  </select>
+                  <SearchSelect
+                    className="mt-1"
+                    value={form.biller_id}
+                    onChange={(biller_id) => setForm({ ...form, biller_id })}
+                    placeholder="Search biller…"
+                    emptyLabel="No biller matches"
+                    options={billers.map((b) => ({ value: b.id, label: b.name }))}
+                  />
                 </div>
                 <div>
                   <Label>Customer</Label>
-                  <select className="w-full border rounded-md h-10 px-2 mt-1" value={form.customer_id}
-                    onChange={(e) => setForm({ ...form, customer_id: e.target.value })}>
-                    <option value="">—</option>
-                    {customers.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-                  </select>
+                  <SearchSelect
+                    className="mt-1"
+                    value={form.customer_id}
+                    onChange={(customer_id) => setForm({ ...form, customer_id })}
+                    placeholder="Search customer…"
+                    emptyLabel="No customer matches"
+                    options={customers.map((c) => ({ value: c.id, label: c.name, hint: c.phone || '' }))}
+                  />
                 </div>
                 <div>
                   <Label>Supplier</Label>
-                  <select className="w-full border rounded-md h-10 px-2 mt-1" value={form.supplier_id}
-                    onChange={(e) => setForm({ ...form, supplier_id: e.target.value })}>
-                    <option value="">—</option>
-                    {suppliers.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-                  </select>
+                  <SearchSelect
+                    className="mt-1"
+                    value={form.supplier_id}
+                    onChange={(supplier_id) => setForm({ ...form, supplier_id })}
+                    placeholder="Search supplier…"
+                    emptyLabel="No supplier matches"
+                    options={suppliers.map((s) => ({ value: s.id, label: s.name, hint: s.phone || s.company || '' }))}
+                  />
                 </div>
                 <div>
                   <Label>Status</Label>
-                  <select className="w-full border rounded-md h-10 px-2 mt-1" value={form.status}
-                    onChange={(e) => setForm({ ...form, status: e.target.value })}>
-                    <option value="draft">Draft</option>
-                    <option value="awaiting_approval">Awaiting Client Approval</option>
-                    {isEdit && <option value="approved">Approved</option>}
-                    {isEdit && <option value="rejected">Rejected</option>}
-                  </select>
+                  <SearchSelect
+                    className="mt-1"
+                    value={form.status}
+                    onChange={(status) => setForm({ ...form, status })}
+                    placeholder="Search status…"
+                    allowClear={false}
+                    options={[
+                      { value: 'draft', label: 'Draft' },
+                      { value: 'awaiting_approval', label: 'Awaiting Client Approval' },
+                      ...(isEdit ? [
+                        { value: 'approved', label: 'Approved' },
+                        { value: 'rejected', label: 'Rejected' },
+                      ] : []),
+                    ]}
+                  />
                 </div>
                 <div>
                   <Label>CC phones (WhatsApp)</Label>
@@ -802,15 +824,13 @@ export default function QuotationsPage() {
                     <Plus className="h-4 w-4 mr-1" /> Add line
                   </Button>
                 </div>
-                <div className="overflow-x-auto border rounded-lg">
+                <div className="border rounded-lg overflow-visible">
                   <table className="w-full text-sm">
                     <thead className="bg-slate-50 text-left">
                       <tr>
                         <th className="p-2">Product</th>
                         <th className="p-2 w-24">Qty</th>
-                        <th className="p-2 w-32">Price</th>
-                        <th className="p-2 w-28">Discount</th>
-                        <th className="p-2 w-28">Tax</th>
+                        <th className="p-2 w-36">Price</th>
                         <th className="p-2 w-32 text-right">Subtotal</th>
                         <th className="p-2 w-12" />
                       </tr>
@@ -819,16 +839,28 @@ export default function QuotationsPage() {
                       {form.items.map((item, idx) => (
                         <tr key={idx} className="border-t">
                           <td className="p-2">
-                            <select className="w-full border rounded-md h-9 px-2" value={item.product_id}
-                              onChange={(e) => {
-                                const p = products.find((x) => x.id === e.target.value);
+                            <SearchSelect
+                              value={item.product_id}
+                              onChange={(product_id) => {
+                                const p = products.find((x) => String(x.id) === String(product_id));
                                 const next = [...form.items];
-                                next[idx] = { ...item, product_id: e.target.value, net_unit_price: p?.price || 0 };
+                                next[idx] = {
+                                  ...item,
+                                  product_id,
+                                  net_unit_price: p?.price || 0,
+                                  discount: 0,
+                                  tax: 0,
+                                };
                                 setForm({ ...form, items: next });
-                              }}>
-                              <option value="">Select product…</option>
-                              {products.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-                            </select>
+                              }}
+                              placeholder="Search product…"
+                              emptyLabel="No product matches"
+                              options={products.map((p) => ({
+                                value: p.id,
+                                label: p.name,
+                                hint: [p.code, p.price != null ? money(p.price) : null].filter(Boolean).join(' · '),
+                              }))}
+                            />
                           </td>
                           <td className="p-2">
                             <Input type="number" step="0.001" value={item.qty}
@@ -843,22 +875,6 @@ export default function QuotationsPage() {
                               onChange={(e) => {
                                 const next = [...form.items];
                                 next[idx] = { ...item, net_unit_price: e.target.value };
-                                setForm({ ...form, items: next });
-                              }} />
-                          </td>
-                          <td className="p-2">
-                            <Input type="number" step="0.01" value={item.discount}
-                              onChange={(e) => {
-                                const next = [...form.items];
-                                next[idx] = { ...item, discount: e.target.value };
-                                setForm({ ...form, items: next });
-                              }} />
-                          </td>
-                          <td className="p-2">
-                            <Input type="number" step="0.01" value={item.tax}
-                              onChange={(e) => {
-                                const next = [...form.items];
-                                next[idx] = { ...item, tax: e.target.value };
                                 setForm({ ...form, items: next });
                               }} />
                           </td>
@@ -878,19 +894,9 @@ export default function QuotationsPage() {
 
               <div className="grid md:grid-cols-3 gap-4">
                 <div>
-                  <Label>Order discount</Label>
-                  <Input type="number" step="0.01" className="mt-1" value={form.discount}
-                    onChange={(e) => setForm({ ...form, discount: e.target.value })} />
-                </div>
-                <div>
                   <Label>Shipping</Label>
                   <Input type="number" step="0.01" className="mt-1" value={form.shipping}
                     onChange={(e) => setForm({ ...form, shipping: e.target.value })} />
-                </div>
-                <div>
-                  <Label>Order tax</Label>
-                  <Input type="number" step="0.01" className="mt-1" value={form.tax}
-                    onChange={(e) => setForm({ ...form, tax: e.target.value })} />
                 </div>
               </div>
 
@@ -941,14 +947,12 @@ export default function QuotationsPage() {
                     <th className="p-2">Product</th>
                     <th className="p-2 text-right">Qty</th>
                     <th className="p-2 text-right">Price</th>
-                    <th className="p-2 text-right">Discount</th>
-                    <th className="p-2 text-right">Tax</th>
                     <th className="p-2 text-right">Subtotal</th>
                   </tr>
                 </thead>
                 <tbody>
                   {(detail.items || []).length === 0 && (
-                    <tr><td colSpan={6} className="p-6 text-center text-slate-500">No line items.</td></tr>
+                    <tr><td colSpan={4} className="p-6 text-center text-slate-500">No line items.</td></tr>
                   )}
                   {(detail.items || []).map((i) => (
                     <tr key={i.id} className="border-t">
@@ -958,8 +962,6 @@ export default function QuotationsPage() {
                       </td>
                       <td className="p-2 text-right">{num(i.qty)}</td>
                       <td className="p-2 text-right">{money(i.net_unit_price)}</td>
-                      <td className="p-2 text-right">{money(i.discount)}</td>
-                      <td className="p-2 text-right">{money(i.tax)}</td>
                       <td className="p-2 text-right">{money(i.subtotal ?? lineSubtotal(i))}</td>
                     </tr>
                   ))}
