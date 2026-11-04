@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  Clock, Fullscreen, HelpCircle, Loader2, Lock, Minus, Package,
-  Plus, Printer, ScanLine, Search, Settings2, Trash2, X,
+  Clock, Fullscreen, Loader2, Lock, Menu, Minus, Package,
+  Plus, Printer, ScanLine, Search, Settings2, Star, Trash2, X,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -16,9 +16,9 @@ import { openPrintWindow } from '@/lib/erpExport';
 import { getSystemSettings } from '@/services/settingsService';
 import { paymentService } from '@/services/commerceService';
 import {
-  closeRegister, createCustomer, createPosSale, getPosSettings, getRegisterSummary, getSale,
+  closeRegister, createCustomer, createPosSale, createProduct, getPosSettings, getRegisterSummary, getSale,
   listBillers, listBrands, listCategories, listCustomers, listProducts, listRecentPosSales,
-  listRegisters, listWarehouses, openRegister,
+  listRegisters, listUnits, listWarehouses, openRegister,
 } from '@/services/erpService';
 import PaymentModal, { paymentTotals } from '@/components/erp/pos/PaymentModal';
 import SaleCompleteModal from '@/components/erp/pos/SaleCompleteModal';
@@ -33,9 +33,9 @@ import {
 
 /** Beyond Tech quick-pay buttons → erp paying_method + legacy paid_by_id. */
 const QUICK_METHODS = [
-  { key: 'cash', method: 'cash', paidById: 1, label: 'Cash', className: 'bg-teal-600 hover:bg-teal-700 text-white' },
-  { key: 'momo', method: 'momo_mtn', paidById: 8, label: 'MoMo', className: 'bg-[#da7828] hover:bg-[#c06820] text-white' },
-  { key: 'visa', method: 'visa', paidById: 2, label: 'Visa', className: 'bg-[#1a1f71] hover:bg-[#12164f] text-white' },
+  { key: 'cash', method: 'cash', paidById: 1, label: 'Cash', icon: '💵', className: 'bg-[#00cec9] hover:bg-[#00b8b4] text-white' },
+  { key: 'momo', method: 'momo_mtn', paidById: 8, label: 'MoMo', icon: '📱', className: 'bg-[#da7828] hover:bg-[#c06820] text-white' },
+  { key: 'visa', method: 'visa', paidById: 2, label: 'Visa', icon: '💳', className: 'bg-[#1a1f71] hover:bg-[#12164f] text-white' },
 ];
 const POS_PAY_METHODS = QUICK_METHODS.map((m) => ({ value: m.method, label: m.label }));
 
@@ -150,6 +150,19 @@ export default function PosPage() {
   const [closingRegister, setClosingRegister] = useState(false);
   const [showShortcuts, setShowShortcuts] = useState(false);
   const [momoWait, setMomoWait] = useState(null);
+  const [searchAll, setSearchAll] = useState(() => {
+    try { return localStorage.getItem('pos-search-all') === '1'; } catch { return false; }
+  });
+  const [expanded, setExpanded] = useState(() => {
+    try { return localStorage.getItem('pos-expend') === '1'; } catch { return false; }
+  });
+  const [starOpen, setStarOpen] = useState(false);
+  const [starSaving, setStarSaving] = useState(false);
+  const [starForm, setStarForm] = useState({ name: '', price: '', category_id: '' });
+  const [units, setUnits] = useState([]);
+  const [recentOpen, setRecentOpen] = useState(false);
+  const [recentSales, setRecentSales] = useState([]);
+  const [recentLoading, setRecentLoading] = useState(false);
 
   const searchRef = useRef(null);
 
@@ -245,11 +258,12 @@ export default function PosPage() {
   const load = async (wid) => {
     setLoading(true);
     try {
-      const [w, bl, cats, brs, rawSettings, sys, comp] = await Promise.all([
+      const [w, bl, cats, brs, unitRows, rawSettings, sys, comp] = await Promise.all([
         listWarehouses(),
         listBillers(),
         listCategories().catch(() => []),
         listBrands().catch(() => []),
+        listUnits().catch(() => []),
         getPosSettings().catch(() => null),
         getSystemSettings().catch(() => null),
         loadErpCompany(),
@@ -259,6 +273,7 @@ export default function PosPage() {
       setBillers(bl || []);
       setCategories(Array.isArray(cats) ? cats : unwrap(cats));
       setBrands(Array.isArray(brs) ? brs : unwrap(brs));
+      setUnits(Array.isArray(unitRows) ? unitRows : unwrap(unitRows));
       setPosSettings(settings);
       setSysSettings(sys || {});
       setCompany(comp || {});
@@ -314,12 +329,16 @@ export default function PosPage() {
   const searchMatches = useMemo(() => {
     const q = search.trim().toLowerCase();
     if (!q) return [];
-    return products.filter((p) => (
-      p.name?.toLowerCase().includes(q)
-      || String(p.code || '').toLowerCase().includes(q)
-      || String(p.barcode || '').toLowerCase().includes(q)
-    )).slice(0, 12);
-  }, [products, search]);
+    return products.filter((p) => {
+      const textMatch = p.name?.toLowerCase().includes(q)
+        || String(p.code || '').toLowerCase().includes(q)
+        || String(p.barcode || '').toLowerCase().includes(q);
+      if (!textMatch) return false;
+      if (searchAll) return true;
+      const stock = p.tracks_stock === false ? null : num(p.stock_qty);
+      return stock === null || stock > 0;
+    }).slice(0, 20);
+  }, [products, search, searchAll]);
 
   const filteredProducts = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -368,7 +387,7 @@ export default function PosPage() {
     if (!product) return;
     const stock = stockById.get(product.id);
     const nextQty = num(cart.find((x) => x.product_id === product.id)?.qty) + qty;
-    if (posSettings.block_out_of_stock && stock !== null && stock !== undefined && nextQty > stock) {
+    if (!searchAll && posSettings.block_out_of_stock && stock !== null && stock !== undefined && nextQty > stock) {
       toast.warning(`Only ${amount(stock, 0)} in stock for ${product.name}`);
       return;
     }
@@ -394,7 +413,7 @@ export default function PosPage() {
   const updateCartQty = (productId, qty) => {
     let next = Math.max(1, num(qty, 1) || 1);
     const stock = stockById.get(productId);
-    if (posSettings.block_out_of_stock && stock !== null && stock !== undefined && next > stock) {
+    if (!searchAll && posSettings.block_out_of_stock && stock !== null && stock !== undefined && next > stock) {
       toast.warning(`Only ${amount(stock, 0)} in stock`);
       next = Math.max(1, stock);
     }
@@ -660,6 +679,8 @@ export default function PosPage() {
 
   const closeTopModal = () => {
     if (showShortcuts) return setShowShortcuts(false);
+    if (starOpen) return setStarOpen(false);
+    if (recentOpen) return setRecentOpen(false);
     if (showQuickCustomer) return setShowQuickCustomer(false);
     if (payModal) return setPayModal(null);
     if (saleComplete) return setSaleComplete(null);
@@ -672,7 +693,7 @@ export default function PosPage() {
   shortcutRef.current = {
     enabled: posSettings.enable_keyboard_shortcuts,
     modalOpen: Boolean(payModal || saleComplete || closeReport
-      || showRegisterModal || showQuickCustomer),
+      || showRegisterModal || showQuickCustomer || starOpen || recentOpen),
     focusSearch,
     openDefaultPay,
     cancelSale,
@@ -745,80 +766,79 @@ export default function PosPage() {
     else document.exitFullscreen?.();
   };
 
+  const toggleSearchAll = () => {
+    const next = !searchAll;
+    setSearchAll(next);
+    try { localStorage.setItem('pos-search-all', next ? '1' : '0'); } catch { /* ignore */ }
+    toast.message(next ? 'Searching all products, including those with no stock' : 'Quick search — in-stock products only');
+  };
+
+  const toggleExpand = () => {
+    const next = !expanded;
+    setExpanded(next);
+    try { localStorage.setItem('pos-expend', next ? '1' : '0'); } catch { /* ignore */ }
+  };
+
+  const openRecent = async () => {
+    setRecentOpen(true);
+    setRecentLoading(true);
+    try {
+      const rows = unwrap(await listRecentPosSales({ warehouse_id: warehouseId || undefined, limit: 10 }));
+      setRecentSales(rows.slice(0, 10));
+    } catch (err) {
+      toast.error(err.message);
+      setRecentSales([]);
+    } finally {
+      setRecentLoading(false);
+    }
+  };
+
+  const saveStarSale = async (e) => {
+    e.preventDefault();
+    const name = starForm.name.trim();
+    const price = num(starForm.price);
+    if (!name) {
+      toast.error('Product name is required');
+      return;
+    }
+    if (price <= 0) {
+      toast.error('Enter a price');
+      return;
+    }
+    setStarSaving(true);
+    try {
+      const defaultUnit = units.find((u) => u.is_default) || units[0];
+      const created = await createProduct({
+        name,
+        price,
+        cost: price,
+        category_id: starForm.category_id || categories[0]?.id || null,
+        unit_id: defaultUnit?.id || null,
+        sale_unit_id: defaultUnit?.id || null,
+        purchase_unit_id: defaultUnit?.id || null,
+        product_type: 'standard',
+        is_featured: true,
+        is_active: true,
+        stocks: warehouseId ? [{ warehouse_id: warehouseId, qty: 1 }] : [],
+      });
+      const product = created?.data || created;
+      toast.success('Star sale product added');
+      setStarOpen(false);
+      setStarForm({ name: '', price: '', category_id: '' });
+      await load(warehouseId);
+      if (product?.id) addToCart(product);
+    } catch (err) {
+      toast.error(err.message);
+    } finally {
+      setStarSaving(false);
+    }
+  };
+
   const gridCols = GRID_COLS[posSettings.products_per_row] || GRID_COLS[4];
 
   return (
-    <div className="-m-4 md:-m-6 min-h-[calc(100vh-4rem)] bg-[#eef2f8] flex flex-col">
-      {/* POS chrome */}
-      <div className="bg-[#003D82] text-white px-3 py-2 flex flex-wrap items-center justify-between gap-2">
-        <div className="flex items-center gap-3">
-          <span className="font-semibold tracking-wide">Point of Sale</span>
-          <span className="hidden sm:flex items-center gap-1.5 text-[11px] bg-white/10 rounded-full px-2.5 py-1">
-            <Clock className="h-3.5 w-3.5" />
-            Today: <strong>{todayStats.count}</strong> sale{todayStats.count === 1 ? '' : 's'}
-            <span className="opacity-60">·</span>
-            <strong>{money(todayStats.total)}</strong>
-          </span>
-        </div>
-        <div className="flex flex-wrap items-center gap-1.5">
-          <Button
-            size="sm"
-            variant="ghost"
-            className="text-white hover:bg-white/10 h-8 px-2"
-            disabled={!lastReceipt}
-            onClick={() => printReceipt(lastReceipt)}
-          >
-            <Printer className="h-4 w-4 mr-1" /> Print last receipt
-          </Button>
-          <div className="relative">
-            <Button
-              size="sm"
-              variant="ghost"
-              className="text-white hover:bg-white/10 h-8 w-8 p-0"
-              title="Keyboard shortcuts"
-              onClick={() => setShowShortcuts((v) => !v)}
-            >
-              <HelpCircle className="h-4 w-4" />
-            </Button>
-            {showShortcuts ? (
-              <div className="absolute right-0 top-9 z-40 w-64 rounded-xl bg-white text-slate-700 shadow-xl border p-3">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Shortcuts</span>
-                  <button type="button" onClick={() => setShowShortcuts(false)}><X className="h-4 w-4" /></button>
-                </div>
-                <ul className="space-y-1 text-xs">
-                  {SHORTCUTS.map(([keys, label]) => (
-                    <li key={keys} className="flex justify-between gap-3">
-                      <kbd className="bg-slate-100 border rounded px-1.5 py-0.5 font-mono text-[11px]">{keys}</kbd>
-                      <span className="text-right">{label}</span>
-                    </li>
-                  ))}
-                </ul>
-                {!posSettings.enable_keyboard_shortcuts ? (
-                  <p className="mt-2 text-[11px] text-amber-700">Shortcuts are disabled in POS settings.</p>
-                ) : null}
-              </div>
-            ) : null}
-          </div>
-          <Button size="sm" variant="ghost" className="text-white hover:bg-white/10 h-8 w-8 p-0" onClick={toggleFullscreen}>
-            <Fullscreen className="h-4 w-4" />
-          </Button>
-          <Button size="sm" variant="ghost" className="text-white hover:bg-white/10 h-8 w-8 p-0" asChild>
-            <Link to="/admin/general-settings?tab=pos"><Settings2 className="h-4 w-4" /></Link>
-          </Button>
-          {register ? (
-            <Button size="sm" variant="ghost" className="text-amber-300 hover:bg-white/10 h-8 px-2" onClick={startCloseRegister}>
-              <Lock className="h-4 w-4 mr-1" /> Close register
-            </Button>
-          ) : (
-            <Button size="sm" className="bg-[#D4AF37] text-[#003D82] hover:bg-[#c4a030] h-8" onClick={() => setShowRegisterModal(true)}>
-              Open register
-            </Button>
-          )}
-        </div>
-      </div>
-
-      <div className="flex-1 grid lg:grid-cols-2 gap-2 p-2 min-h-0">
+    <div className="h-full min-h-full bg-[#eef2f8] flex flex-col">
+      <div className={cn('flex-1 grid gap-2 p-2 min-h-0', expanded ? 'grid-cols-1' : 'lg:grid-cols-2')}>
         {/* LEFT: cart */}
         <div className="bg-white rounded-xl border border-slate-200 shadow-sm flex flex-col min-h-[520px]">
           <div className="p-3 grid grid-cols-1 sm:grid-cols-3 gap-2 border-b">
@@ -862,7 +882,42 @@ export default function PosPage() {
             </p>
           )}
 
-          <div className="px-4 py-4 border-y bg-slate-50/80">
+          <div className="px-3 py-2 flex flex-wrap items-center gap-2 border-b bg-white">
+            <Button type="button" variant="outline" className="h-9" onClick={() => {
+              setStarForm({ name: '', price: '', category_id: categories[0]?.id || '' });
+              setStarOpen(true);
+            }}>
+              <Star className="h-4 w-4 mr-1.5 text-[#D4AF37] fill-[#D4AF37]" /> Star Sale
+            </Button>
+            <Button type="button" variant="outline" className={cn('h-9', searchAll && 'border-[#003D82] text-[#003D82]')} onClick={toggleSearchAll}>
+              <Search className="h-4 w-4 mr-1.5" /> {searchAll ? 'Quick Search' : 'Search All Product'}
+            </Button>
+            <Button type="button" variant="outline" className="h-9" onClick={toggleExpand}>
+              <Menu className="h-4 w-4 mr-1.5" /> {expanded ? 'Collapse' : 'Expand'}
+            </Button>
+            <div className="ml-auto flex items-center gap-1">
+              <Button size="icon" variant="ghost" className="h-8 w-8" title="Print last receipt" disabled={!lastReceipt} onClick={() => printReceipt(lastReceipt)}>
+                <Printer className="h-4 w-4" />
+              </Button>
+              <Button size="icon" variant="ghost" className="h-8 w-8" title="Fullscreen" onClick={toggleFullscreen}>
+                <Fullscreen className="h-4 w-4" />
+              </Button>
+              <Button size="icon" variant="ghost" className="h-8 w-8" asChild>
+                <Link to="/admin/general-settings?tab=pos"><Settings2 className="h-4 w-4" /></Link>
+              </Button>
+              {register ? (
+                <Button size="sm" variant="ghost" className="h-8 text-amber-700" onClick={startCloseRegister}>
+                  <Lock className="h-4 w-4 mr-1" /> Close
+                </Button>
+              ) : (
+                <Button size="sm" className="h-8 bg-[#D4AF37] text-[#003D82]" onClick={() => setShowRegisterModal(true)}>
+                  Open register
+                </Button>
+              )}
+            </div>
+          </div>
+
+          <div className="px-4 py-3 border-y bg-slate-50/80">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
               <Input
@@ -898,15 +953,13 @@ export default function PosPage() {
           </div>
 
           <div className="flex-1 overflow-auto px-2 py-3">
-            <table className="w-full text-sm">
+            <table className="w-full text-sm table-fixed">
               <thead className="bg-slate-50 sticky top-0">
                 <tr className="text-left">
-                  <th className="p-3">Product</th>
-                  <th className="p-3 w-24">Price</th>
-                  <th className="p-3 w-28">Quantity</th>
-                  <th className="p-3 w-20">Discount</th>
-                  <th className="p-3 w-20">Tax</th>
-                  <th className="p-3 w-24">SubTotal</th>
+                  <th className="p-3 w-[46%]">Product</th>
+                  <th className="p-3 w-[22%]">Price</th>
+                  <th className="p-3 w-[14%]">Qty</th>
+                  <th className="p-3 w-[14%]">SubTotal</th>
                   <th className="p-3 w-10" />
                 </tr>
               </thead>
@@ -914,54 +967,34 @@ export default function PosPage() {
                 {cart.map((i) => (
                   <tr key={i.product_id} className="border-t">
                     <td className="p-2">
-                      <div className="font-medium">{i.name}</div>
+                      <div className="font-medium leading-snug">{i.name}</div>
                     </td>
                     <td className="p-2">
                       <Input
-                        className="h-8"
+                        className="h-10 text-base font-semibold"
                         type="number"
-                        step="0.01"
+                        step="1"
                         value={i.price}
                         onChange={(e) => updateLine(i.product_id, { price: num(e.target.value) })}
                       />
                     </td>
                     <td className="p-2">
-                      <div className="flex items-center gap-1">
-                        <Button size="icon" variant="outline" className="h-7 w-7" onClick={() => updateCartQty(i.product_id, i.qty - 1)}>
+                      <div className="flex items-center gap-0.5">
+                        <Button size="icon" variant="outline" className="h-7 w-6" onClick={() => updateCartQty(i.product_id, i.qty - 1)}>
                           <Minus className="h-3 w-3" />
                         </Button>
                         <Input
-                          className="h-8 w-14 text-center"
+                          className="h-8 w-10 text-center px-1"
                           type="number"
                           value={i.qty}
                           onChange={(e) => updateCartQty(i.product_id, e.target.value)}
                         />
-                        <Button size="icon" variant="outline" className="h-7 w-7" onClick={() => updateCartQty(i.product_id, i.qty + 1)}>
+                        <Button size="icon" variant="outline" className="h-7 w-6" onClick={() => updateCartQty(i.product_id, i.qty + 1)}>
                           <Plus className="h-3 w-3" />
                         </Button>
                       </div>
                     </td>
-                    <td className="p-2">
-                      <Input
-                        className="h-8"
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        value={i.discount}
-                        onChange={(e) => updateLine(i.product_id, { discount: num(e.target.value) })}
-                      />
-                    </td>
-                    <td className="p-2">
-                      <Input
-                        className="h-8"
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        value={i.tax}
-                        onChange={(e) => updateLine(i.product_id, { tax: num(e.target.value), taxEdited: true })}
-                      />
-                    </td>
-                    <td className="p-2 font-medium">{amount(lineSubtotal(i))}</td>
+                    <td className="p-2 font-semibold">{amount(lineSubtotal(i), 0)}</td>
                     <td className="p-2">
                       <Button size="icon" variant="ghost" onClick={() => setCart((c) => c.filter((x) => x.product_id !== i.product_id))}>
                         <Trash2 className="h-4 w-4 text-red-600" />
@@ -971,37 +1004,30 @@ export default function PosPage() {
                 ))}
                 {!cart.length && (
                   <tr>
-                    <td colSpan={7} className="p-10 text-center text-slate-400">Cart is empty — pick products on the right</td>
+                    <td colSpan={5} className="p-10 text-center text-slate-400">Cart is empty — pick products on the right</td>
                   </tr>
                 )}
               </tbody>
             </table>
           </div>
 
-          <div className="border-t bg-[#003D82] text-white p-3 text-sm space-y-1">
-            <div className="flex flex-wrap gap-x-4 gap-y-1">
-              <span>Items: <strong>{amount(itemsCount, 0)}</strong></span>
-              <span>Total: <strong>{money(subtotal)}</strong></span>
-              <span>Discount: <strong>{money(discount)}</strong></span>
-              <span>Tax: <strong>{money(tax)}</strong></span>
-              <span>Shipping: <strong>{money(shipping)}</strong></span>
-            </div>
-            <div className="text-lg font-bold">Grand Total: {money(grandTotal)}</div>
-            <div className="grid grid-cols-3 gap-2 pt-1">
-              <Input className="bg-white/10 border-white/30 text-white h-8" type="number" placeholder="Discount" value={discount} onChange={(e) => setDiscount(e.target.value)} />
-              <Input className="bg-white/10 border-white/30 text-white h-8" type="number" placeholder="Tax" value={tax} onChange={(e) => setTax(e.target.value)} />
-              <Input className="bg-white/10 border-white/30 text-white h-8" type="number" placeholder="Shipping" value={shipping} onChange={(e) => setShipping(e.target.value)} />
-            </div>
+          <div className="border-t px-3 py-2 text-sm flex flex-wrap gap-x-6 gap-y-1 text-slate-700">
+            <span>Items: <strong>{amount(itemsCount, 0)}</strong></span>
+            <span>Total: <strong>{money(subtotal)}</strong></span>
+            <span className="ml-auto text-xs text-slate-500">Today {todayStats.count} · {money(todayStats.total)}</span>
+          </div>
+          <div className="bg-[#003D82] text-white px-3 py-2 text-lg font-bold">
+            Grand total <span className="float-right">{money(grandTotal)}</span>
           </div>
 
-          <div className="p-2 grid grid-cols-3 gap-2 border-t bg-slate-50">
+          <div className="grid grid-cols-2 sm:grid-cols-5">
             {QUICK_METHODS.map((m) => (
               <button
                 key={m.key}
                 type="button"
                 disabled={paying}
                 onClick={() => openPay(m)}
-                className={cn('rounded-xl py-3 px-2 text-sm font-bold shadow-sm transition disabled:opacity-50', m.className)}
+                className={cn('py-3.5 px-2 text-sm font-bold shadow-inner transition disabled:opacity-50', m.className)}
               >
                 {m.label}
               </button>
@@ -1009,14 +1035,22 @@ export default function PosPage() {
             <button
               type="button"
               onClick={cancelSale}
-              className="rounded-xl py-3 px-2 text-sm font-bold shadow-sm bg-red-600 hover:bg-red-700 text-white col-span-3"
+              className="py-3.5 px-2 text-sm font-bold bg-[#d63031] hover:bg-[#c02627] text-white"
             >
               Cancel
+            </button>
+            <button
+              type="button"
+              onClick={openRecent}
+              className="py-3.5 px-2 text-sm font-bold bg-[#ffc107] hover:bg-[#e0a800] text-slate-900"
+            >
+              Recent
             </button>
           </div>
         </div>
 
         {/* RIGHT: products */}
+        {!expanded && (
         <div className="bg-white rounded-xl border border-slate-200 shadow-sm flex flex-col min-h-[520px]">
           <div className="bg-[#003D82] text-white px-2 py-1 flex flex-wrap gap-1.5 items-center justify-between min-h-0">
             <div className="flex gap-1.5">
@@ -1071,7 +1105,7 @@ export default function PosPage() {
               <div className={cn('grid gap-2', gridCols)}>
                 {filteredProducts.map((p) => {
                   const stock = stockById.get(p.id);
-                  const soldOut = posSettings.block_out_of_stock && stock !== null && stock !== undefined && stock <= 0;
+                  const soldOut = !searchAll && posSettings.block_out_of_stock && stock !== null && stock !== undefined && stock <= 0;
                   return (
                     <button
                       key={p.id}
@@ -1102,6 +1136,7 @@ export default function PosPage() {
             )}
           </div>
         </div>
+        )}
       </div>
 
       {visaOpen && (
@@ -1298,6 +1333,86 @@ export default function PosPage() {
               <Button type="submit" className="bg-[#003D82]">Save</Button>
             </div>
           </form>
+        </div>
+      )}
+
+      {starOpen && (
+        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4">
+          <form onSubmit={saveStarSale} className="bg-white rounded-2xl shadow-xl w-full max-w-md p-5 space-y-3">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-bold text-[#003D82] flex items-center gap-2">
+                <Star className="h-5 w-5 fill-[#D4AF37] text-[#D4AF37]" /> Star Sale
+              </h3>
+              <button type="button" onClick={() => setStarOpen(false)}><X className="h-5 w-5" /></button>
+            </div>
+            <div>
+              <Label>Name *</Label>
+              <Input required value={starForm.name} onChange={(e) => setStarForm({ ...starForm, name: e.target.value })} />
+            </div>
+            <div>
+              <Label>Price *</Label>
+              <Input required type="number" min="1" step="1" value={starForm.price} onChange={(e) => setStarForm({ ...starForm, price: e.target.value })} />
+            </div>
+            <div>
+              <Label>Category</Label>
+              <SearchSelect
+                className="mt-1"
+                value={starForm.category_id}
+                onChange={(category_id) => setStarForm({ ...starForm, category_id })}
+                options={categories.map((c) => ({ value: c.id, label: c.name }))}
+                placeholder="Select category…"
+              />
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button type="button" variant="outline" onClick={() => setStarOpen(false)}>Cancel</Button>
+              <Button type="submit" className="bg-[#003D82]" disabled={starSaving}>
+                {starSaving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                Add to sale
+              </Button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {recentOpen && (
+        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl p-5 space-y-3">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-bold text-[#003D82] flex items-center gap-2">
+                <Clock className="h-5 w-5" /> Recent transaction
+              </h3>
+              <button type="button" onClick={() => setRecentOpen(false)}><X className="h-5 w-5" /></button>
+            </div>
+            {recentLoading ? (
+              <div className="py-10 flex justify-center"><Loader2 className="animate-spin text-[#003D82]" /></div>
+            ) : (
+              <div className="overflow-auto max-h-[60vh]">
+                <table className="w-full text-sm">
+                  <thead className="bg-slate-50 text-left">
+                    <tr>
+                      <th className="p-2">Date</th>
+                      <th className="p-2">Reference</th>
+                      <th className="p-2">Customer</th>
+                      <th className="p-2">Total</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {recentSales.map((sale) => (
+                      <tr key={sale.id} className="border-t">
+                        <td className="p-2">{String(sale.sale_date || sale.created_at || '').slice(0, 10)}</td>
+                        <td className="p-2 font-medium">{sale.reference}</td>
+                        <td className="p-2">{sale.customer_name || '—'}</td>
+                        <td className="p-2">{money(sale.grand_total)}</td>
+                      </tr>
+                    ))}
+                    {!recentSales.length && (
+                      <tr><td colSpan={4} className="p-8 text-center text-slate-400">No recent POS sales</td></tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
         </div>
       )}
     </div>

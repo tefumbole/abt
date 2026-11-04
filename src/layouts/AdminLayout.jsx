@@ -110,6 +110,7 @@ const AdminLayout = () => {
   const [settingsOrder, setSettingsOrder] = useState(null);
   const { hasPermission, hasStaffAccess, loading: permLoading } = usePermission();
   const userRoleLabel = formatRoleLabel(profile?.role || user?.app_metadata?.role || user?.role || '');
+  const isPosPage = location.pathname.startsWith('/admin/erp/pos');
 
   useEffect(() => {
     let cancelled = false;
@@ -577,7 +578,7 @@ const AdminLayout = () => {
           <span className="font-bold text-lg text-[#D4AF37]">Alpha Admin</span>
         </div>
         <div className="flex items-center gap-2">
-          {(hasStaffAccess || itemVisible(hasPermission, MENU_PERMISSIONS.erpCommerce)) && (
+          {!isPosPage && (hasStaffAccess || itemVisible(hasPermission, MENU_PERMISSIONS.erpCommerce)) && (
             <Link
               to="/admin/erp/pos"
               onClick={() => setSidebarOpen(false)}
@@ -586,7 +587,7 @@ const AdminLayout = () => {
               POS
             </Link>
           )}
-          <LanguageSwitcher variant="admin" className="md:hidden" />
+          {!isPosPage && <LanguageSwitcher variant="admin" className="md:hidden" />}
           <button onClick={() => setSidebarOpen(!sidebarOpen)} className="p-2">
             {sidebarOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
           </button>
@@ -658,7 +659,11 @@ const AdminLayout = () => {
         ></div>
       )}
 
-      <main className="flex-1 p-4 md:p-8 overflow-y-auto bg-gray-50 h-[calc(100vh-64px)] md:h-screen">
+      <main className={cn(
+        'flex-1 overflow-y-auto bg-gray-50',
+        isPosPage ? 'p-0 h-[calc(100vh-56px)] md:h-screen' : 'p-4 md:p-8 h-[calc(100vh-64px)] md:h-screen'
+      )}>
+        {!isPosPage && (
         <div className="hidden md:flex justify-end items-center gap-3 mb-4">
           {(hasStaffAccess || itemVisible(hasPermission, MENU_PERMISSIONS.erpCommerce)) && (
             <Link
@@ -678,7 +683,8 @@ const AdminLayout = () => {
           </Link>
           <LanguageSwitcher variant="admin" />
         </div>
-        {activeSection && !location.pathname.startsWith('/admin/erp/pos') && (
+        )}
+        {activeSection && !isPosPage && (
           activeSection.label === 'Human Resources' ? (
             <HrTopNav />
           ) : activeSection.label === 'HR Letters' ? (
@@ -707,7 +713,10 @@ const AdminLayout = () => {
           </div>
           )
         )}
-        <div className="max-w-7xl mx-auto pb-10 print:p-0 print:m-0 print:max-w-none print:w-full print:bg-white">
+        <div className={isPosPage
+          ? 'h-full print:p-0 print:m-0 print:max-w-none print:w-full print:bg-white'
+          : 'max-w-7xl mx-auto pb-10 print:p-0 print:m-0 print:max-w-none print:w-full print:bg-white'
+        }>
           <Outlet />
         </div>
       </main>
